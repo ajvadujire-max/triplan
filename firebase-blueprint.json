@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Organization": {
+      "title": "Organization",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "Admin": {
+      "title": "Admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "organizationName": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "lastLogin": { "type": "string" }
+      }
+    },
+    "User": {
+      "title": "User",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" }
+      }
+    },
+    "Trip": {
+      "title": "Trip",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "Traveller": {
+      "title": "Traveller",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" }
+      }
+    },
+    "Expense": {
+      "title": "Expense",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" }
+      }
+    },
+    "Collection": {
+      "title": "Collection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/organizations/{organizationId}": { "schema": "Organization" },
+    "/admins/{adminId}": { "schema": "Admin" },
+    "/users/{userId}": { "schema": "User" },
+    "/trips/{tripId}": { "schema": "Trip" },
+    "/travellers/{travellerId}": { "schema": "Traveller" },
+    "/expenses/{expenseId}": { "schema": "Expense" },
+    "/collections/{paymentId}": { "schema": "Collection" }
+  }
+}

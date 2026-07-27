@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getAdminData() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getAdminData().role == 'super_admin';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (getAdminData().role == 'Admin' || getAdminData().role == 'admin');
+    }
+
+    function isOrgAdmin(orgId) {
+      return isAdmin() && getAdminData().organizationId == orgId;
+    }
+
+    function isPersonalSandbox(orgId) {
+      return isAuthenticated() && orgId == 'personal_' + request.auth.uid;
+    }
+
+    function canAccessOrg(orgId) {
+      return isSuperAdmin() || isOrgAdmin(orgId) || isPersonalSandbox(orgId);
+    }
+
+    match /organizations/{organizationId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isOrgAdmin(organizationId);
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSuperAdmin() || request.auth.uid == adminId;
+      allow write: if isSuperAdmin();
+      allow create: if request.auth.uid == adminId && (
+        request.resource.data.role == 'user' || 
+        (request.resource.data.role == 'super_admin' && request.auth.token.email == 'ajvadujire@gmail.com')
+      );
+      allow update: if request.auth.uid == adminId && request.resource.data.role == resource.data.role;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /trips/{tripId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /travellers/{travellerId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /collections/{paymentId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /accounts/{accountId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /cashbook/{entryId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if canAccessOrg(resource.data.organizationId) || (request.resource != null && canAccessOrg(request.resource.data.organizationId));
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
