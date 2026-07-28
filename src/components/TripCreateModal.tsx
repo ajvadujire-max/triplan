@@ -46,7 +46,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !destination.trim()) return;
+    if (!name.trim() || !destination.trim() || !startDate || !endDate) return;
 
     const newTrip: Trip = {
       id: initialTrip?.id || `trip_${Date.now()}`,
@@ -187,10 +187,11 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Start Date
+                Start Date *
               </label>
               <input
                 type="date"
+                required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -199,10 +200,11 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                End Date
+                End Date *
               </label>
               <input
                 type="date"
+                required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"

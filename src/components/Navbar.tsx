@@ -55,11 +55,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
-    { id: "journey", label: "Journey Builder", icon: Luggage },
+    { id: "planner", label: "Planner", icon: Luggage },
     { id: "collections", label: "Collections", icon: IndianRupee },
     { id: "expenses", label: "Split Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers & Budgets", icon: Users },
-    { id: "timeline", label: "Activity Timeline", icon: Clock },
     { id: "vault", label: "Vault & Packing", icon: Calendar },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun },
     { id: "finance", label: "Finance & Cashbook", icon: Wallet },

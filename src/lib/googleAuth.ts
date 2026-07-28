@@ -62,6 +62,14 @@ export const googleSignIn = async (): Promise<{
       localStorage.setItem("trippro_google_access_token", cachedAccessToken);
       return { user: result.user, accessToken: cachedAccessToken };
     } catch (error: any) {
+      if (
+        error?.code === "auth/popup-closed-by-user" ||
+        error?.code === "auth/cancelled-popup-request" ||
+        error?.code === "auth/popup-blocked"
+      ) {
+        console.warn("Google sign-in popup was closed or cancelled by user.");
+        return null;
+      }
       console.error("Google sign in error:", error);
       throw error;
     } finally {

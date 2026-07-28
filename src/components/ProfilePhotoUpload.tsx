@@ -5,6 +5,8 @@
 
 import React, { useRef, useState } from "react";
 import { Camera, Image as ImageIcon, Trash2, Upload, AlertCircle, Loader2, User } from "lucide-react";
+import { PhotoEditorModal } from "./PhotoEditorModal";
+import { AnimatePresence } from "motion/react";
 
 interface ProfilePhotoUploadProps {
   photoUrl?: string;
@@ -21,60 +23,6 @@ export function getInitials(name?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/**
- * Compresses an image file using browser Canvas to max 400px width and WebP/JPEG format
- */
-export function compressImageFile(file: File, maxWidth = 400, quality = 0.82): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (file.size > 5 * 1024 * 1024) {
-      reject(new Error("File size exceeds 5 MB. Please select a smaller photo."));
-      return;
-    }
-
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-    if (!validTypes.includes(file.type.toLowerCase())) {
-      reject(new Error("Invalid format. Please upload JPG, PNG, or WEBP."));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            reject(new Error("Could not initialize image processor."));
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL("image/webp", quality);
-          resolve(compressedDataUrl);
-        } catch (err) {
-          reject(new Error("Failed to process image file."));
-        }
-      };
-      img.onerror = () => reject(new Error("Selected file is not a valid image."));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error("Could not read image file."));
-    reader.readAsDataURL(file);
-  });
-}
-
 export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   photoUrl,
   fullName,
@@ -87,24 +35,44 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg("File size exceeds 5 MB. Please select a smaller photo.");
+      return;
+    }
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!validTypes.includes(file.type.toLowerCase())) {
+      setErrorMsg("Invalid format. Please upload JPG, PNG, or WEBP.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setSelectedImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input values
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  };
+
+  const handleApplyCropped = async (croppedDataUrl: string) => {
     setErrorMsg(null);
     setIsProcessing(true);
-
     try {
-      const compressedUrl = await compressImageFile(file);
-      onChangePhoto(compressedUrl);
+      onChangePhoto(croppedDataUrl);
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to upload image.");
+      setErrorMsg(err.message || "Failed to save photo.");
     } finally {
       setIsProcessing(false);
-      // Reset input values so same file can be selected again if needed
-      if (galleryInputRef.current) galleryInputRef.current.value = "";
-      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      setSelectedImage(null);
     }
   };
 
@@ -128,6 +96,17 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {/* Photo Editor Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <PhotoEditorModal
+            image={selectedImage}
+            onClose={() => setSelectedImage(null)}
+            onApply={handleApplyCropped}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
         {/* Circular Avatar Preview (80–100px) */}

@@ -21,12 +21,13 @@ export const InitSuperAdmin: React.FC = () => {
       
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       
-      await setDoc(doc(db, "admins", cred.user.uid), {
+      const adminData = {
+        uid: cred.user.uid,
         id: cred.user.uid,
         name: "Super Administrator",
         email: email,
         role: "super_admin",
-        status: "Active",
+        status: "active",
         permissions: {
           dashboard: true,
           trips: true,
@@ -39,8 +40,13 @@ export const InitSuperAdmin: React.FC = () => {
           settings: true
         },
         createdAt: new Date().toISOString(),
-        organizationId: "system"
-      });
+        organizationId: "system",
+        organization: "System Management",
+        profilePhoto: ""
+      };
+
+      await setDoc(doc(db, "admins", cred.user.uid), adminData);
+      await setDoc(doc(db, "users", cred.user.uid), adminData);
       
       setStatus("success");
       setMessage("Super Admin successfully created! Redirecting...");
@@ -48,9 +54,11 @@ export const InitSuperAdmin: React.FC = () => {
       
     } catch (err: any) {
       setStatus("error");
-      if (err.code === "auth/email-already-in-use") {
+      const errorCode = err.code || (err.message?.includes("auth/email-already-in-use") ? "auth/email-already-in-use" : "");
+      
+      if (errorCode === "auth/email-already-in-use") {
         setMessage("Super Admin already exists. You can log in normally.");
-      } else if (err.code === "auth/operation-not-allowed") {
+      } else if (errorCode === "auth/operation-not-allowed") {
         setMessage("Email/Password Auth is disabled in Firebase.");
       } else {
         setMessage(`Error: ${err.message}`);

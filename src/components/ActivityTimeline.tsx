@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Trip,
   TimelineActivity,
@@ -8,6 +8,7 @@ import {
   ReminderOption,
   ActivityAttachment,
   Traveller,
+  TransportSegment,
 } from "../types";
 import {
   Clock,
@@ -57,6 +58,7 @@ import {
 interface ActivityTimelineProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  hideSegments?: boolean;
 }
 
 // Category Config with Icons & Colors
@@ -203,13 +205,35 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   // Collapsed Days state
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
 
+  // UI States
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<TimelineActivity | null>(null);
+  const [hideSegments, setHideSegments] = useState(false);
 
   // Form Fields
   const [formTime, setFormTime] = useState("09:00 AM");
   const [formEndTime, setFormEndTime] = useState("10:30 AM");
+  
+  // Helper to format Date to datetime-local string (YYYY-MM-DDTHH:mm)
+  const toDateTimeLocal = (date: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  // Helper to format Date to display time (09:00 AM)
+  const formatTime = (date: Date) => {
+    return date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
   const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] = useState<ActivityCategory>("Sightseeing");
   const [formDesc, setFormDesc] = useState("");
@@ -232,48 +256,87 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
     return `Day 1`;
   };
 
-  // Group timeline activities by day
-  const groupedTimeline: Record<string, TimelineActivity[]> = useMemo(() => {
-    let list = [...trip.timeline];
+  // Unified chronological timeline
+  const unifiedTimeline = useMemo(() => {
+    const items: (TimelineActivity | TransportSegment)[] = hideSegments 
+      ? [...trip.timeline] 
+      : [...trip.timeline, ...trip.segments];
+    
+    return items.sort((a, b) => {
+      const aTime = 'activityDateTime' in a 
+        ? (a.activityDateTime ? new Date(a.activityDateTime).getTime() : 0)
+        : ('departureDateTime' in a && a.departureDateTime ? new Date(a.departureDateTime).getTime() : 0);
+      const bTime = 'activityDateTime' in b
+        ? (b.activityDateTime ? new Date(b.activityDateTime).getTime() : 0)
+        : ('departureDateTime' in b && b.departureDateTime ? new Date(b.departureDateTime).getTime() : 0);
+      return aTime - bTime;
+    });
+  }, [trip.timeline, trip.segments]);
 
+  // Group timeline activities by day
+  const groupedTimeline = useMemo<Record<string, (TimelineActivity | TransportSegment)[]>>(() => {
+    let list = [...unifiedTimeline];
+    
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          (a.description && a.description.toLowerCase().includes(q)) ||
-          (a.location && a.location.toLowerCase().includes(q)) ||
-          (a.notes && a.notes.toLowerCase().includes(q))
-      );
+      list = list.filter((item) => {
+        if ('title' in item) {
+          return item.title.toLowerCase().includes(q) || 
+                 (item.description && item.description.toLowerCase().includes(q)) ||
+                 (item.location && item.location.toLowerCase().includes(q));
+        } else {
+          return item.from.toLowerCase().includes(q) || 
+                 item.to.toLowerCase().includes(q) ||
+                 item.transportType.toLowerCase().includes(q);
+        }
+      });
     }
 
     // Category filter
     if (selectedCategory !== "all") {
-      list = list.filter((a) => {
-        if (selectedCategory === "Meals") return a.category === "Meals" || a.category === "Food";
-        if (selectedCategory === "Hotel Check-in") return a.category === "Hotel Check-in" || a.category === "Hotel";
-        return a.category === selectedCategory;
+      list = list.filter((item) => {
+        if ('category' in item) {
+          if (selectedCategory === "Meals") return item.category === "Meals" || item.category === "Food";
+          if (selectedCategory === "Hotel Check-in") return item.category === "Hotel Check-in" || item.category === "Hotel";
+          return item.category === selectedCategory;
+        } else {
+          return selectedCategory === "Transport";
+        }
       });
     }
 
     // Traveller filter
     if (selectedTravellerId !== "all") {
-      list = list.filter((a) => a.assignedTravellerIds?.includes(selectedTravellerId));
+      list = list.filter((item) => {
+        if ('assignedTravellerIds' in item) {
+          return item.assignedTravellerIds?.includes(selectedTravellerId);
+        }
+        return true;
+      });
     }
 
     // Grouping by day
-    const groups: Record<string, TimelineActivity[]> = {};
+    const groups: Record<string, (TimelineActivity | TransportSegment)[]> = {};
 
-    list.forEach((act, idx) => {
-      const dayKey = getActivityDayKey(act, idx);
+    list.forEach((item, idx) => {
+      let dayKey = "Unknown Date";
+      if ('date' in item && item.date) {
+        dayKey = item.date;
+      } else if ('departureDateTime' in item && item.departureDateTime) {
+        dayKey = item.departureDateTime.split('T')[0];
+      } else if ('departure' in item && item.departure.includes('-')) {
+         const parts = item.departure.split(',');
+         if (parts.length >= 2) dayKey = parts[0].trim();
+      }
+      
       if (!groups[dayKey]) groups[dayKey] = [];
-      groups[dayKey].push(act);
+      groups[dayKey].push(item);
     });
 
     // Filter by selected day
     if (selectedDay !== "all") {
-      const filteredGroups: Record<string, TimelineActivity[]> = {};
+      const filteredGroups: Record<string, (TimelineActivity | TransportSegment)[]> = {};
       if (groups[selectedDay]) {
         filteredGroups[selectedDay] = groups[selectedDay];
       }
@@ -281,58 +344,116 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
     }
 
     return groups;
-  }, [trip.timeline, searchQuery, selectedCategory, selectedTravellerId, selectedDay]);
+  }, [unifiedTimeline, searchQuery, selectedCategory, selectedTravellerId, selectedDay]);
 
   // All Day Keys
   const allDayKeys = useMemo(() => {
-    const keys = new Set<string>();
-    trip.timeline.forEach((act, idx) => {
-      keys.add(getActivityDayKey(act, idx));
+    const keys = Object.keys(groupedTimeline).sort((a, b) => {
+      // Try to sort by date
+      const timeA = new Date(a).getTime();
+      const timeB = new Date(b).getTime();
+      if (!isNaN(timeA) && !isNaN(timeB)) return timeA - timeB;
+      return a.localeCompare(b);
     });
-    if (keys.size === 0) keys.add("Day 1");
-    return Array.from(keys);
-  }, [trip.timeline]);
+    if (keys.length === 0) return ["Day 1"];
+    return keys;
+  }, [groupedTimeline]);
 
   // Smart Stats Calculation
   const stats = useMemo(() => {
     const totalActivities = trip.timeline.length;
+    const totalSegments = trip.segments.length;
     const completedActivities = trip.timeline.filter((a) => a.status === "Completed").length;
-    const completionRate = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0;
+    const completionRate = totalActivities + totalSegments > 0 
+      ? Math.round(((completedActivities + totalSegments) / (totalActivities + totalSegments)) * 100) 
+      : 0;
 
-    const totalCost = trip.timeline.reduce((sum, a) => sum + (a.estimatedCost || 0), 0);
+    const activityCost = trip.timeline.reduce((sum, a) => sum + (a.estimatedCost || 0), 0);
+    const transportCost = trip.segments.reduce((sum, s) => sum + (s.fare || 0), 0);
+    const totalCost = activityCost + transportCost;
+
+    const totalDist = trip.segments.reduce((sum, s) => sum + (s.distanceKm || 0), 0);
 
     // Sum travel times
-    const totalTravelMins = trip.timeline.reduce(
-      (sum, a) => sum + (a.travelTimeFromPreviousMinutes || 15),
+    const totalActivityTravelMins = trip.timeline.reduce(
+      (sum, a) => sum + (a.travelTimeFromPreviousMinutes || 0),
       0
     );
+    
+    // Parse segment durations (e.g., "2h 30m")
+    const totalSegmentMins = trip.segments.reduce((sum, s) => {
+      const hours = s.duration.match(/(\d+)h/);
+      const mins = s.duration.match(/(\d+)m/);
+      let m = 0;
+      if (hours) m += parseInt(hours[1]) * 60;
+      if (mins) m += parseInt(mins[1]);
+      return sum + m;
+    }, 0);
+
+    const totalTravelMins = totalActivityTravelMins + totalSegmentMins;
     const travelHours = Math.floor(totalTravelMins / 60);
     const travelMinsLeft = totalTravelMins % 60;
 
     // Idle time estimate
-    const totalIdleMins = Math.max(0, totalActivities * 45 - totalTravelMins);
+    const totalIdleMins = Math.max(0, (totalActivities + totalSegments) * 45 - totalTravelMins);
     const idleHours = (totalIdleMins / 60).toFixed(1);
 
     return {
       totalActivities,
+      totalSegments,
       completedActivities,
       completionRate,
       totalCost,
+      transportCost,
+      activityCost,
+      totalDist,
       travelTimeString: `${travelHours > 0 ? `${travelHours}h ` : ""}${travelMinsLeft}m`,
       idleHours,
     };
-  }, [trip.timeline]);
+  }, [trip.timeline, trip.segments]);
 
-  // Open Modal for Create
+  // Open Modal for Add
   const handleOpenAdd = () => {
     setEditingActivity(null);
-    setFormTime("09:00 AM");
-    setFormEndTime("10:30 AM");
+    
+    // Smart Prefill Logic
+    let defaultStart = new Date();
+    
+    if (unifiedTimeline.length > 0) {
+      // Use absolute last item's end time
+      const lastItem = unifiedTimeline[unifiedTimeline.length - 1];
+      if ('activityEndDateTime' in lastItem && lastItem.activityEndDateTime) {
+        defaultStart = new Date(lastItem.activityEndDateTime);
+      } else if ('activityDateTime' in lastItem && lastItem.activityDateTime) {
+        defaultStart = new Date(lastItem.activityDateTime);
+        defaultStart.setHours(defaultStart.getHours() + 1);
+      } else if ('arrivalDateTime' in lastItem && lastItem.arrivalDateTime) {
+        defaultStart = new Date(lastItem.arrivalDateTime);
+      }
+    } else if (trip.startDate) {
+      // Use trip start date at 9 AM
+      defaultStart = new Date(trip.startDate);
+      defaultStart.setHours(9, 0, 0, 0);
+    }
+
+    if (selectedDay !== "all" && !selectedDay.startsWith("Day")) {
+      // If a specific date is selected in filter, use that date but keep time
+      const selDate = new Date(selectedDay);
+      if (!isNaN(selDate.getTime())) {
+        defaultStart.setFullYear(selDate.getFullYear(), selDate.getMonth(), selDate.getDate());
+      }
+    }
+
+    const defaultEnd = new Date(defaultStart);
+    defaultEnd.setHours(defaultStart.getHours() + 1);
+
+    setFormTime(formatTime(defaultStart));
+    setFormEndTime(formatTime(defaultEnd));
     setFormTitle("");
     setFormCategory("Sightseeing");
     setFormDesc("");
     setFormLocation(trip.destination);
-    setFormDate(trip.startDate || "");
+    setFormDate(defaultStart.toISOString().split('T')[0]);
     setFormDayIndex(1);
     setFormAssignedTravellers(trip.travellers.map((t) => t.id));
     setFormEstimatedCost(1000);
@@ -382,11 +503,17 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
 
   // Delete Activity
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this activity from the timeline?")) {
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDelete = () => {
+    if (confirmDeleteId) {
       onUpdateTrip({
         ...trip,
-        timeline: trip.timeline.filter((a) => a.id !== id),
+        timeline: trip.timeline.filter((a) => a.id !== confirmDeleteId),
       });
+      setConfirmDeleteId(null);
+      showToast("Activity deleted");
     }
   };
 
@@ -473,10 +600,15 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
 
     if (editingActivity) {
       // Edit
+      const startD = new Date(`${formDate} ${formTime}`);
+      const endD = new Date(`${formDate} ${formEndTime}`);
+
       const updatedActivity: TimelineActivity = {
         ...editingActivity,
         time: formTime,
         endTime: formEndTime,
+        activityDateTime: startD.toISOString(),
+        activityEndDateTime: endD.toISOString(),
         title: formTitle.trim(),
         category: formCategory,
         description: formDesc.trim(),
@@ -497,11 +629,16 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       });
     } else {
       // Create
+      const startD = new Date(`${formDate} ${formTime}`);
+      const endD = new Date(`${formDate} ${formEndTime}`);
+
       const newActivity: TimelineActivity = {
         id: `tm_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
         tripId: trip.id,
         time: formTime,
         endTime: formEndTime,
+        activityDateTime: startD.toISOString(),
+        activityEndDateTime: endD.toISOString(),
         title: formTitle.trim(),
         category: formCategory,
         description: formDesc.trim(),
@@ -624,10 +761,10 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       {/* 2. SMART STATS DASHBOARD HEADER */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Activities</p>
-          <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">{stats.totalActivities}</p>
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Events</p>
+          <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">{stats.totalActivities + stats.totalSegments}</p>
           <p className="text-[9px] sm:text-[10px] text-cyan-600 dark:text-cyan-400 font-semibold mt-1">
-            {stats.completedActivities} completed
+            {stats.totalActivities} Act + {stats.totalSegments} Seg
           </p>
         </div>
 
@@ -645,25 +782,25 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
         </div>
 
         <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Travel Time</p>
-          <p className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{stats.travelTimeString}</p>
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Travel Distance</p>
+          <p className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{stats.totalDist.toLocaleString()} KM</p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 flex items-center gap-1">
-            <Navigation className="w-2.5 h-2.5 text-indigo-500" /> movement
+            <Navigation className="w-2.5 h-2.5 text-indigo-500" /> Across {stats.totalSegments} Seg
           </p>
         </div>
 
         <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Idle Time</p>
-          <p className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">{stats.idleHours} hrs</p>
-          <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1">Leisure gap</p>
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Travel Time</p>
+          <p className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">{stats.travelTimeString}</p>
+          <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1">Movement duration</p>
         </div>
 
         <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Activity Cost</p>
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Combined Cost</p>
           <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">
             {trip.currency}{stats.totalCost.toLocaleString()}
           </p>
-          <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1">Sum</p>
+          <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1">Act + Transport</p>
         </div>
 
         <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -784,8 +921,9 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       ) : viewMode === "timeline" ? (
         /* ---------------- VIEW 1: VERTICAL TIMELINE VIEW ---------------- */
         <div className="space-y-3 sm:space-y-6">
-          {Object.entries(groupedTimeline).map(([dayKey, activities]) => {
+          {Object.entries(groupedTimeline).map(([dayKey, items]: [string, (TimelineActivity | TransportSegment)[]]) => {
             const isCollapsed = collapsedDays[dayKey];
+            const activities = items.filter(i => 'status' in i) as TimelineActivity[];
             const dayCompleted = activities.filter((a) => a.status === "Completed").length;
 
             return (
@@ -815,8 +953,8 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="w-24 bg-slate-200 dark:bg-slate-700 h-1 rounded-full overflow-hidden hidden sm:block">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-16 sm:w-24 bg-slate-200 dark:bg-slate-700 h-1 rounded-full overflow-hidden hidden sm:block">
                       <div
                         className="bg-emerald-500 h-full rounded-full transition-all"
                         style={{
@@ -834,257 +972,327 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                 {/* Day Timeline Content */}
                 {!isCollapsed && (
                   <div className="p-3.5 sm:p-6 space-y-3 sm:space-y-6 relative border-l-2 border-cyan-200 dark:border-cyan-800/80 ml-4 sm:ml-8 my-2">
-                    {activities.map((act, index) => {
-                      const catInfo = getCategoryInfo(act.category);
-                      const CategoryIcon = catInfo.icon;
-                      const isCompleted = act.status === "Completed";
-                      const assignedTravellers = trip.travellers.filter((t) =>
-                        act.assignedTravellerIds?.includes(t.id)
-                      );
+                    {items.map((item, index) => {
+                      const isActivity = 'title' in item && 'category' in item;
+                      
+                      if (isActivity) {
+                        const act = item as TimelineActivity;
+                        const catInfo = getCategoryInfo(act.category);
+                        const CategoryIcon = catInfo.icon;
+                        const isCompleted = act.status === "Completed";
+                        const assignedTravellers = trip.travellers.filter((t) =>
+                          act.assignedTravellerIds?.includes(t.id)
+                        );
 
-                      return (
-                        <div key={act.id} className="relative pl-4 sm:pl-8 group">
-                          {/* Timeline Point Node */}
-                          <div
-                            className={`absolute -left-[19px] sm:-left-[39px] top-1 sm:top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center shadow-md transition-all ${
-                              isCompleted
-                                ? "bg-emerald-500 border-white text-white"
-                                : `${catInfo.bgColor} ${catInfo.borderColor} ${catInfo.color}`
-                            }`}
-                          >
-                            {isCompleted ? (
-                              <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                            ) : (
-                              <CategoryIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                            )}
-                          </div>
-
-                          {/* Activity Card */}
-                          <div
-                            className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all space-y-2.5 sm:space-y-3 ${
-                              isCompleted
-                                ? "bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/50"
-                                : "bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-sm hover:border-cyan-300 dark:hover:border-cyan-700"
-                            }`}
-                          >
-                            {/* Card Header Row */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2 sm:pb-3">
-                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                {/* Time Badge */}
-                                <span className="font-extrabold text-[10px] sm:text-xs text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/80 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border border-cyan-200 dark:border-cyan-800 flex items-center gap-1">
-                                  <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                  {act.time}
-                                  {act.endTime ? ` - ${act.endTime}` : ""}
-                                </span>
-
-                                {/* Category Badge */}
-                                <span
-                                  className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border flex items-center gap-1 ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}
-                                >
-                                  <CategoryIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                  {catInfo.label}
-                                </span>
-
-                                {/* Reminder Badge */}
-                                {act.reminder && act.reminder !== "none" && (
-                                  <span className="text-[9px] sm:text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                                    <Bell className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {act.reminder}
-                                  </span>
-                                )}
-
-                                {/* Status Badge */}
-                                <button
-                                  onClick={() => handleToggleStatus(act)}
-                                  className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-all ${
-                                    isCompleted
-                                      ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300"
-                                      : act.status === "In Progress"
-                                      ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300"
-                                      : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-300"
-                                  }`}
-                                >
-                                  {act.status || "Upcoming"}
-                                </button>
-                              </div>
-
-                              {/* Card Quick Actions */}
-                              <div className="flex items-center gap-1 self-end sm:self-auto">
-                                {/* Time shift buttons */}
-                                <button
-                                  onClick={() => handleShiftTime(act, -15)}
-                                  title="Shift 15m earlier"
-                                  className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded transition-colors text-[9px] sm:text-[10px] font-bold"
-                                >
-                                  -15m
-                                </button>
-                                <button
-                                  onClick={() => handleShiftTime(act, 15)}
-                                  title="Shift 15m later"
-                                  className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded transition-colors text-[9px] sm:text-[10px] font-bold"
-                                >
-                                  +15m
-                                </button>
-
-                                {/* Move Up / Down */}
-                                <button
-                                  onClick={() => handleMoveOrder(act.id, "up")}
-                                  title="Move Up"
-                                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded transition-colors"
-                                >
-                                  <ArrowUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleMoveOrder(act.id, "down")}
-                                  title="Move Down"
-                                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded transition-colors"
-                                >
-                                  <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                </button>
-
-                                {/* Duplicate */}
-                                <button
-                                  onClick={() => handleDuplicate(act)}
-                                  title="Duplicate Activity"
-                                  className="p-1 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 rounded transition-colors"
-                                >
-                                  <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                </button>
-
-                                {/* Edit */}
-                                <button
-                                  onClick={() => handleOpenEdit(act)}
-                                  title="Edit Activity"
-                                  className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded transition-colors"
-                                >
-                                  <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                </button>
-
-                                {/* Delete */}
-                                <button
-                                  onClick={() => handleDelete(act.id)}
-                                  title="Delete Activity"
-                                  className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
-                                >
-                                  <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Title & Description */}
-                            <div>
-                              <h4
-                                className={`text-sm sm:text-base font-bold text-slate-900 dark:text-white ${
-                                  isCompleted ? "line-through opacity-75" : ""
-                                }`}
-                              >
-                                {act.title}
-                              </h4>
-                              {act.description && (
-                                <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
-                                  {act.description}
-                                </p>
+                        return (
+                          <div key={act.id} className="relative pl-4 sm:pl-8 group">
+                            {/* Timeline Point Node */}
+                            <div
+                              className={`absolute -left-[19px] sm:-left-[39px] top-1 sm:top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center shadow-md transition-all ${
+                                isCompleted
+                                  ? "bg-emerald-500 border-white text-white"
+                                  : `${catInfo.bgColor} ${catInfo.borderColor} ${catInfo.color}`
+                              }`}
+                            >
+                              {isCompleted ? (
+                                <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              ) : (
+                                <CategoryIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                               )}
                             </div>
 
-                            {/* Location & Map Metrics Row */}
-                            {act.location && (
-                              <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] sm:text-xs">
-                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
-                                  <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                  <span className="truncate max-w-[200px] sm:max-w-none">{act.location}</span>
+                            {/* Activity Card */}
+                            <div
+                              className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all space-y-2.5 sm:space-y-3 ${
+                                isCompleted
+                                  ? "bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/50"
+                                  : "bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 shadow-sm hover:border-cyan-300 dark:hover:border-cyan-700"
+                              }`}
+                            >
+                              {/* Card Header Row */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2 sm:pb-3">
+                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                  {/* Time Badge */}
+                                  <span className="font-extrabold text-[10px] sm:text-xs text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/80 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border border-cyan-200 dark:border-cyan-800 flex items-center gap-1">
+                                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                    {act.time}
+                                    {act.endTime ? ` - ${act.endTime}` : ""}
+                                  </span>
+
+                                  {/* Category Badge */}
+                                  <span
+                                    className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border flex items-center gap-1 ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}
+                                  >
+                                    <CategoryIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                    {catInfo.label}
+                                  </span>
+
+                                  {/* Reminder Badge */}
+                                  {act.reminder && act.reminder !== "none" && (
+                                    <span className="text-[9px] sm:text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                      <Bell className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {act.reminder}
+                                    </span>
+                                  )}
+
+                                  {/* Status Badge */}
+                                  <button
+                                    onClick={() => handleToggleStatus(act)}
+                                    className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-all ${
+                                      isCompleted
+                                        ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300"
+                                        : act.status === "In Progress"
+                                        ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300"
+                                        : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-300"
+                                    }`}
+                                  >
+                                    {act.status || "Upcoming"}
+                                  </button>
                                 </div>
 
-                                <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] text-slate-500 shrink-0">
-                                  {act.distanceFromPreviousKm && (
-                                    <span>
-                                      Dist: <b>{act.distanceFromPreviousKm} km</b>
-                                    </span>
-                                  )}
-                                  {act.travelTimeFromPreviousMinutes && (
-                                    <span>
-                                      Drive: <b>{act.travelTimeFromPreviousMinutes}m</b>
-                                    </span>
-                                  )}
+                                {/* Card Quick Actions */}
+                                <div className="flex items-center gap-1 self-end sm:self-auto">
+                                  {/* Time shift buttons */}
                                   <button
-                                    onClick={() => handleOpenGoogleMaps(act.location!)}
-                                    className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-bold hover:underline"
+                                    onClick={() => handleShiftTime(act, -15)}
+                                    title="Shift 15m earlier"
+                                    className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded transition-colors text-[9px] sm:text-[10px] font-bold"
                                   >
-                                    <ExternalLink className="w-2.5 h-2.5" /> Maps
+                                    -15m
+                                  </button>
+                                  <button
+                                    onClick={() => handleShiftTime(act, 15)}
+                                    title="Shift 15m later"
+                                    className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded transition-colors text-[9px] sm:text-[10px] font-bold"
+                                  >
+                                    +15m
+                                  </button>
+
+                                  {/* Move Up / Down */}
+                                  <button
+                                    onClick={() => handleMoveOrder(act.id, "up")}
+                                    title="Move Up"
+                                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded transition-colors"
+                                  >
+                                    <ArrowUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleMoveOrder(act.id, "down")}
+                                    title="Move Down"
+                                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded transition-colors"
+                                  >
+                                    <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </button>
+
+                                  {/* Duplicate */}
+                                  <button
+                                    onClick={() => handleDuplicate(act)}
+                                    title="Duplicate Activity"
+                                    className="p-1 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 rounded transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </button>
+
+                                  {/* Edit */}
+                                  <button
+                                    onClick={() => handleOpenEdit(act)}
+                                    title="Edit Activity"
+                                    className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded transition-colors"
+                                  >
+                                    <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                  </button>
+
+                                  {/* Delete */}
+                                  <button
+                                    onClick={() => handleDelete(act.id)}
+                                    title="Delete Activity"
+                                    className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                   </button>
                                 </div>
                               </div>
-                            )}
 
-                            {/* Footer Metrics Row: Assigned Travellers & Cost */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-0.5 text-[10px] sm:text-xs">
-                              {/* Assigned Travellers */}
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">Assigned:</span>
-                                {assignedTravellers.length > 0 ? (
-                                  <div className="flex items-center -space-x-1">
-                                    {assignedTravellers.map((trv) => (
-                                      <img
-                                        key={trv.id}
-                                        src={
-                                          trv.profilePhoto ||
-                                          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop"
-                                        }
-                                        alt={trv.fullName}
-                                        title={trv.fullName}
-                                        className="w-5 h-5 rounded-full object-cover border border-white dark:border-slate-800"
-                                      />
-                                    ))}
-                                    <span className="text-[9px] sm:text-[10px] text-slate-500 ml-1.5 font-medium">
-                                      ({assignedTravellers.length})
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-[10px] sm:text-[11px] text-slate-400 italic">All squad</span>
+                              {/* Title & Description */}
+                              <div>
+                                <h4
+                                  className={`text-sm sm:text-base font-bold text-slate-900 dark:text-white ${
+                                    isCompleted ? "line-through opacity-75" : ""
+                                  }`}
+                                >
+                                  {act.title}
+                                </h4>
+                                {act.description && (
+                                  <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                                    {act.description}
+                                  </p>
                                 )}
                               </div>
 
-                              {/* Estimated Cost */}
-                              {(act.estimatedCost || 0) > 0 && (
-                                <div className="flex items-center gap-1 text-slate-900 dark:text-white font-bold">
-                                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-normal">Est. Cost:</span>
-                                  <span className="text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs">
-                                    {trip.currency}
-                                    {act.estimatedCost?.toLocaleString()}
-                                  </span>
+                              {/* Location & Map Metrics Row */}
+                              {act.location && (
+                                <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] sm:text-xs">
+                                  <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                    <span className="truncate max-w-[200px] sm:max-w-none">{act.location}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] text-slate-500 shrink-0">
+                                    {act.distanceFromPreviousKm && (
+                                      <span>
+                                        Dist: <b>{act.distanceFromPreviousKm} km</b>
+                                      </span>
+                                    )}
+                                    {act.travelTimeFromPreviousMinutes && (
+                                      <span>
+                                        Drive: <b>{act.travelTimeFromPreviousMinutes}m</b>
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => handleOpenGoogleMaps(act.location!)}
+                                      className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-bold hover:underline"
+                                    >
+                                      <ExternalLink className="w-2.5 h-2.5" /> Maps
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Footer Metrics Row: Assigned Travellers & Cost */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-0.5 text-[10px] sm:text-xs">
+                                {/* Assigned Travellers */}
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">Assigned:</span>
+                                  {assignedTravellers.length > 0 ? (
+                                    <div className="flex items-center -space-x-1">
+                                      {assignedTravellers.map((trv) => (
+                                        <img
+                                          key={trv.id}
+                                          src={
+                                            trv.profilePhoto ||
+                                            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop"
+                                          }
+                                          alt={trv.fullName}
+                                          title={trv.fullName}
+                                          className="w-5 h-5 rounded-full object-cover border border-white dark:border-slate-800"
+                                        />
+                                      ))}
+                                      <span className="text-[9px] sm:text-[10px] text-slate-500 ml-1.5 font-medium">
+                                        ({assignedTravellers.length})
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] sm:text-[11px] text-slate-400 italic">All squad</span>
+                                  )}
+                                </div>
+
+                                {/* Estimated Cost */}
+                                {(act.estimatedCost || 0) > 0 && (
+                                  <div className="flex items-center gap-1 text-slate-900 dark:text-white font-bold">
+                                    <span className="text-[10px] sm:text-[11px] text-slate-400 font-normal">Est. Cost:</span>
+                                    <span className="text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs">
+                                      {trip.currency}
+                                      {act.estimatedCost?.toLocaleString()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Attachments & Notes */}
+                              {((act.attachments && act.attachments.length > 0) || act.notes) && (
+                                <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-xs">
+                                  {act.notes && (
+                                    <p className="text-[10px] sm:text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/60 italic">
+                                      📝 {act.notes}
+                                    </p>
+                                  )}
+
+                                  {act.attachments && act.attachments.length > 0 && (
+                                    <div className="flex items-center gap-1.5">
+                                      <Paperclip className="w-3 h-3 text-slate-400" />
+                                      {act.attachments.map((att) => (
+                                        <a
+                                          key={att.id}
+                                          href={att.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-[10px] sm:text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+                                        >
+                                          {att.name}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
-
-                            {/* Attachments & Notes */}
-                            {((act.attachments && act.attachments.length > 0) || act.notes) && (
-                              <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-xs">
-                                {act.notes && (
-                                  <p className="text-[10px] sm:text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/60 italic">
-                                    📝 {act.notes}
-                                  </p>
-                                )}
-
-                                {act.attachments && act.attachments.length > 0 && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Paperclip className="w-3 h-3 text-slate-400" />
-                                    {act.attachments.map((att) => (
-                                      <a
-                                        key={att.id}
-                                        href={att.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-[10px] sm:text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
-                                      >
-                                        {att.name}
-                                      </a>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      );
+                        );
+                      } else {
+                        // Render Journey Segment
+                        const seg = item as TransportSegment;
+                        return (
+                          <div key={seg.id} className="relative pl-4 sm:pl-8 group">
+                            <div className="absolute -left-[19px] sm:-left-[39px] top-1 sm:top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-indigo-300 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
+                              <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            </div>
+                            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 shadow-sm">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                  <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                                    <Car className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                      <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                        {seg.transportType} Segment
+                                      </span>
+                                      <span className="text-slate-300 dark:text-slate-700 text-[10px]">•</span>
+                                      <span className="text-[10px] font-bold text-slate-500">
+                                        {seg.departure.split(",")[1] || seg.departure}
+                                      </span>
+                                      {seg.status && (
+                                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                          seg.status === "Confirmed" ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" : "bg-amber-50 dark:bg-amber-950/40 text-amber-600"
+                                        }`}>
+                                          {seg.status}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <h4 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+                                      {seg.from} → {seg.to}
+                                    </h4>
+                                    {seg.operator && (
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                                          Operator:
+                                        </span>
+                                        <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300">
+                                          {seg.operator}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
+                                  <div className="text-right">
+                                    <div className="text-xs font-black text-slate-900 dark:text-white">
+                                      {seg.duration}
+                                    </div>
+                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
+                                      {seg.distanceKm} KM
+                                    </div>
+                                  </div>
+                                  {seg.fare > 0 && (
+                                    <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                                      {trip.currency}{seg.fare.toLocaleString()}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
                     })}
                   </div>
                 )}
@@ -1118,57 +1326,97 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
 
           {/* Daily Schedule List */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4">
-            {(groupedTimeline[selectedDay === "all" ? allDayKeys[0] : selectedDay] || []).map((act) => {
-              const catInfo = getCategoryInfo(act.category);
-              const CategoryIcon = catInfo.icon;
+            {(groupedTimeline[selectedDay === "all" ? allDayKeys[0] : selectedDay] || []).map((item) => {
+              const isActivity = 'title' in item && 'category' in item;
+              
+              if (isActivity) {
+                const act = item as TimelineActivity;
+                const catInfo = getCategoryInfo(act.category);
+                const CategoryIcon = catInfo.icon;
 
-              return (
-                <div
-                  key={act.id}
-                  className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
-                >
-                  <div className="flex items-start gap-2.5 sm:gap-3">
-                    <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border flex items-center justify-center shrink-0 ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}
-                    >
-                      <CategoryIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <span className="font-extrabold text-[10px] sm:text-xs text-cyan-600 dark:text-cyan-400">
-                          {act.time}
-                        </span>
-                        <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                          {act.category}
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base mt-0.5">
-                        {act.title}
-                      </h4>
-                      <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
-                        {act.description || "No description"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 self-end sm:self-auto">
-                    {act.location && (
-                      <button
-                        onClick={() => handleOpenGoogleMaps(act.location!)}
-                        className="flex items-center gap-0.5 text-[11px] sm:text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline"
+                return (
+                  <div
+                    key={act.id}
+                    className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+                  >
+                    <div className="flex items-start gap-2.5 sm:gap-3">
+                      <div
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border flex items-center justify-center shrink-0 ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}
                       >
-                        <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Map
+                        <CategoryIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="font-extrabold text-[10px] sm:text-xs text-cyan-600 dark:text-cyan-400">
+                            {act.time}
+                          </span>
+                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {act.category}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base mt-0.5">
+                          {act.title}
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+                          {act.description || "No description"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 self-end sm:self-auto">
+                      {act.location && (
+                        <button
+                          onClick={() => handleOpenGoogleMaps(act.location!)}
+                          className="flex items-center gap-0.5 text-[11px] sm:text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline"
+                        >
+                          <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Map
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleOpenEdit(act)}
+                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200"
+                      >
+                        Edit
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleOpenEdit(act)}
-                      className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200"
-                    >
-                      Edit
-                    </button>
+                    </div>
                   </div>
-                </div>
-              );
+                );
+              } else {
+                const seg = item as TransportSegment;
+                return (
+                  <div
+                    key={seg.id}
+                    className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+                  >
+                    <div className="flex items-start gap-2.5 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center shrink-0">
+                        <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="font-extrabold text-[10px] sm:text-xs text-indigo-600">
+                            {seg.departure.split(',')[1] || seg.departure}
+                          </span>
+                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                            {seg.transportType}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base mt-0.5">
+                          {seg.from} → {seg.to}
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+                          {seg.operator ? `${seg.operator} • ` : ""}{seg.distanceKm} KM • {seg.duration}
+                        </p>
+                      </div>
+                    </div>
+                    {seg.fare > 0 && (
+                      <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-black text-indigo-600 dark:text-indigo-400 self-end sm:self-auto">
+                        {trip.currency}{seg.fare.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
             })}
           </div>
         </div>
@@ -1190,22 +1438,41 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                 </div>
 
                 <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                  {dayActs.map((act) => {
-                    const catInfo = getCategoryInfo(act.category);
-                    return (
-                      <div
-                        key={act.id}
-                        className="p-2 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-[10px] sm:text-xs space-y-0.5 sm:space-y-1"
-                      >
-                        <div className="flex items-center justify-between font-bold">
-                          <span className="text-cyan-600 dark:text-cyan-400">{act.time}</span>
-                          <span className={`text-[8px] sm:text-[9px] px-1 py-0.5 rounded border ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}>
-                            {act.category}
-                          </span>
+                  {dayActs.map((item) => {
+                    if ('title' in item) {
+                      const act = item as TimelineActivity;
+                      const catInfo = getCategoryInfo(act.category);
+                      return (
+                        <div
+                          key={act.id}
+                          className="p-2 rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-[10px] sm:text-xs space-y-0.5 sm:space-y-1"
+                        >
+                          <div className="flex items-center justify-between font-bold">
+                            <span className="text-cyan-600 dark:text-cyan-400">{act.time}</span>
+                            <span className={`text-[8px] sm:text-[9px] px-1 py-0.5 rounded border ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}>
+                              {act.category}
+                            </span>
+                          </div>
+                          <p className="font-bold text-slate-900 dark:text-white text-[10px] sm:text-xs">{act.title}</p>
                         </div>
-                        <p className="font-bold text-slate-900 dark:text-white text-[10px] sm:text-xs">{act.title}</p>
-                      </div>
-                    );
+                      );
+                    } else {
+                      const seg = item as TransportSegment;
+                      return (
+                        <div
+                          key={seg.id}
+                          className="p-2 rounded-lg sm:rounded-xl bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 text-[10px] sm:text-xs space-y-0.5 sm:space-y-1"
+                        >
+                          <div className="flex items-center justify-between font-bold">
+                            <span className="text-indigo-600">{seg.departure.split(',')[1] || seg.departure}</span>
+                            <span className="text-[8px] px-1 py-0.5 rounded border border-indigo-200 bg-indigo-100 text-indigo-700">
+                              Transport
+                            </span>
+                          </div>
+                          <p className="font-bold text-slate-900 dark:text-white text-[10px] sm:text-xs truncate">{seg.from} → {seg.to}</p>
+                        </div>
+                      );
+                    }
                   })}
                 </div>
               </div>
@@ -1229,52 +1496,90 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {Object.entries(groupedTimeline).flatMap(([dk, acts]) =>
-                  acts.map((act) => {
-                    const catInfo = getCategoryInfo(act.category);
+                {Object.entries(groupedTimeline).flatMap(([dk, items]: [string, (TimelineActivity | TransportSegment)[]]) =>
+                  items.map((item) => {
+                    const isActivity = 'title' in item && 'category' in item;
+                    
+                    if (isActivity) {
+                      const act = item as TimelineActivity;
+                      const catInfo = getCategoryInfo(act.category);
 
-                    return (
-                      <tr key={act.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="p-2 sm:p-3.5 whitespace-nowrap">
-                          <span className="font-bold text-slate-900 dark:text-white block">{dk}</span>
-                          <span className="text-[10px] sm:text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold">{act.time}</span>
-                        </td>
-                        <td className="p-2 sm:p-3.5">
-                          <p className="font-bold text-slate-900 dark:text-white">{act.title}</p>
-                          {act.description && <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">{act.description}</p>}
-                        </td>
-                        <td className="p-2 sm:p-3.5 whitespace-nowrap">
-                          <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}>
-                            {catInfo.label}
-                          </span>
-                        </td>
-                        <td className="p-2 sm:p-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                          {act.location || "-"}
-                        </td>
-                        <td className="p-2 sm:p-3.5 whitespace-nowrap font-bold text-slate-900 dark:text-white">
-                          {act.estimatedCost ? `${trip.currency}${act.estimatedCost.toLocaleString()}` : "-"}
-                        </td>
-                        <td className="p-2 sm:p-3.5 whitespace-nowrap">
-                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {act.status || "Upcoming"}
-                          </span>
-                        </td>
-                        <td className="p-3.5 whitespace-nowrap text-right">
-                          <button
-                            onClick={() => handleOpenEdit(act)}
-                            className="p-1 text-slate-400 hover:text-cyan-600 mr-1"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(act.id)}
-                            className="p-1 text-slate-400 hover:text-rose-600"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
+                      return (
+                        <tr key={act.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap">
+                            <span className="font-bold text-slate-900 dark:text-white block">{dk}</span>
+                            <span className="text-[10px] sm:text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold">{act.time}</span>
+                          </td>
+                          <td className="p-2 sm:p-3.5">
+                            <p className="font-bold text-slate-900 dark:text-white">{act.title}</p>
+                            {act.description && <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">{act.description}</p>}
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap">
+                            <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border ${catInfo.bgColor} ${catInfo.color} ${catInfo.borderColor}`}>
+                              {catInfo.label}
+                            </span>
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                            {act.location || "-"}
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                            {act.estimatedCost ? `${trip.currency}${act.estimatedCost.toLocaleString()}` : "-"}
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              {act.status || "Upcoming"}
+                            </span>
+                          </td>
+                          <td className="p-3.5 whitespace-nowrap text-right">
+                            <button
+                              onClick={() => handleOpenEdit(act)}
+                              className="p-1 text-slate-400 hover:text-cyan-600 mr-1"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(act.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    } else {
+                      const seg = item as TransportSegment;
+                      return (
+                        <tr key={seg.id} className="hover:bg-indigo-50/40 dark:hover:bg-indigo-900/20 transition-colors bg-indigo-50/20 dark:bg-indigo-950/10">
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap">
+                            <span className="font-bold text-indigo-900 dark:text-indigo-300 block">{dk}</span>
+                            <span className="text-[10px] sm:text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">{seg.departure.split(',')[1] || seg.departure}</span>
+                          </td>
+                          <td className="p-2 sm:p-3.5">
+                            <p className="font-bold text-slate-900 dark:text-white">{seg.from} → {seg.to}</p>
+                            <p className="text-[10px] sm:text-[11px] text-slate-500">{seg.transportType} Journey</p>
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border border-indigo-200 bg-indigo-50 text-indigo-600">
+                              Transport
+                            </span>
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                            -
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                            -
+                          </td>
+                          <td className="p-2 sm:p-3.5 whitespace-nowrap">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                              Transit
+                            </span>
+                          </td>
+                          <td className="p-3.5 whitespace-nowrap text-right">
+                            <span className="text-[10px] text-slate-400 italic">Segment</span>
+                          </td>
+                        </tr>
+                      );
+                    }
                   })
                 )}
               </tbody>
@@ -1575,6 +1880,61 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
           </motion.div>
         </div>
       )}
+
+      {/* Global Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white border-emerald-500"
+                : "bg-rose-600 text-white border-rose-500"
+            }`}
+          >
+            {toast.type === "success" ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+            <span className="text-sm font-bold">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Confirmation Modal for Deletion */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3 text-rose-600">
+                <Trash2 className="w-6 h-6" />
+                <h3 className="text-lg font-black">Delete Activity?</h3>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                Are you sure you want to remove this activity? This will also delete any reminders associated with it.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20"
+                >
+                  Delete Now
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

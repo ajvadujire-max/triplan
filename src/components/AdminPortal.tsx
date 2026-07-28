@@ -39,13 +39,15 @@ export const AdminPortal: React.FC = () => {
       if (user) {
         setIsCheckingSetup(true); // Prevent flashing
         try {
-          const adminDocRef = doc(db, "admins", user.uid);
-          let adminDoc = await getDoc(adminDocRef);
+          // Check users collection first
+          let userDoc = await getDoc(doc(db, "users", user.uid));
+          let adminDoc = await getDoc(doc(db, "admins", user.uid));
           
-          if (!adminDoc.exists()) {
+          if (!userDoc.exists() && !adminDoc.exists()) {
             const isSuper = user.email === 'ajvadujire@gmail.com';
             const role = isSuper ? "super_admin" : "user";
             const newAdminData = {
+              uid: user.uid,
               id: user.uid,
               name: user.displayName || user.email?.split('@')[0] || "Unknown",
               email: user.email,
@@ -61,19 +63,30 @@ export const AdminPortal: React.FC = () => {
                 reports: true,
                 settings: true
               } : {},
-              status: "Active",
+              status: "active",
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString(),
-              organizationId: `personal_${user.uid}`
+              organizationId: `personal_${user.uid}`,
+              organization: isSuper ? "System Management" : "Personal",
+              profilePhoto: user.photoURL || ""
             };
-            await setDoc(adminDocRef, newAdminData);
-            adminDoc = await getDoc(adminDocRef);
+            await setDoc(doc(db, "users", user.uid), newAdminData);
+            await setDoc(doc(db, "admins", user.uid), newAdminData);
+            userDoc = await getDoc(doc(db, "users", user.uid));
           } else {
-            await setDoc(adminDocRef, { lastLogin: new Date().toISOString() }, { merge: true });
+            // Update last login
+            if (userDoc.exists()) {
+              await setDoc(doc(db, "users", user.uid), { lastLogin: new Date().toISOString() }, { merge: true });
+            }
+            if (adminDoc.exists()) {
+              await setDoc(doc(db, "admins", user.uid), { lastLogin: new Date().toISOString() }, { merge: true });
+            }
           }
 
-          if (adminDoc.exists()) {
-            const data = adminDoc.data();
+          const finalDoc = userDoc.exists() ? userDoc : adminDoc;
+
+          if (finalDoc.exists()) {
+            const data = finalDoc.data();
             if (data.role === "super_admin" || data.role === "admin" || data.role === "Admin") {
               navigate("/admin-portal/dashboard");
             } else {

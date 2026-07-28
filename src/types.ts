@@ -86,6 +86,8 @@ export interface TransportSegment {
   to: string;
   departure: string; // ISO datetime or formatted
   arrival: string;   // ISO datetime or formatted
+  departureDateTime?: string; // ISO datetime string for sorting/filtering
+  arrivalDateTime?: string;   // ISO datetime string for sorting/filtering
   distanceKm: number;
   duration: string;  // e.g., "3h 45m"
   fare: number;
@@ -256,6 +258,8 @@ export interface TimelineActivity {
   tripId: string;
   time: string;
   endTime?: string;
+  activityDateTime?: string; // ISO datetime string
+  activityEndDateTime?: string; // ISO datetime string
   title: string;
   description: string;
   category: ActivityCategory;

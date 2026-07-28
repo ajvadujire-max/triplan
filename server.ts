@@ -33,75 +33,53 @@ app.get("/api/health", (req, res) => {
 // AI Travel Insights Endpoint
 app.post("/api/ai-insights", async (req, res) => {
   try {
-    const { trip } = req.body;
-    if (!trip) {
-      return res.status(400).json({ error: "Trip data is required" });
+    const { trip, prompt: userPrompt } = req.body;
+    if (!trip && !userPrompt) {
+      return res.status(400).json({ error: "Trip data or prompt is required" });
     }
 
     if (!aiClient) {
       // Return smart fallback insights if API key is not present
-      return res.json({
-        cheaperRoutes: [
-          `Consider taking local express trains or overnight buses for segment '${trip.destination}' to save up to 25% on transport.`,
-          `Booking flights 3-4 weeks in advance usually lowers airfare costs significantly for ${trip.destination}.`
-        ],
-        predictedFuelCost: trip.totalBudget ? Math.round(trip.totalBudget * 0.18) : 2500,
-        predictedTotalCost: trip.totalBudget ? Math.round(trip.totalBudget * 0.92) : 22000,
-        budgetWarning: trip.totalSpent > trip.totalBudget ? "CRITICAL: Current spending exceeds your total trip budget!" : null,
-        hotelSuggestions: [
-          `Boutique Stays & Heritage Hotels near ${trip.destination} city center`,
-          `Eco-resorts with group discounts`
-        ],
-        restaurantSuggestions: [
-          `Authentic local street food markets in ${trip.destination}`,
-          `Top-rated family diners with local culinary specialties`
-        ],
-        travelInsights: [
-          `Best time for sightseeing in ${trip.destination} is early morning to avoid peak traffic.`,
-          `Keep digital copies of all traveler documents in your TripPro Document Vault.`
-        ]
-      });
+      const fallbackText = userPrompt?.includes("budget") 
+        ? "Your spending seems to be on track, but keep an eye on food and miscellaneous costs. Consider using local transport to save about 15%."
+        : userPrompt?.includes("itinerary")
+        ? "Day 1: City center exploration. Day 2: Nature trail and scenic views. Day 3: Local markets and culinary tour."
+        : "Travel Hack: Always keep a digital copy of your documents. Use local SIM cards for better data rates.";
+      
+      return res.json({ text: fallbackText });
     }
 
-    const prompt = `
-You are a senior Travel Tech Expert and Financial Software Architect.
-Analyze the following trip parameters and provide structured recommendations in JSON format.
+    const systemInstruction = `
+You are a senior Travel Tech Expert and Financial Assistant.
+Analyze the trip data provided and respond to the specific user query.
+Keep responses professional, data-driven, and highly actionable.
+Focus on cost optimization, logical flow, and local expert knowledge.
+`;
 
-Trip Details:
-- Name: ${trip.name}
-- Destination: ${trip.destination}
-- Purpose: ${trip.purpose}
-- Currency: ${trip.currency || "₹"}
-- Total Budget: ${trip.totalBudget}
-- Total Spent: ${trip.totalSpent}
-- Number of Travellers: ${trip.travellers?.length || 1}
-- Transport Segments: ${JSON.stringify(trip.segments || [])}
-- Expenses Breakdown: ${JSON.stringify(trip.expenses || [])}
+    const fullPrompt = `
+Trip Context:
+- Name: ${trip?.name || "Untitled Trip"}
+- Destination: ${trip?.destination || "Unknown"}
+- Purpose: ${trip?.purpose || "Leisure"}
+- Budget: ${trip?.currency || "₹"}${trip?.totalBudget || 0}
+- Travellers: ${trip?.travellers?.length || 1}
+- Itinerary Items: ${trip?.timeline?.length || 0}
+- Expenses: ${trip?.expenses?.length || 0}
 
-Provide a JSON object strictly matching this schema:
-{
-  "cheaperRoutes": ["suggestion 1", "suggestion 2"],
-  "predictedFuelCost": 1200,
-  "predictedTotalCost": 15000,
-  "budgetWarning": "warning string or null",
-  "hotelSuggestions": ["hotel 1", "hotel 2"],
-  "restaurantSuggestions": ["restaurant 1", "restaurant 2"],
-  "travelInsights": ["insight 1", "insight 2"]
-}
-Only output valid JSON.
+User Query: ${userPrompt || "Analyze my trip and provide insights."}
+
+Provide a concise, high-impact response.
 `;
 
     const response = await aiClient.models.generateContent({
       model: "gemini-3.6-flash",
-      contents: prompt,
+      contents: fullPrompt,
       config: {
-        responseMimeType: "application/json",
+        systemInstruction,
       },
     });
 
-    const jsonText = response.text || "{}";
-    const data = JSON.parse(jsonText);
-    res.json(data);
+    res.json({ text: response.text });
   } catch (error: any) {
     console.error("Error generating AI insights:", error);
     res.status(500).json({

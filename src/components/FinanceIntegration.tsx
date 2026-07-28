@@ -33,6 +33,7 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 
 interface FinanceIntegrationProps {
@@ -593,6 +594,58 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
     return Array.from(new Set(filtered.map((e) => e.category)));
   }, [viewingHistoryAccountId, cashbookEntries]);
 
+  const handleResetCashbook = () => {
+    if (confirm("Are you sure you want to scrub ALL transaction history? This will clear the cashbook but preserve account balances.")) {
+      cashbookEntries.forEach(entry => onDeleteCashbookEntry(entry.id));
+      showToast("Cashbook has been reset successfully");
+    }
+  };
+
+  const [isManualEntryModalOpen, setIsManualEntryModalOpen] = useState(false);
+  const [manualEntryForm, setManualEntryForm] = useState({
+    description: "",
+    amount: "",
+    type: "debit" as "debit" | "credit",
+    category: "Other",
+    accountId: accounts.find(a => a.active ?? true)?.id || "",
+    date: new Date().toISOString().split("T")[0]
+  });
+
+  const handleManualEntrySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualEntryForm.description || !manualEntryForm.amount || !manualEntryForm.accountId) {
+      showToast("Please fill all required fields");
+      return;
+    }
+
+    const amt = Number(manualEntryForm.amount);
+    const acc = accounts.find(a => a.id === manualEntryForm.accountId);
+    if (!acc) return;
+
+    const newEntry: CashbookEntry = {
+      id: `cb_man_${Date.now()}`,
+      tripId: trip.id,
+      date: manualEntryForm.date,
+      description: manualEntryForm.description,
+      category: manualEntryForm.category,
+      type: manualEntryForm.type,
+      amount: amt,
+      accountId: manualEntryForm.accountId,
+      auditTrail: `Manual ${manualEntryForm.type} entry via TripPro.`
+    };
+
+    onSaveCashbookEntry(newEntry);
+    
+    // Update account balance
+    onSaveAccount({
+      ...acc,
+      balance: manualEntryForm.type === "credit" ? acc.balance + amt : acc.balance - amt
+    });
+
+    setIsManualEntryModalOpen(false);
+    showToast("Transaction recorded successfully");
+  };
+
   // Help render account icon beautifully
   const getAccountIconComponent = (iconName: string) => {
     const preset = PRESET_ICONS.find((i) => i.name === iconName);
@@ -636,7 +689,31 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 max-sm:w-full">
+        <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
+          <button
+            onClick={handleResetCashbook}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold px-4 py-2.5 rounded-xl border border-rose-100 dark:border-rose-900 transition-all"
+          >
+            <RotateCcw className="w-4 h-4" /> Reset Cashbook
+          </button>
+
+          <button
+            onClick={() => {
+              setManualEntryForm({
+                description: "",
+                amount: "",
+                type: "debit",
+                category: "Other",
+                accountId: accounts.find(a => a.active ?? true)?.id || "",
+                date: new Date().toISOString().split("T")[0]
+              });
+              setIsManualEntryModalOpen(true);
+            }}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add Transaction
+          </button>
+
           <button
             onClick={handleOpenAddAccount}
             className="hidden sm:flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all"
@@ -1730,6 +1807,73 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
         </div>
       )}
 
+      {/* Manual Entry Modal */}
+      {isManualEntryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 rounded-t-[24px] sm:rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-slate-900 dark:text-white">Add Manual Transaction</h3>
+              <button onClick={() => setIsManualEntryModalOpen(false)}>
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <form onSubmit={handleManualEntrySubmit} className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">Description</label>
+                <input
+                  type="text"
+                  required
+                  value={manualEntryForm.description}
+                  onChange={e => setManualEntryForm({ ...manualEntryForm, description: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs"
+                  placeholder="e.g. ATM Withdrawal, Personal Spending"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">Amount</label>
+                  <input
+                    type="number"
+                    required
+                    value={manualEntryForm.amount}
+                    onChange={e => setManualEntryForm({ ...manualEntryForm, amount: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">Type</label>
+                  <select
+                    value={manualEntryForm.type}
+                    onChange={e => setManualEntryForm({ ...manualEntryForm, type: e.target.value as "debit" | "credit" })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs"
+                  >
+                    <option value="debit">Debit (Spend)</option>
+                    <option value="credit">Credit (Receive)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">Account</label>
+                <select
+                  value={manualEntryForm.accountId}
+                  onChange={e => setManualEntryForm({ ...manualEntryForm, accountId: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs"
+                >
+                  {accounts.filter(a => a.active ?? true).map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({trip.currency}{a.balance})</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-black shadow-md mt-2"
+              >
+                Save Transaction
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 dark:bg-slate-950/95 text-white text-xs font-black py-2.5 px-4 rounded-xl shadow-xl border border-slate-800 flex items-center gap-2 animate-fadeIn">

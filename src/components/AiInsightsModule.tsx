@@ -50,7 +50,7 @@ Provide a concise, professional 3-bullet financial audit & smart budget warning.
       const res = await fetch("/api/ai-insights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: promptText }),
+        body: JSON.stringify({ prompt: promptText, trip }),
       });
 
       const data = await res.json();

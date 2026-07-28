@@ -153,6 +153,36 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
   const [toLoc, setToLoc] = useState("");
   const [departureTime, setDepartureTime] = useState("");
   const [arrivalTime, setArrivalTime] = useState("");
+  
+  // Helper to format Date to datetime-local string (YYYY-MM-DDTHH:mm)
+  const toDateTimeLocal = (date: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  // Helper to parse datetime-local string to Date
+  const fromDateTimeLocal = (s: string) => s ? new Date(s) : new Date();
+
+  // Handle overnight travel automatically
+  useEffect(() => {
+    if (departureTime && arrivalTime) {
+      const dep = new Date(departureTime);
+      const arr = new Date(arrivalTime);
+      
+      // If arrival is before departure on the same day (or strictly before)
+      // and we want to auto-handle "overnight", we check if time only is smaller
+      // However, datetime-local has full date. 
+      // If user JUST changed the time and it resulted in arr < dep, we might want to shift arr date.
+      if (arr < dep) {
+        // Auto increment arrival by 1 day
+        const nextDay = new Date(dep);
+        nextDay.setDate(dep.getDate() + 1);
+        nextDay.setHours(arr.getHours(), arr.getMinutes());
+        setArrivalTime(toDateTimeLocal(nextDay));
+      }
+    }
+  }, [departureTime, arrivalTime]);
+
   const [distKm, setDistKm] = useState(20);
   const [durationStr, setDurationStr] = useState("45m");
   const [fareAmt, setFareAmt] = useState(500);
@@ -378,8 +408,25 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
     setTransType("Taxi");
     setFromLoc("");
     setToLoc("");
-    setDepartureTime("");
-    setArrivalTime("");
+    
+    // Smart Prefill Logic (Requirement 2 & 3)
+    let defaultDep = new Date();
+    if (trip.segments.length > 0) {
+      // Use last segment's arrival (Requirement 3: Auto Continue Timeline)
+      const lastSeg = trip.segments[trip.segments.length - 1];
+      defaultDep = lastSeg.arrivalDateTime ? new Date(lastSeg.arrivalDateTime) : new Date(lastSeg.arrival);
+    } else if (trip.startDate) {
+      // Use trip start date (Requirement 2: Auto Date for first segment)
+      defaultDep = new Date(trip.startDate);
+      defaultDep.setHours(8, 0, 0, 0); // Default to 8 AM
+    }
+    
+    const defaultArr = new Date(defaultDep);
+    defaultArr.setHours(defaultDep.getHours() + 1);
+    
+    setDepartureTime(toDateTimeLocal(defaultDep));
+    setArrivalTime(toDateTimeLocal(defaultArr));
+    
     setDistKm(20);
     setDurationStr("45m");
     setFareAmt(500);
@@ -429,13 +476,18 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
       // Edit mode
       const updatedSegments = trip.segments.map((s) => {
         if (s.id === editingSegment.id) {
+          const depDate = new Date(departureTime);
+          const arrDate = new Date(arrivalTime);
+          
           return {
             ...s,
             transportType: transType,
             from: fromLoc,
             to: toLoc,
-            departure: departureTime || "2026-08-01 08:00 AM",
-            arrival: arrivalTime || "2026-08-01 09:00 AM",
+            departure: depDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+            arrival: arrDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+            departureDateTime: depDate.toISOString(),
+            arrivalDateTime: arrDate.toISOString(),
             distanceKm: Number(distKm) || 0,
             duration: durationStr || "1h",
             fare: Number(fareAmt) || 0,
@@ -465,13 +517,18 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
       setEditingSegment(null);
     } else {
       // Add Mode
+      const depDate = new Date(departureTime);
+      const arrDate = new Date(arrivalTime);
+
       const newSeg: TransportSegment = {
         id: `seg_${Date.now()}`,
         transportType: transType,
         from: fromLoc,
         to: toLoc,
-        departure: departureTime || "2026-08-01 08:00 AM",
-        arrival: arrivalTime || "2026-08-01 09:00 AM",
+        departure: depDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+        arrival: arrDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+        departureDateTime: depDate.toISOString(),
+        arrivalDateTime: arrDate.toISOString(),
         distanceKm: Number(distKm) || 0,
         duration: durationStr || "1h",
         fare: Number(fareAmt) || 0,

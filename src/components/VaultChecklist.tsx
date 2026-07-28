@@ -103,6 +103,13 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     rect: DOMRect;
   } | null>(null);
 
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // Drag and Drop (Reordering) state
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
@@ -274,6 +281,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     }
 
     setIsDocModalOpen(false);
+    showToast(docModalMode === "add" ? "Document added to vault" : "Document updated successfully");
   };
 
   const handleDeleteDoc = (id: string) => {
@@ -1473,6 +1481,24 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
           </motion.div>
         </div>
       )}
+      {/* Floating Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className={`fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white border-emerald-500"
+                : "bg-rose-600 text-white border-rose-500"
+            }`}
+          >
+            {toast.type === "success" ? <CheckCircle2 className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
+            <span className="text-sm font-bold">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

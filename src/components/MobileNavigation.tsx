@@ -60,14 +60,13 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
   const primaryTabs = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
-    { id: "journey", label: "Journey", icon: Luggage },
+    { id: "planner", label: "Planner", icon: Luggage },
     { id: "collections", label: "Collections", icon: IndianRupee },
     { id: "expenses", label: "Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers", icon: Users },
   ];
 
   const moreTabs = [
-    { id: "timeline", label: "Activity Timeline", icon: Clock, description: "Track itinerary schedule" },
     { id: "vault", label: "Vault & Packing", icon: Calendar, description: "Checklists & essential files" },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun, description: "Live climate & route views" },
     { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync" },

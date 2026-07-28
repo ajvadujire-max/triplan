@@ -6,6 +6,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Trip } from "../types";
+import { TripCountdownCard } from "./TripCountdownCard";
 import {
   MapPin,
   Calendar,
@@ -164,23 +165,8 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Budget Exceed Warning Bar */}
-      {budgetUsagePercent > 100 && (
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-center gap-2 sm:gap-3 shadow-xs">
-          <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 shrink-0 animate-bounce" />
-          <div className="text-[11px] sm:text-xs leading-relaxed">
-            <span className="font-bold">Budget Alert:</span> Total trip expenditure ({trip.currency}
-            {totalSpent.toLocaleString()}) has exceeded your allocated budget ({trip.currency}
-            {trip.totalBudget.toLocaleString()}) by{" "}
-            <span className="font-bold">
-              {trip.currency}
-              {(totalSpent - trip.totalBudget).toLocaleString()}
-            </span>{" "}
-            ({budgetUsagePercent}% used).
-          </div>
-        </div>
-      )}
+      
+      <TripCountdownCard trip={trip} onNavigateTab={onNavigateTab} />
 
       {/* Summary Stats Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
@@ -361,28 +347,28 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
           <button
-            onClick={() => onNavigateTab("journey")}
+            onClick={() => onNavigateTab("planner")}
             className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 hover:border-indigo-500 dark:hover:border-indigo-500 text-left group transition-all active:scale-95 cursor-pointer shadow-xs min-h-[85px] sm:min-h-[100px]"
           >
             <Luggage className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400 mb-1.5 sm:mb-2.5 group-hover:scale-110 transition-transform" />
             <p className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug">
-              Journey Builder
+              Trip Planner
             </p>
             <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              {trip.segments.length} Segments
+              Build Routes & Itinerary
             </p>
           </button>
 
           <button
-            onClick={() => onNavigateTab("timeline")}
+            onClick={() => onNavigateTab("vault")}
             className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 hover:border-cyan-500 dark:hover:border-cyan-500 text-left group transition-all active:scale-95 cursor-pointer shadow-xs min-h-[85px] sm:min-h-[100px]"
           >
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600 dark:text-cyan-400 mb-1.5 sm:mb-2.5 group-hover:scale-110 transition-transform" />
             <p className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug">
-              Activity Timeline
+              Vault & Checklist
             </p>
             <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              {trip.timeline.length} Activities
+              Essential Docs
             </p>
           </button>
 

@@ -11,6 +11,7 @@ import {
   PaymentMethod,
   CollectionStatus,
 } from "../types";
+import { ContactPhoneButton } from "./ContactOptionsBottomSheet";
 import {
   IndianRupee,
   Search,
@@ -40,8 +41,13 @@ import {
   Check,
   Percent,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  MessageCircle,
+  Bell,
+  ArrowLeft
 } from "lucide-react";
+import { motion } from "motion/react";
 
 interface CollectionsModuleProps {
   trip: Trip;
@@ -61,8 +67,9 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     "Name" | "Remaining Amount" | "Paid Amount" | "Recently Updated" | "Highest Due" | "Lowest Due"
   >("Highest Due");
 
-  // Selection for bulk actions
-  const [selectedTravellerIds, setSelectedTravellerIds] = useState<string[]>([]);
+  // Selection for bulk actions - REMOVED per user request
+  // const [selectedTravellerIds, setSelectedTravellerIds] = useState<string[]>([]);
+  const [selectedTravellerId, setSelectedTravellerId] = useState<string | null>(null);
 
   // Modals / Bottom Sheets state
   const [activePaymentTraveller, setActivePaymentTraveller] = useState<Traveller | null>(null);
@@ -295,56 +302,6 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     setEditingBudgetTraveller(null);
   };
 
-  // Bulk Actions
-  const toggleSelectAll = () => {
-    if (selectedTravellerIds.length === filteredTravellers.length) {
-      setSelectedTravellerIds([]);
-    } else {
-      setSelectedTravellerIds(filteredTravellers.map((item) => item.traveller.id));
-    }
-  };
-
-  const toggleSelectTraveller = (id: string) => {
-    setSelectedTravellerIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleBulkMarkPaid = () => {
-    if (selectedTravellerIds.length === 0) return;
-
-    const updatedTravellers = trip.travellers.map((trv) => {
-      if (selectedTravellerIds.includes(trv.id)) {
-        const stats = getTravellerStats(trv);
-        if (stats.remaining > 0) {
-          const autoPayment: PaymentRecord = {
-            id: `pm_bulk_${Date.now()}_${trv.id}`,
-            amount: stats.remaining,
-            method: "UPI",
-            date: new Date().toISOString().split("T")[0],
-            notes: "Bulk settlement",
-            createdAt: new Date().toISOString(),
-          };
-          const newHistory = [autoPayment, ...(trv.paymentHistory || [])];
-          return {
-            ...trv,
-            paidAmount: trv.allocatedBudget,
-            paymentHistory: newHistory,
-          };
-        }
-      }
-      return trv;
-    });
-
-    onUpdateTrip({
-      ...trip,
-      travellers: updatedTravellers,
-    });
-
-    setSelectedTravellerIds([]);
-    showToast(`Marked ${selectedTravellerIds.length} travellers as Paid!`);
-  };
-
   const handleSendReminder = (traveller: Traveller) => {
     const stats = getTravellerStats(traveller);
     const msg = `Hi ${traveller.fullName}, your pending collection for ${trip.name} is ₹${stats.remaining.toLocaleString("en-IN")}. Kindly transfer via UPI/Cash at your earliest. Thank you!`;
@@ -354,27 +311,6 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
       showToast(`Reminder copied for ${traveller.fullName}!`);
     } else {
       showToast(msg);
-    }
-  };
-
-  const handleBulkSendReminder = () => {
-    const selectedTravellers = trip.travellers.filter((t) =>
-      selectedTravellerIds.includes(t.id)
-    );
-    const pendingText = selectedTravellers
-      .map((t) => {
-        const stats = getTravellerStats(t);
-        return `• ${t.fullName}: ₹${stats.remaining.toLocaleString("en-IN")} pending`;
-      })
-      .join("\n");
-
-    const fullMessage = `📢 *Collection Reminder for ${trip.name}*\n\n${pendingText}\n\nPlease complete payment via UPI/Bank Transfer. Thank you!`;
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(fullMessage);
-      showToast(`Bulk reminder list copied for ${selectedTravellerIds.length} members!`);
-    } else {
-      showToast(`Reminder text prepared for ${selectedTravellerIds.length} members`);
     }
   };
 
@@ -426,6 +362,11 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     window.print();
   };
 
+  const selectedTraveller = useMemo(() => {
+    if (!selectedTravellerId) return null;
+    return trip.travellers.find(t => t.id === selectedTravellerId) || null;
+  }, [selectedTravellerId, trip.travellers]);
+
   // Get Method Icon helper
   const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
@@ -446,13 +387,29 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     <div className="space-y-6 pb-20">
       {/* Toast Notification */}
       {reminderToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl border border-indigo-500 flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[110] bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl border border-indigo-500 flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{reminderToast}</span>
         </div>
       )}
 
-      {/* Header Banner */}
+      {selectedTraveller ? (
+        <CollectionDetails
+          traveller={selectedTraveller}
+          trip={trip}
+          stats={getTravellerStats(selectedTraveller)}
+          onBack={() => setSelectedTravellerId(null)}
+          onUpdateTrip={onUpdateTrip}
+          openReceivePayment={openReceivePayment}
+          handleSendReminder={handleSendReminder}
+          setEditingBudgetTraveller={setEditingBudgetTraveller}
+          setActiveHistoryTraveller={setActiveHistoryTraveller}
+          handleDeletePaymentRecord={handleDeletePaymentRecord}
+          getMethodIcon={getMethodIcon}
+        />
+      ) : (
+        <>
+          {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-800/40 text-white shadow-xl">
         <div>
           <div className="flex items-center gap-2">
@@ -769,61 +726,10 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
         </div>
       </div>
 
-      {/* BULK ACTION BAR (SHOWN WHEN MEMBERS SELECTED) */}
-      {selectedTravellerIds.length > 0 && (
-        <div className="sticky top-16 z-30 bg-slate-900 text-white p-3 sm:p-4 rounded-2xl shadow-xl border border-indigo-500 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <span className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center font-black text-xs">
-              {selectedTravellerIds.length}
-            </span>
-            <span className="text-xs font-bold text-slate-200">
-              Travellers Selected
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={handleBulkMarkPaid}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Mark Paid</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleBulkSendReminder}
-              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Send Reminder</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedTravellerIds([])}
-              className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 3. TRAVELLER CARDS LIST */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-            <input
-              type="checkbox"
-              checked={
-                filteredTravellers.length > 0 &&
-                selectedTravellerIds.length === filteredTravellers.length
-              }
-              onChange={toggleSelectAll}
-              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-            />
             <span>
               Showing {filteredTravellers.length} of {trip.travellers.length}{" "}
               travellers
@@ -843,58 +749,29 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
         {filteredTravellers.length > 0 ? (
           filteredTravellers.map(({ traveller, stats }) => {
-            const isSelected = selectedTravellerIds.includes(traveller.id);
-            const percentPaid = stats.budget > 0
-              ? Math.min(100, Math.round((stats.paid / stats.budget) * 100))
-              : 0;
-
             return (
               <div
                 key={traveller.id}
-                className={`group relative bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border transition-all duration-200 shadow-xs hover:shadow-md ${
-                  isSelected
-                    ? "border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/20"
-                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                }`}
+                onClick={() => setSelectedTravellerId(traveller.id)}
+                className="group relative bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer active:scale-[0.99]"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Left: Avatar, Name, Role & Status */}
-                  <div className="flex items-start sm:items-center gap-3">
-                    {/* Checkbox for Bulk */}
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelectTraveller(traveller.id)}
-                      className="mt-1 sm:mt-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0"
-                    />
-
-                    {/* Avatar */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* Left: Avatar, Name, Role */}
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="relative shrink-0">
                       {traveller.profilePhoto ? (
                         <img
                           src={traveller.profilePhoto}
                           alt={traveller.fullName}
-                          className="w-11 h-11 rounded-2xl object-cover border border-slate-200 dark:border-slate-700"
+                          className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700"
                         />
                       ) : (
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-black text-sm flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-black text-sm flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
                           {traveller.fullName.substring(0, 2).toUpperCase()}
                         </div>
                       )}
-                      <span
-                        className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] font-black ${
-                          stats.status === "Paid"
-                            ? "bg-emerald-500 text-white"
-                            : stats.status === "Partial"
-                            ? "bg-amber-500 text-white"
-                            : "bg-rose-500 text-white"
-                        }`}
-                      >
-                        {stats.status === "Paid" ? "✓" : "!"}
-                      </span>
                     </div>
 
-                    {/* Name & Role */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
@@ -904,128 +781,58 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                           {traveller.role}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                        {traveller.phone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-slate-400" />
-                            {traveller.phone}
-                          </span>
-                        )}
-                        <span>{stats.history.length} Payments recorded</span>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <Phone className="w-3 h-3 text-slate-400" />
+                        <span className="truncate">{traveller.phone || "No phone"}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Middle: Financial Metrics (Budget, Paid, Remaining) */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-center sm:text-right shrink-0">
+                  {/* Middle: Key Financials */}
+                  <div className="hidden sm:grid grid-cols-3 gap-6 text-right shrink-0">
                     <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Budget
-                      </div>
-                      <div className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 mt-0.5">
-                        ₹{stats.budget.toLocaleString("en-IN")}
-                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Budget</div>
+                      <div className="text-sm font-black text-slate-900 dark:text-white">₹{stats.budget.toLocaleString("en-IN")}</div>
                     </div>
-
                     <div>
-                      <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        Paid
-                      </div>
-                      <div className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        ₹{stats.paid.toLocaleString("en-IN")}
-                      </div>
+                      <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Paid</div>
+                      <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">₹{stats.paid.toLocaleString("en-IN")}</div>
                     </div>
-
                     <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Balance
-                      </div>
-                      <div
-                        className={`text-xs sm:text-sm font-black mt-0.5 ${
-                          stats.remaining > 0
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-slate-400"
-                        }`}
-                      >
-                        ₹{stats.remaining.toLocaleString("en-IN")}
-                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Balance</div>
+                      <div className={`text-sm font-black ${stats.remaining > 0 ? "text-rose-500" : "text-slate-400"}`}>₹{stats.remaining.toLocaleString("en-IN")}</div>
                     </div>
                   </div>
 
-                  {/* Right: Status Badge & Primary Action Buttons */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-                    {/* Status Badge */}
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 shrink-0 ${
-                        stats.status === "Paid"
-                          ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
-                          : stats.status === "Partial"
-                          ? "bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
-                          : "bg-rose-100 text-rose-900 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
-                      }`}
-                    >
-                      <span>{stats.status === "Paid" ? "🟢 Paid" : stats.status === "Partial" ? "🟡 Partial" : "🔴 Unpaid"}</span>
-                    </span>
-
-                    {/* Quick Buttons */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => openReceivePayment(traveller)}
-                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1 shrink-0"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Receive Payment</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveHistoryTraveller(traveller)}
-                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
-                        title="Payment History"
-                      >
-                        <History className="w-4 h-4 text-slate-500" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSendReminder(traveller)}
-                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
-                        title="Copy Payment Reminder"
-                      >
-                        <Send className="w-4 h-4 text-slate-500" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setEditingBudgetTraveller(traveller)}
-                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
-                        title="Edit Budget"
-                      >
-                        <Edit2 className="w-4 h-4 text-slate-500" />
-                      </button>
+                  {/* Right: Status & Arrow */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="hidden xs:block">
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                        stats.status === "Paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" :
+                        stats.status === "Partial" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" :
+                        "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+                      }`}>
+                        {stats.status}
+                      </span>
                     </div>
+                    <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 transition-colors" />
                   </div>
                 </div>
-
-                {/* Individual Progress Bar */}
-                <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center gap-3">
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden flex-1">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        stats.status === "Paid"
-                          ? "bg-emerald-500"
-                          : stats.status === "Partial"
-                          ? "bg-amber-500"
-                          : "bg-slate-300 dark:bg-slate-700"
-                      }`}
-                      style={{ width: `${percentPaid}%` }}
-                    />
-                  </div>
-                  <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 shrink-0">
-                    {percentPaid}%
-                  </span>
+                
+                {/* Mobile only financials */}
+                <div className="grid xs:hidden grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                   <div>
+                      <div className="text-[9px] font-bold text-slate-400 uppercase">Budget</div>
+                      <div className="text-xs font-extrabold text-slate-900 dark:text-white">₹{stats.budget.toLocaleString("en-IN")}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-bold text-emerald-600 uppercase">Paid</div>
+                      <div className="text-xs font-extrabold text-emerald-600">₹{stats.paid.toLocaleString("en-IN")}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-bold text-slate-400 uppercase">Balance</div>
+                      <div className={`text-xs font-extrabold ${stats.remaining > 0 ? "text-rose-500" : "text-slate-400"}`}>₹{stats.remaining.toLocaleString("en-IN")}</div>
+                    </div>
                 </div>
               </div>
             );
@@ -1042,6 +849,8 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
           </div>
         )}
       </div>
+    </>
+  )}
 
       {/* 4. RECEIVE PAYMENT BOTTOM SHEET / MODAL */}
       {activePaymentTraveller && (
@@ -1409,5 +1218,309 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
         </div>
       )}
     </div>
+  );
+};
+
+interface CollectionDetailsProps {
+  traveller: Traveller;
+  trip: Trip;
+  stats: {
+    budget: number;
+    paid: number;
+    remaining: number;
+    status: CollectionStatus;
+    history: PaymentRecord[];
+  };
+  onBack: () => void;
+  onUpdateTrip: (updatedTrip: Trip) => void;
+  openReceivePayment: (traveller: Traveller, prefillAmount?: number) => void;
+  handleSendReminder: (traveller: Traveller) => void;
+  setEditingBudgetTraveller: (traveller: Traveller | null) => void;
+  setActiveHistoryTraveller: (traveller: Traveller | null) => void;
+  handleDeletePaymentRecord: (travellerId: string, recordId: string) => void;
+  getMethodIcon: (method: PaymentMethod) => React.ReactNode;
+}
+
+const CollectionDetails: React.FC<CollectionDetailsProps> = ({
+  traveller,
+  trip,
+  stats,
+  onBack,
+  onUpdateTrip,
+  openReceivePayment,
+  handleSendReminder,
+  setEditingBudgetTraveller,
+  setActiveHistoryTraveller,
+  handleDeletePaymentRecord,
+  getMethodIcon,
+}) => {
+  const percentPaid = stats.budget > 0
+    ? Math.min(100, Math.round((stats.paid / stats.budget) * 100))
+    : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="space-y-6"
+    >
+      {/* Header with Back Button */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-500 transition-colors shadow-sm"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white">Collection Details</h2>
+          <p className="text-xs text-slate-500 font-medium">Viewing payment status for {traveller.fullName}</p>
+        </div>
+      </div>
+
+      {/* Traveller Profile Header Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <div className="relative">
+            {traveller.profilePhoto ? (
+              <img
+                src={traveller.profilePhoto}
+                alt={traveller.fullName}
+                className="w-24 h-24 rounded-[32px] object-cover border-4 border-white dark:border-slate-800 shadow-xl"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-[32px] bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-black text-3xl flex items-center justify-center border-4 border-white dark:border-slate-800 shadow-xl">
+                {traveller.fullName.substring(0, 2).toUpperCase()}
+              </div>
+            )}
+            <div className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full border-4 border-white dark:border-slate-900 flex items-center justify-center text-xs shadow-lg ${
+              stats.status === "Paid" ? "bg-emerald-500 text-white" :
+              stats.status === "Partial" ? "bg-amber-500 text-white" :
+              "bg-rose-500 text-white"
+            }`}>
+              {stats.status === "Paid" ? <Check className="w-4 h-4" /> : "!"}
+            </div>
+          </div>
+
+          <div className="flex-1 text-center sm:text-left">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white">{traveller.fullName}</h1>
+              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                {traveller.role}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                stats.status === "Paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" :
+                stats.status === "Partial" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" :
+                "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+              }`}>
+                {stats.status} Status
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-center sm:justify-start gap-4">
+              <ContactPhoneButton 
+                phone={traveller.phone} 
+                travellerName={traveller.fullName}
+                className="text-sm font-bold text-emerald-600 dark:text-emerald-400"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Summary and Balance */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Payment Summary Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-indigo-500" />
+                Payment Summary
+              </h3>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Overall Progress</span>
+                <span className="text-lg font-black text-emerald-500">{percentPaid}%</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Total Budget</span>
+                <span className="text-lg font-black text-slate-900 dark:text-white">₹{stats.budget.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                <span className="text-[10px] font-bold text-emerald-600 uppercase block mb-1">Total Paid</span>
+                <span className="text-lg font-black text-emerald-600">₹{stats.paid.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30">
+                <span className="text-[10px] font-bold text-rose-500 uppercase block mb-1">Balance</span>
+                <span className={`text-lg font-black ${stats.remaining > 0 ? "text-rose-500" : "text-slate-400"}`}>₹{stats.remaining.toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-4 rounded-full overflow-hidden p-1 border border-slate-200 dark:border-slate-700">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${percentPaid}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className={`h-full rounded-full ${
+                    percentPaid === 100 ? "bg-emerald-500" : "bg-indigo-500"
+                  }`}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                <span>START</span>
+                <span>{percentPaid}% COLLECTED</span>
+                <span>TARGET</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment History Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-6">
+              <History className="w-5 h-5 text-indigo-500" />
+              Payment History
+            </h3>
+
+            {stats.history.length > 0 ? (
+              <div className="space-y-4">
+                {stats.history.map((record) => (
+                  <div
+                    key={record.id}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
+                        {getMethodIcon(record.method)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 dark:text-white">₹{record.amount.toLocaleString("en-IN")}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                            {record.method}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                        {record.notes && (
+                          <p className="text-[10px] text-slate-400 italic mt-1 max-w-[150px] truncate">{record.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button
+                        onClick={() => handleDeletePaymentRecord(traveller.id, record.id)}
+                        className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 hover:bg-rose-100 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                <FileText className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+                <p className="text-sm text-slate-500 font-medium">No payments recorded yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Outstanding and Quick Actions */}
+        <div className="space-y-6">
+          {/* Outstanding Balance Highlight */}
+          {stats.remaining > 0 && (
+            <div className="bg-rose-500 rounded-3xl p-6 text-white shadow-xl shadow-rose-500/20">
+              <div className="flex items-center justify-between mb-4">
+                <AlertCircle className="w-6 h-6 text-white/80" />
+                <span className="px-3 py-1 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider border border-white/20">
+                  DUE NOW
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-white/70 uppercase block">Pending Balance</span>
+              <h2 className="text-3xl font-black mb-4">₹{stats.remaining.toLocaleString("en-IN")}</h2>
+              <button
+                onClick={() => openReceivePayment(traveller)}
+                className="w-full py-3 rounded-2xl bg-white text-rose-600 font-black text-sm shadow-lg hover:bg-rose-50 transition-colors flex items-center justify-center gap-2"
+              >
+                <IndianRupee className="w-4 h-4" />
+                Receive Now
+              </button>
+            </div>
+          )}
+
+          {/* Quick Actions Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 className="font-black text-slate-900 dark:text-white mb-4">Quick Actions</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => openReceivePayment(traveller)}
+                className="w-full flex items-center justify-between p-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <Plus className="w-5 h-5" />
+                  <span className="font-bold text-sm">Receive Payment</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <button
+                onClick={() => handleSendReminder(traveller)}
+                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all border border-slate-100 dark:border-slate-800 group"
+              >
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5" />
+                  <span className="font-bold text-sm">Send Reminder</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <button
+                onClick={() => setEditingBudgetTraveller(traveller)}
+                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all border border-slate-100 dark:border-slate-800 group"
+              >
+                <div className="flex items-center gap-3">
+                  <Edit2 className="w-5 h-5" />
+                  <span className="font-bold text-sm">Edit Collection</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-3">Communication</p>
+                <div className="grid grid-cols-2 gap-2">
+                   <button
+                    onClick={() => {
+                        const waUrl = `https://wa.me/${traveller.phone?.replace(/\D/g, "")}`;
+                        window.open(waUrl, "_blank");
+                    }}
+                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-600 hover:bg-emerald-100 transition-all"
+                  >
+                    <MessageCircle className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-black uppercase">WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                        window.location.href = `tel:${traveller.phone}`;
+                    }}
+                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 text-blue-600 hover:bg-blue-100 transition-all"
+                  >
+                    <Phone className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-black uppercase">Call</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 };

@@ -28,6 +28,7 @@ import { ExpensesModule } from "./components/ExpensesModule";
 import { JourneyBuilder } from "./components/JourneyBuilder";
 import { VaultChecklist } from "./components/VaultChecklist";
 import { ActivityTimeline } from "./components/ActivityTimeline";
+import { PlannerModule } from "./components/PlannerModule";
 import { WeatherMapsTimeline } from "./components/WeatherMapsTimeline";
 import { FinanceIntegration } from "./components/FinanceIntegration";
 import { AiInsightsModule } from "./components/AiInsightsModule";
@@ -59,7 +60,7 @@ function MainApp() {
   });
 
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "ai" | "ai_insights"
+    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "ai" | "ai_insights"
   >("dashboard");
 
   const [accounts, setAccounts] = useState<FinanceAccount[]>(() => {
@@ -175,8 +176,16 @@ function MainApp() {
     setIsAuthLoading(true);
     try {
       await googleSignIn();
-    } catch (err) {
-      console.error("Google login failed:", err);
+    } catch (err: any) {
+      if (
+        err?.code === "auth/popup-closed-by-user" ||
+        err?.code === "auth/cancelled-popup-request" ||
+        err?.code === "auth/popup-blocked"
+      ) {
+        console.warn("Google sign-in closed by user.");
+      } else {
+        console.error("Google login failed:", err);
+      }
     } finally {
       setIsAuthLoading(false);
     }
@@ -426,13 +435,18 @@ function MainApp() {
         {activeTab === "travellers" && (
           <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
         )}
+        
+        {activeTab === "planner" && (
+          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+        )}
 
+        {/* Fallbacks for internal navigation if any */}
         {activeTab === "journey" && (
-          <JourneyBuilder trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
         )}
 
         {activeTab === "timeline" && (
-          <ActivityTimeline trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
         )}
 
         {activeTab === "expenses" && (
@@ -441,6 +455,7 @@ function MainApp() {
             accounts={accounts}
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
+            onUpdateTrip={handleUpdateTrip}
           />
         )}
 
@@ -494,13 +509,17 @@ function MainApp() {
   );
 }
 
+import { ContactTravellerProvider } from "./components/ContactOptionsBottomSheet";
+
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<MainApp />} />
-      <Route path="/admin-portal" element={<AdminPortal />} />
-      <Route path="/admin-portal/dashboard" element={<AdminDashboard />} />
-      <Route path="/admin-portal/init" element={<InitSuperAdmin />} />
-    </Routes>
+    <ContactTravellerProvider>
+      <Routes>
+        <Route path="/" element={<MainApp />} />
+        <Route path="/admin-portal" element={<AdminPortal />} />
+        <Route path="/admin-portal/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-portal/init" element={<InitSuperAdmin />} />
+      </Routes>
+    </ContactTravellerProvider>
   );
 }
