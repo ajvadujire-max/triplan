@@ -49,7 +49,25 @@ export default function JoinTripByCode() {
           </button>
         </form>
         
-        <div className="mt-6 text-center">
+        <div className="mt-6">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-slate-500">Or</span>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => navigate("/admin/login")}
+            className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-bold text-lg hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+          >
+            Organizer Login
+          </button>
+        </div>
+
+        <div className="mt-8 text-center">
           <button onClick={() => navigate("/")} className="text-slate-500 hover:text-slate-700 font-medium text-sm transition-colors">
             Back to Home
           </button>
