@@ -6,27 +6,9 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "status": { "type": "string" },
+        "ownerId": { "type": "string" },
         "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" },
-        "createdBy": { "type": "string" }
-      }
-    },
-    "Admin": {
-      "title": "Admin",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string" },
-        "phone": { "type": "string" },
-        "organizationId": { "type": "string" },
-        "organizationName": { "type": "string" },
-        "role": { "type": "string" },
-        "status": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" },
-        "lastLogin": { "type": "string" }
+        "updatedAt": { "type": "string" }
       }
     },
     "User": {
@@ -34,7 +16,12 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "organizationId": { "type": "string" }
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "role": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string" }
       }
     },
     "Trip": {
@@ -42,10 +29,12 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "name": { "type": "string" },
+        "destination": { "type": "string" },
         "organizationId": { "type": "string" },
-        "createdBy": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "organizerId": { "type": "string" },
+        "inviteCode": { "type": "string" },
+        "createdAt": { "type": "string" }
       }
     },
     "Traveller": {
@@ -53,7 +42,9 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "organizationId": { "type": "string" }
+        "tripId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string" }
       }
     },
     "Expense": {
@@ -61,25 +52,74 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "organizationId": { "type": "string" }
+        "tripId": { "type": "string" },
+        "amount": { "type": "number" }
       }
     },
-    "Collection": {
-      "title": "Collection",
+    "Journey": {
+      "title": "Journey",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "organizationId": { "type": "string" }
+        "tripId": { "type": "string" }
+      }
+    },
+    "Budget": {
+      "title": "Budget",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tripId": { "type": "string" }
+      }
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tripId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "InviteLink": {
+      "title": "InviteLink",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tripId": { "type": "string" },
+        "code": { "type": "string" }
+      }
+    },
+    "Role": {
+      "title": "Role",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "Permission": {
+      "title": "Permission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roleId": { "type": "string" },
+        "action": { "type": "string" }
       }
     }
   },
   "firestore": {
     "/organizations/{organizationId}": { "schema": "Organization" },
-    "/admins/{adminId}": { "schema": "Admin" },
     "/users/{userId}": { "schema": "User" },
     "/trips/{tripId}": { "schema": "Trip" },
     "/travellers/{travellerId}": { "schema": "Traveller" },
     "/expenses/{expenseId}": { "schema": "Expense" },
-    "/collections/{paymentId}": { "schema": "Collection" }
+    "/journeys/{journeyId}": { "schema": "Journey" },
+    "/budgets/{budgetId}": { "schema": "Budget" },
+    "/joinRequests/{requestId}": { "schema": "JoinRequest" },
+    "/inviteLinks/{linkId}": { "schema": "InviteLink" },
+    "/roles/{roleId}": { "schema": "Role" },
+    "/permissions/{permissionId}": { "schema": "Permission" }
   }
 }

@@ -37,6 +37,7 @@ interface MobileNavigationProps {
   onSignIn: () => void;
   onSignOut: () => void;
   isAuthLoading?: boolean;
+  role?: "traveller" | "organizer" | "super_admin";
 }
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({
@@ -51,27 +52,32 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   user,
   onSignIn,
   onSignOut,
-  isAuthLoading = false
+  isAuthLoading = false,
+  role = "traveller",
 }) => {
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
   const [isTripSelectorOpen, setIsTripSelectorOpen] = useState(false);
 
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
 
-  const primaryTabs = [
+  const primaryTabsAll = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
-    { id: "collections", label: "Collections", icon: IndianRupee },
+    { id: "collections", label: "Collections", icon: IndianRupee, organizerOnly: true },
     { id: "expenses", label: "Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers", icon: Users },
   ];
 
-  const moreTabs = [
+  const primaryTabs = primaryTabsAll.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
+
+  const moreTabsAll = [
     { id: "vault", label: "Vault & Packing", icon: Calendar, description: "Checklists & essential files" },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun, description: "Live climate & route views" },
-    { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync" },
+    { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync", organizerOnly: true },
     { id: "ai_insights", label: "AI Smart Insights", icon: Sparkles, description: "Predictive fuel & schedules" },
   ];
+
+  const moreTabs = moreTabsAll.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
 
   const handleTabClick = (tabId: string) => {
     onSelectTab(tabId);

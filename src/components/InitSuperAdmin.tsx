@@ -21,13 +21,12 @@ export const InitSuperAdmin: React.FC = () => {
       
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       
-      const adminData = {
-        uid: cred.user.uid,
+      await setDoc(doc(db, "admins", cred.user.uid), {
         id: cred.user.uid,
         name: "Super Administrator",
         email: email,
         role: "super_admin",
-        status: "active",
+        status: "Active",
         permissions: {
           dashboard: true,
           trips: true,
@@ -40,13 +39,8 @@ export const InitSuperAdmin: React.FC = () => {
           settings: true
         },
         createdAt: new Date().toISOString(),
-        organizationId: "system",
-        organization: "System Management",
-        profilePhoto: ""
-      };
-
-      await setDoc(doc(db, "admins", cred.user.uid), adminData);
-      await setDoc(doc(db, "users", cred.user.uid), adminData);
+        organizationId: "system"
+      });
       
       setStatus("success");
       setMessage("Super Admin successfully created! Redirecting...");

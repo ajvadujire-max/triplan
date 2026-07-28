@@ -20,18 +20,13 @@ export const AdminDashboard: React.FC = () => {
 
   // Create Admin State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [createdAdminInfo, setCreatedAdminInfo] = useState<any>(null);
-  
   const [newAdmin, setNewAdmin] = useState({
     name: "",
     email: "",
     phone: "",
     organizationName: "",
     password: "",
-    confirmPassword: "",
-    status: "active",
-    role: "admin",
+    status: "Active",
     permissions: {
       dashboard: true,
       trips: true,
@@ -41,7 +36,7 @@ export const AdminDashboard: React.FC = () => {
       travellers: true,
       documents: true,
       reports: true,
-      settings: false
+      settings: true
     }
   });
   const [isCreating, setIsCreating] = useState(false);
@@ -92,12 +87,6 @@ export const AdminDashboard: React.FC = () => {
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (newAdmin.password !== newAdmin.confirmPassword) {
-      setCreateError("Passwords do not match");
-      return;
-    }
-
     setIsCreating(true);
     setCreateError("");
 
@@ -107,11 +96,10 @@ export const AdminDashboard: React.FC = () => {
       const secondaryAuth = getAuth(secondaryApp);
       
       const cred = await createUserWithEmailAndPassword(secondaryAuth, newAdmin.email, newAdmin.password);
-      const uid = cred.user.uid;
       
       const orgId = `org_${Date.now()}`;
       
-      // 1. Create organization
+      // Create organization
       await setDoc(doc(db, "organizations", orgId), {
         id: orgId,
         name: newAdmin.organizationName,
@@ -120,34 +108,18 @@ export const AdminDashboard: React.FC = () => {
         createdBy: auth.currentUser?.uid
       });
 
-      const adminDataToStore = {
-        uid: uid,
-        id: uid, // for legacy compatibility
+      // Create Admin
+      await setDoc(doc(db, "admins", cred.user.uid), {
+        id: cred.user.uid,
         name: newAdmin.name,
         email: newAdmin.email,
         phone: newAdmin.phone,
         organizationId: orgId,
-        organization: newAdmin.organizationName,
-        organizationName: newAdmin.organizationName, // for legacy compatibility
-        role: "admin",
-        status: "active",
+        organizationName: newAdmin.organizationName,
+        role: "Admin",
+        status: newAdmin.status,
         permissions: newAdmin.permissions,
-        profilePhoto: "",
         createdAt: new Date().toISOString()
-      };
-
-      // 2. Create Firestore document under users/{uid} (Requested)
-      await setDoc(doc(db, "users", uid), adminDataToStore);
-
-      // 3. Create Admin doc for legacy compatibility if needed
-      await setDoc(doc(db, "admins", uid), adminDataToStore);
-
-      // Store info for success modal
-      setCreatedAdminInfo({
-        email: newAdmin.email,
-        password: newAdmin.password,
-        organization: newAdmin.organizationName,
-        role: "Admin"
       });
 
       // Cleanup
@@ -155,29 +127,7 @@ export const AdminDashboard: React.FC = () => {
       await deleteApp(secondaryApp);
 
       setIsCreateModalOpen(false);
-      setShowSuccessModal(true);
-      
-      setNewAdmin({ 
-        name: "", 
-        email: "", 
-        phone: "", 
-        organizationName: "", 
-        password: "", 
-        confirmPassword: "",
-        status: "active",
-        role: "admin",
-        permissions: {
-          dashboard: true,
-          trips: true,
-          journey: true,
-          expenses: true,
-          budget: true,
-          travellers: true,
-          documents: true,
-          reports: true,
-          settings: false
-        }
-      });
+      setNewAdmin({ name: "", email: "", phone: "", organizationName: "", password: "", status: "Active" });
       
       // Refresh
       fetchAdminData();
@@ -473,32 +423,14 @@ export const AdminDashboard: React.FC = () => {
                 <input type="email" required value={newAdmin.email} onChange={e => setNewAdmin({...newAdmin, email: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Password</label>
-                  <input type="password" required minLength={6} value={newAdmin.password} onChange={e => setNewAdmin({...newAdmin, password: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Confirm Password</label>
-                  <input type="password" required minLength={6} value={newAdmin.confirmPassword} onChange={e => setNewAdmin({...newAdmin, confirmPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Temporary Password</label>
+                <input type="password" required minLength={6} value={newAdmin.password} onChange={e => setNewAdmin({...newAdmin, password: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
               </div>
 
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Organization Name</label>
-                  <input type="text" required value={newAdmin.organizationName} onChange={e => setNewAdmin({...newAdmin, organizationName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" placeholder="e.g. Fidians Tours" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Role</label>
-                  <select 
-                    value={newAdmin.role} 
-                    onChange={e => setNewAdmin({...newAdmin, role: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Organization Name</label>
+                <input type="text" required value={newAdmin.organizationName} onChange={e => setNewAdmin({...newAdmin, organizationName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" placeholder="e.g. Fidians Tours" />
               </div>
 
               <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -531,48 +463,6 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-      {/* Success Modal */}
-      {showSuccessModal && createdAdminInfo && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="p-8 text-center">
-              <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Plus className="w-10 h-10 text-emerald-500 rotate-45" />
-              </div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Admin Created Successfully</h2>
-              <p className="text-slate-500 dark:text-slate-400 mb-8">The administrator can now log in with the following credentials.</p>
-              
-              <div className="space-y-4 text-left bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Login Email</p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{createdAdminInfo.email}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Password</p>
-                  <p className="text-sm font-mono font-bold text-indigo-500">{createdAdminInfo.password}</p>
-                </div>
-                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Organization</p>
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{createdAdminInfo.organization}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assigned Role</p>
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{createdAdminInfo.role}</p>
-                  </div>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full mt-8 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl shadow-slate-900/20"
-              >
-                Close & Continue
-              </button>
-            </div>
           </div>
         </div>
       )}

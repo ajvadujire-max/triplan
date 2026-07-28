@@ -354,23 +354,78 @@ export interface GoogleFormConfig {
   createdAt: string;
 }
 
+export type AppRole = "traveller" | "organizer" | "super_admin";
+
+export interface Organization {
+  id: string;
+  name: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  role: AppRole;
+  organizationId?: string;
+  city?: string;
+  country?: string;
+  createdAt: string;
+}
+
+export interface InviteLink {
+  id: string;
+  tripId: string;
+  organizationId: string;
+  code: string; // Unique Trip ID like GOA8F3A
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface JoinRequest {
+  id: string;
+  tripId: string;
+  fullName: string;
+  mobileNumber: string;
+  email?: string;
+  age?: number;
+  gender?: string;
+  emergencyContact?: string;
+  profilePhoto?: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+}
+
 export interface Trip {
   id: string;
   name: string;
   destination: string;
-  purpose: TripPurpose;
+  type: string;
   startDate: string;
   endDate: string;
+  coverImage?: string;
+  organizerId: string;
+  organizationId: string;
+  expectedTravellers?: number;
+  expectedBudget?: number;
+  currency: string;
+  defaultExpenseSplit: "Equal" | "Manual" | "Percentage";
+  approvalRequired: boolean;
+  inviteCode: string;
+  createdAt: string;
+  
+  // Existing fields for compatibility
+  purpose: TripPurpose;
   color: string;
   coverPhoto: string;
   notes: string;
   status: TripStatus;
-  currency: string;
-  travelCategory: string; // e.g. "Road Trip", "International Flight", "Family Vacation"
-  
-  totalBudget: number; // Overall trip budget
-  
-  // Journey Summary Stats
+  travelCategory: string;
+  totalBudget: number;
+  totalSpent: number;
+  remainingBudget: number;
   totalDistanceKm: number;
   totalDuration: string;
   currentJourneyStatus: string;
@@ -387,10 +442,6 @@ export interface Trip {
   documents: DocumentItem[];
   checklist: ChecklistItem[];
   timeline: TimelineActivity[];
-
-  // Google Form integration
-  googleFormConfig?: GoogleFormConfig;
-  pendingRegistrations?: PendingTravellerRegistration[];
 }
 
 export interface AIInsightsResponse {

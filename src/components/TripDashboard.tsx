@@ -31,13 +31,16 @@ interface TripDashboardProps {
   trip: Trip;
   onEditTrip: () => void;
   onNavigateTab: (tab: string) => void;
+  role?: "traveller" | "organizer" | "super_admin";
 }
 
 export const TripDashboard: React.FC<TripDashboardProps> = ({
   trip,
   onEditTrip,
   onNavigateTab,
+  role = "traveller",
 }) => {
+  const isOrganizer = role === "organizer" || role === "super_admin";
   // Calculate total spent from trip expenses
   const totalSpent = trip.expenses.reduce((acc, exp) => acc + exp.amount, 0);
   const remainingBudget = trip.totalBudget - totalSpent;
@@ -148,13 +151,15 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <button
-              onClick={onEditTrip}
-              className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-[11px] sm:text-sm font-bold px-3 py-2 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl border border-white/10 dark:border-slate-700 shadow-sm active:scale-95 transition-all cursor-pointer min-h-[38px] sm:min-h-[48px]"
-            >
-              <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300" />
-              Manage Trip
-            </button>
+            {isOrganizer && (
+              <button
+                onClick={onEditTrip}
+                className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-[11px] sm:text-sm font-bold px-3 py-2 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl border border-white/10 dark:border-slate-700 shadow-sm active:scale-95 transition-all cursor-pointer min-h-[38px] sm:min-h-[48px]"
+              >
+                <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300" />
+                Manage Trip
+              </button>
+            )}
             <button
               onClick={() => onNavigateTab("expenses")}
               className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] sm:text-sm font-bold px-3 py-2 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl shadow-sm active:scale-95 transition-all cursor-pointer min-h-[38px] sm:min-h-[48px]"

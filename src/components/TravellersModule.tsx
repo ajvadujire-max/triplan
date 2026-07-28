@@ -36,12 +36,15 @@ import {
 interface TravellersModuleProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  appRole?: "traveller" | "organizer" | "super_admin";
 }
 
 export const TravellersModule: React.FC<TravellersModuleProps> = ({
   trip,
   onUpdateTrip,
+  appRole = "traveller",
 }) => {
+  const isOrganizer = appRole === "organizer" || appRole === "super_admin";
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isGoogleFormModalOpen, setIsGoogleFormModalOpen] = useState(false);
   const [editingPendingReg, setEditingPendingReg] = useState<PendingTravellerRegistration | null>(null);
@@ -168,7 +171,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   const [bloodGroup, setBloodGroup] = useState("O+");
   const [passportNumber, setPassportNumber] = useState("");
   const [drivingLicense, setDrivingLicense] = useState("");
-  const [role, setRole] = useState<TravellerRole>("Traveller");
+  const [formRole, setFormRole] = useState<TravellerRole>("Traveller");
   const [allocatedBudget, setAllocatedBudget] = useState(5000);
   const [profilePhoto, setProfilePhoto] = useState("");
 
@@ -183,7 +186,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     setBloodGroup("O+");
     setPassportNumber("");
     setDrivingLicense("");
-    setRole("Traveller");
+    setFormRole("Traveller");
     setAllocatedBudget(5000);
     setProfilePhoto("");
     setIsAddModalOpen(true);
@@ -200,7 +203,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     setBloodGroup(t.bloodGroup);
     setPassportNumber(t.passportNumber || "");
     setDrivingLicense(t.drivingLicense || "");
-    setRole(t.role);
+    setFormRole(t.role);
     setAllocatedBudget(t.allocatedBudget);
     setProfilePhoto(t.profilePhoto || "");
     setIsAddModalOpen(true);
@@ -226,7 +229,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               bloodGroup,
               passportNumber,
               drivingLicense,
-              role,
+              role: formRole,
               allocatedBudget: Number(allocatedBudget),
               profilePhoto,
             }
@@ -244,7 +247,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         bloodGroup,
         passportNumber,
         drivingLicense,
-        role,
+        role: formRole,
         allocatedBudget: Number(allocatedBudget),
         profilePhoto: profilePhoto || "",
       };
@@ -544,21 +547,22 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             )}
           </div>
 
-          {/* Bottom Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
-            <button
-              onClick={() => handleOpenEdit(selectedTraveller)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm"
-            >
-              <Edit className="w-4 h-4" /> Edit Traveller
-            </button>
-            <button
-              onClick={() => handleDeleteTraveller(selectedTraveller.id)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
-            >
-              <Trash2 className="w-4 h-4" /> Remove Traveller
-            </button>
-          </div>
+          {isOrganizer && (
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => handleOpenEdit(selectedTraveller)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm"
+              >
+                <Edit className="w-4 h-4" /> Edit Traveller
+              </button>
+              <button
+                onClick={() => handleDeleteTraveller(selectedTraveller.id)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
+              >
+                <Trash2 className="w-4 h-4" /> Remove Traveller
+              </button>
+            </div>
+          )}
         </motion.div>
 
         {/* Add / Edit Traveller Modal */}
@@ -629,8 +633,8 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                       Role
                     </label>
                     <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as TravellerRole)}
+                      value={formRole}
+                      onChange={(e) => setFormRole(e.target.value as TravellerRole)}
                       className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
                       <option value="Organizer">Organizer</option>
@@ -841,27 +845,32 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         </div>
 
         <div className="flex flex-row sm:flex-row items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto">
-          <button
-            onClick={() => setIsGoogleFormModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-500 text-white text-[10px] sm:text-sm font-bold h-9 sm:h-11 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-md transition-all"
-          >
-            <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-200" />
-            Create Form
-          </button>
+          {isOrganizer && (
+            <>
+              <button
+                onClick={() => setIsGoogleFormModalOpen(true)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-500 text-white text-[10px] sm:text-sm font-bold h-9 sm:h-11 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-md transition-all"
+              >
+                <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-200" />
+                Create Form
+              </button>
 
-          <button
-            onClick={handleOpenAdd}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] sm:text-sm font-bold h-9 sm:h-11 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-md transition-all"
-          >
-            <UserPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            + Traveller
-          </button>
+              <button
+                onClick={handleOpenAdd}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] sm:text-sm font-bold h-9 sm:h-11 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-md transition-all"
+              >
+                <UserPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                + Traveller
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Pending Traveller Registrations Section */}
-      <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 sm:space-y-4">
-        <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+      {isOrganizer && (
+        <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 sm:space-y-4">
+          <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
           <div className="flex items-center gap-1 sm:gap-2">
             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600 dark:text-purple-400" />
             <h3 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white">
@@ -967,6 +976,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           </div>
         )}
       </div>
+    )}
 
       {/* Individual Budget Overview Cards (Section 4) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
@@ -1162,8 +1172,8 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                     Role
                   </label>
                   <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as TravellerRole)}
+                    value={formRole}
+                    onChange={(e) => setFormRole(e.target.value as TravellerRole)}
                     className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
                     <option value="Organizer">Organizer</option>

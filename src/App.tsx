@@ -45,10 +45,11 @@ import {
   migrateLocalDataToFirestore,
 } from "./lib/firestoreSync";
 
-function MainApp() {
+function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [userRole, setUserRole] = useState<"traveller" | "organizer" | "super_admin">(role as any);
 
   const [trips, setTrips] = useState<Trip[]>(() => {
     const saved = localStorage.getItem("trippro_trips");
@@ -391,6 +392,7 @@ function MainApp() {
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
         isAuthLoading={isAuthLoading}
+        role={userRole}
       />
 
       <MobileNavigation
@@ -409,6 +411,7 @@ function MainApp() {
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
         isAuthLoading={isAuthLoading}
+        role={userRole}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 space-y-6">
@@ -421,6 +424,7 @@ function MainApp() {
               setEditingTrip(activeTrip);
               setIsCreateModalOpen(true);
             }}
+            role={userRole}
           />
         )}
 
@@ -433,7 +437,7 @@ function MainApp() {
         )}
 
         {activeTab === "travellers" && (
-          <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} appRole={userRole} />
         )}
         
         {activeTab === "planner" && (
@@ -456,6 +460,7 @@ function MainApp() {
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
             onUpdateTrip={handleUpdateTrip}
+            role={userRole}
           />
         )}
 
@@ -511,14 +516,34 @@ function MainApp() {
 
 import { ContactTravellerProvider } from "./components/ContactOptionsBottomSheet";
 
+import LandingPage from "./pages/LandingPage";
+import OnboardingWizard from "./pages/OnboardingWizard";
+import JoinTrip from "./pages/JoinTrip";
+import { TravellerLogin, OrganizerLogin, SuperAdminLogin } from "./pages/LoginPages";
+import TravellerDashboard from "./pages/TravellerDashboard";
+import OrganizerDashboard from "./pages/OrganizerDashboard";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+
 export default function App() {
   return (
     <ContactTravellerProvider>
       <Routes>
-        <Route path="/" element={<MainApp />} />
-        <Route path="/admin-portal" element={<AdminPortal />} />
-        <Route path="/admin-portal/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin-portal/init" element={<InitSuperAdmin />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="/t/:tripCode" element={<JoinTrip />} />
+        
+        {/* Auth Routes */}
+        <Route path="/login" element={<TravellerLogin />} />
+        <Route path="/admin/login" element={<OrganizerLogin />} />
+        <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+        
+        {/* Dashboards - All using original MainApp but with roles */}
+        <Route path="/dashboard" element={<MainApp role="traveller" />} />
+        <Route path="/admin/dashboard" element={<MainApp role="organizer" />} />
+        <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+
+        {/* Fallbacks */}
+        <Route path="/app" element={<MainApp role="traveller" />} />
       </Routes>
     </ContactTravellerProvider>
   );

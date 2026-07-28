@@ -35,6 +35,7 @@ interface NavbarProps {
   onSignIn: () => void;
   onSignOut: () => void;
   isAuthLoading?: boolean;
+  role?: "traveller" | "organizer" | "super_admin";
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -50,20 +51,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSignIn,
   onSignOut,
   isAuthLoading = false,
+  role = "traveller",
 }) => {
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
 
-  const tabs = [
+  const allTabs = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
-    { id: "collections", label: "Collections", icon: IndianRupee },
+    { id: "collections", label: "Collections", icon: IndianRupee, organizerOnly: true },
     { id: "expenses", label: "Split Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers & Budgets", icon: Users },
     { id: "vault", label: "Vault & Packing", icon: Calendar },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun },
-    { id: "finance", label: "Finance & Cashbook", icon: Wallet },
+    { id: "finance", label: "Finance & Cashbook", icon: Wallet, organizerOnly: true },
     { id: "ai_insights", label: "AI Insights", icon: Sparkles },
   ];
+
+  const tabs = allTabs.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
 
   return (
     <header className="hidden md:block sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 transition-colors">

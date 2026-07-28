@@ -1,6 +1,6 @@
 {
   "name": "TripPro - Travel Planner & Expense Manager",
-  "description": "Comprehensive travel planner, journey builder, split expense manager, and finance integration system with AI trip insights.",
+  "description": "Professional SaaS travel planning platform with role-based dashboards, multi-step onboarding, group expense splitting, and secure invite systems.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
