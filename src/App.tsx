@@ -364,7 +364,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
       {isLoadingCloud && (
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4">
@@ -519,6 +519,7 @@ import { ContactTravellerProvider } from "./components/ContactOptionsBottomSheet
 import LandingPage from "./pages/LandingPage";
 import OnboardingWizard from "./pages/OnboardingWizard";
 import JoinTrip from "./pages/JoinTrip";
+import JoinTripByCode from "./pages/JoinTripByCode";
 import { TravellerLogin, OrganizerLogin, SuperAdminLogin } from "./pages/LoginPages";
 import TravellerDashboard from "./pages/TravellerDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
@@ -530,6 +531,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="/join" element={<JoinTripByCode />} />
         <Route path="/t/:tripCode" element={<JoinTrip />} />
         
         {/* Auth Routes */}

@@ -1212,7 +1212,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.name}
                       onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
                       placeholder="e.g. HDFC Business Account"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                     {formErrors.name && <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.name}</p>}
                   </div>
@@ -1224,7 +1224,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                     <select
                       value={accountForm.type}
                       onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     >
                       {ACCOUNT_TYPES.map((type) => (
                         <option key={type} value={type}>
@@ -1245,7 +1245,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.bankName}
                       onChange={(e) => setAccountForm({ ...accountForm, bankName: e.target.value })}
                       placeholder="e.g. HDFC Bank"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
 
@@ -1258,7 +1258,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.nickname}
                       onChange={(e) => setAccountForm({ ...accountForm, nickname: e.target.value })}
                       placeholder="e.g. Salary Reserve"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
 
@@ -1271,7 +1271,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.accountHolderName}
                       onChange={(e) => setAccountForm({ ...accountForm, accountHolderName: e.target.value })}
                       placeholder="e.g. Ajva"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1292,7 +1292,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.accountNumber}
                       onChange={(e) => setAccountForm({ ...accountForm, accountNumber: e.target.value })}
                       placeholder="e.g. 50100234123411"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                     {formErrors.accountNumber && (
                       <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.accountNumber}</p>
@@ -1308,7 +1308,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.upiId}
                       onChange={(e) => setAccountForm({ ...accountForm, upiId: e.target.value })}
                       placeholder="e.g. ajva@okhdfc"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                     {formErrors.upiId && (
                       <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.upiId}</p>
@@ -1326,7 +1326,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.ifscCode}
                       onChange={(e) => setAccountForm({ ...accountForm, ifscCode: e.target.value })}
                       placeholder="e.g. HDFC0000104"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                     {formErrors.ifscCode && (
                       <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.ifscCode}</p>
@@ -1342,7 +1342,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.branch}
                       onChange={(e) => setAccountForm({ ...accountForm, branch: e.target.value })}
                       placeholder="e.g. Bandra West"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
 
@@ -1355,7 +1355,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.swiftCode}
                       onChange={(e) => setAccountForm({ ...accountForm, swiftCode: e.target.value })}
                       placeholder="e.g. HDFCCINBB"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1376,7 +1376,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.openingBalance}
                       onChange={(e) => setAccountForm({ ...accountForm, openingBalance: e.target.value })}
                       placeholder="e.g. 50000"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
 
@@ -1389,7 +1389,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.balance}
                       onChange={(e) => setAccountForm({ ...accountForm, balance: e.target.value })}
                       placeholder="e.g. 45000"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                     {formErrors.balance && (
                       <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.balance}</p>
@@ -1448,7 +1448,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.minimumBalance}
                       onChange={(e) => setAccountForm({ ...accountForm, minimumBalance: e.target.value })}
                       placeholder="e.g. 10000"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
                 </div>

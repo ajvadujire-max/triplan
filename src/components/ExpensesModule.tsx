@@ -609,12 +609,12 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
         {/* Edit / Add Modal */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex max-sm:items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
             <motion.div
               initial={{ y: "100%", opacity: 0.5 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 rounded-t-[24px] sm:rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden mt-auto sm:mt-0 flex flex-col max-h-[92vh] sm:max-h-none"
+              className="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 max-sm:rounded-t-[32px] sm:rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-none"
             >
               <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <div className="flex items-center gap-2">
@@ -623,8 +623,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     {editingExpense ? "Edit Expense" : "Record & Split Expense"}
                   </h3>
                 </div>
-                <button onClick={() => setIsAddModalOpen(false)}>
-                  <X className="w-5 h-5 text-slate-400" />
+                <button onClick={() => setIsAddModalOpen(false)} className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
 
@@ -640,7 +640,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       placeholder="e.g. Dinner at Britto's"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -656,7 +656,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       onChange={(e) =>
                         setAmount(e.target.value === "" ? "" : Number(e.target.value))
                       }
-                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
@@ -669,7 +669,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
                       {categoriesList.map((cat) => (
                         <option key={cat} value={cat}>
@@ -686,7 +686,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     <select
                       value={accountUsedId}
                       onChange={(e) => setAccountUsedId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
                       {accounts.map((acc) => (
                         <option key={acc.id} value={acc.id}>
@@ -705,7 +705,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                   <select
                     value={whoPaidId}
                     onChange={(e) => setWhoPaidId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
                     {trip.travellers.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -800,7 +800,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       placeholder="https://..."
                       value={receiptUrl}
                       onChange={(e) => setReceiptUrl(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     />
                   </div>
 
@@ -812,7 +812,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -826,7 +826,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     placeholder="Additional details..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -959,7 +959,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       {/* Budget Warning Alert */}
       {(() => {
         const totalSpent = trip.expenses.reduce((acc, exp) => acc + exp.amount, 0);
-        const budgetUsagePercent = trip.totalBudget > 0 ? Math.round((totalSpent / trip.totalBudget) * 100) : 0;
+        const budgetUsagePercentValue = trip.totalBudget > 0 ? Math.round((totalSpent / trip.totalBudget) * 100) : 0;
+        const budgetUsagePercent = isNaN(budgetUsagePercentValue) ? 0 : budgetUsagePercentValue;
         
         if (budgetUsagePercent > 100) {
           return (

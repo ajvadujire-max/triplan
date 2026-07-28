@@ -24,6 +24,7 @@ export default function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [copyText, setCopyText] = useState("Copy Link");
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -66,7 +67,41 @@ export default function OnboardingWizard() {
   };
 
   const tripCode = React.useMemo(() => generateTripCode(formData.tripName || "TRIP"), [formData.tripName, isSuccess]);
-  const inviteLink = `https://triplan-zeta.vercel.app/t/${tripCode}`;
+  
+  const inviteLink = React.useMemo(() => {
+    const baseDomain = typeof window !== 'undefined' ? window.location.origin : 'https://triplan-zeta.vercel.app';
+    return `${baseDomain}/t/${tripCode}`;
+  }, [tripCode]);
+
+  const handleCopyLink = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(inviteLink);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = inviteLink;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+        }
+        document.body.removeChild(textArea);
+      }
+      setCopyText("Copied!");
+      setTimeout(() => setCopyText("Copy Link"), 2000);
+    } catch (err) {
+      console.error('Failed to copy!', err);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(`Join my trip on TripPro! Trip Code: ${tripCode} - ${inviteLink}`);
+    const whatsappUrl = `https://wa.me/?text=${text}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -98,10 +133,17 @@ export default function OnboardingWizard() {
             <div className="text-2xl font-mono font-black text-indigo-600 mb-4">{tripCode}</div>
             <div className="text-sm text-slate-500 break-all mb-4 px-2">{inviteLink}</div>
             <div className="flex gap-2">
-              <button className="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors">
-                Copy Link
+              <button 
+                onClick={handleCopyLink}
+                className="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+              >
+                {copyText === "Copied!" ? <CheckCircle2 className="w-4 h-4" /> : null}
+                {copyText}
               </button>
-              <button className="flex-1 bg-green-50 text-green-600 py-3 rounded-xl font-bold text-sm hover:bg-green-100 transition-colors">
+              <button 
+                onClick={handleWhatsAppShare}
+                className="flex-1 bg-green-50 text-green-600 py-3 rounded-xl font-bold text-sm hover:bg-green-100 transition-colors cursor-pointer active:scale-95"
+              >
                 WhatsApp
               </button>
             </div>
@@ -320,7 +362,7 @@ export default function OnboardingWizard() {
                       <input 
                         type="number" 
                         value={formData.expectedTravellers}
-                        onChange={(e) => updateFormData({ expectedTravellers: parseInt(e.target.value) })}
+                        onChange={(e) => updateFormData({ expectedTravellers: parseInt(e.target.value) || 0 })}
                         className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
                       />
                     </div>
@@ -345,7 +387,7 @@ export default function OnboardingWizard() {
                     <input 
                       type="number" 
                       value={formData.expectedBudget}
-                      onChange={(e) => updateFormData({ expectedBudget: parseInt(e.target.value) })}
+                      onChange={(e) => updateFormData({ expectedBudget: parseInt(e.target.value) || 0 })}
                       className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
                       placeholder="0.00"
                     />

@@ -8,7 +8,7 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,7 +55,7 @@ export default function LandingPage() {
       </motion.div>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
+      <section className="pt-24 pb-8 md:pt-32 md:pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -65,17 +65,17 @@ export default function LandingPage() {
             <span className="px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-sm font-semibold mb-6 inline-block">
               New: AI-Powered Travel Insights
             </span>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-8">
+            <h1 className="text-4xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 md:mb-8">
               Plan Trips Like <span className="text-indigo-600 underline decoration-indigo-200 underline-offset-8">Professionals</span>
             </h1>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-base md:text-xl text-slate-600 w-[90%] md:w-full max-w-2xl mx-auto mb-8 md:mb-10 leading-relaxed text-center">
               The ultimate group trip management platform. Track expenses, coordinate schedules, and manage documents all in one place.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/onboarding" className="w-full sm:w-auto bg-indigo-600 text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center justify-center gap-2">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4 w-full max-w-sm mx-auto md:max-w-none">
+              <Link to="/onboarding" className="w-full md:w-auto bg-indigo-600 text-white px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center justify-center gap-2">
                 Create New Trip <ChevronRight className="w-5 h-5" />
               </Link>
-              <Link to="/join" className="w-full sm:w-auto bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-full text-lg font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2">
+              <Link to="/join" className="w-full md:w-auto bg-white text-slate-900 border border-slate-200 px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2">
                 Join Existing Trip
               </Link>
             </div>
@@ -85,40 +85,40 @@ export default function LandingPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="mt-20 relative"
+            className="mt-12 md:mt-20 relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 to-transparent z-10 h-32 bottom-0" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 to-transparent z-10 h-24 md:h-32 bottom-0" />
             <img
               src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
               alt="App Dashboard Preview"
-              className="rounded-3xl shadow-2xl border border-slate-200"
+              className="rounded-3xl shadow-2xl border border-slate-200 w-full h-[240px] md:h-auto object-cover"
             />
           </motion.div>
         </div>
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
+      <section id="features" className="py-12 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Travel Smarter</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
+            <p className="text-slate-600 max-w-2xl mx-auto text-base md:text-lg">
               TripPro combines travel logistics with financial management to give you the most comprehensive trip planning tool.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {[
               { title: "Expense Tracking", desc: "Split bills, track budgets, and manage group finances effortlessly.", icon: Wallet },
               { title: "Group Coordination", desc: "Shared itineraries and real-time updates for every traveller.", icon: Users },
               { title: "Secure Vault", desc: "Keep passports, tickets, and bookings in one encrypted place.", icon: Shield },
             ].map((feature, i) => (
-              <div key={i} className="p-8 rounded-3xl border border-slate-100 bg-slate-50/50 hover:border-indigo-100 hover:bg-white transition-all group">
-                <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
+              <div key={i} className="p-6 md:p-8 rounded-3xl border border-slate-100 bg-slate-50/50 hover:border-indigo-100 hover:bg-white transition-all group">
+                <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-5 md:mb-6 shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
                   <feature.icon className="text-white w-7 h-7" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{feature.desc}</p>
+                <p className="text-slate-600 leading-relaxed text-sm md:text-base">{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -126,22 +126,22 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-24 px-4 bg-slate-50">
+      <section id="pricing" className="py-12 md:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-slate-600">Choose the plan that fits your travel style.</p>
+            <p className="text-slate-600 text-base md:text-lg">Choose the plan that fits your travel style.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {[
               { name: "Free", price: "0", features: ["1 Active Trip", "Up to 5 Travellers", "Basic Expenses", "Mobile App"] },
               { name: "Pro", price: "9", features: ["Unlimited Trips", "Unlimited Travellers", "Advanced Analytics", "Priority Support", "AI Insights"], popular: true },
               { name: "Enterprise", price: "29", features: ["Organization Control", "Custom Branding", "API Access", "Dedicated Manager"] },
             ].map((plan, i) => (
               <div key={i} className={cn(
-                "p-8 rounded-3xl border transition-all flex flex-col",
-                plan.popular ? "bg-white border-indigo-600 shadow-xl shadow-indigo-100 relative scale-105" : "bg-white/50 border-slate-200"
+                "p-6 md:p-8 rounded-3xl border transition-all flex flex-col",
+                plan.popular ? "bg-white border-indigo-600 shadow-xl shadow-indigo-100 relative md:scale-105" : "bg-white/50 border-slate-200"
               )}>
                 {plan.popular && (
                   <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-xs font-bold tracking-widest uppercase">
@@ -155,13 +155,13 @@ export default function LandingPage() {
                 </div>
                 <ul className="space-y-4 mb-8 flex-1">
                   {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-3 text-slate-600">
-                      <CheckCircle2 className="w-5 h-5 text-indigo-600" /> {f}
+                    <li key={j} className="flex items-center gap-3 text-slate-600 text-sm md:text-base">
+                      <CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" /> {f}
                     </li>
                   ))}
                 </ul>
                 <button className={cn(
-                  "w-full py-3 rounded-xl font-bold transition-all",
+                  "w-full py-3 rounded-xl font-bold transition-all text-sm md:text-base",
                   plan.popular ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100" : "bg-slate-100 text-slate-900 hover:bg-slate-200"
                 )}>
                   Choose {plan.name}
@@ -173,18 +173,18 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-24 bg-white">
-        <div className="max-w-3xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-16">Frequently Asked Questions</h2>
-          <div className="space-y-6">
+      <section id="faq" className="py-12 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-16">Frequently Asked Questions</h2>
+          <div className="space-y-4 md:space-y-6">
             {[
               { q: "Is TripPro available offline?", a: "Yes, you can access your itinerary and basic trip details without an internet connection." },
               { q: "Can I export my expense data?", a: "Absolutely! You can export your financial records to CSV or PDF at any time." },
               { q: "How many people can I invite?", a: "The Free plan supports up to 5 travellers. Pro and Enterprise support unlimited participants." },
             ].map((item, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/30">
-                <h4 className="text-lg font-bold mb-2">{item.q}</h4>
-                <p className="text-slate-600">{item.a}</p>
+              <div key={i} className="p-5 md:p-6 rounded-2xl border border-slate-100 bg-slate-50/30">
+                <h4 className="text-base md:text-lg font-bold mb-2">{item.q}</h4>
+                <p className="text-sm md:text-base text-slate-600">{item.a}</p>
               </div>
             ))}
           </div>
@@ -192,38 +192,38 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-950 text-slate-400 py-16 px-4">
+      <footer className="bg-slate-950 text-slate-400 py-12 md:py-16 px-4 sm:px-6 lg:px-8 text-center md:text-left">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            <div className="col-span-2">
-              <div className="flex items-center gap-2 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-12">
+            <div className="col-span-1 md:col-span-2 flex flex-col items-center md:items-start">
+              <div className="flex items-center gap-2 mb-4 md:mb-6">
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                   <Plane className="text-white w-5 h-5" />
                 </div>
                 <span className="text-xl font-bold text-white tracking-tight">TripPro</span>
               </div>
-              <p className="max-w-sm mb-6">
+              <p className="max-w-sm mb-6 text-sm md:text-base">
                 Making group travel organized, transparent, and fun. Built for modern travellers who value coordination.
               </p>
             </div>
-            <div>
-              <h5 className="text-white font-bold mb-6 uppercase text-xs tracking-widest">Product</h5>
-              <ul className="space-y-4 text-sm">
+            <div className="flex flex-col items-center md:items-start">
+              <h5 className="text-white font-bold mb-4 md:mb-6 uppercase text-xs tracking-widest">Product</h5>
+              <ul className="space-y-3 md:space-y-4 text-sm">
                 <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Itineraries</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Expenses</a></li>
               </ul>
             </div>
-            <div>
-              <h5 className="text-white font-bold mb-6 uppercase text-xs tracking-widest">Company</h5>
-              <ul className="space-y-4 text-sm">
+            <div className="flex flex-col items-center md:items-start">
+              <h5 className="text-white font-bold mb-4 md:mb-6 uppercase text-xs tracking-widest">Company</h5>
+              <ul className="space-y-3 md:space-y-4 text-sm">
                 <li><a href="#" className="hover:text-white transition-colors">About</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+          <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
             <p>© 2026 TripPro. All rights reserved.</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-white transition-colors">Twitter</a>

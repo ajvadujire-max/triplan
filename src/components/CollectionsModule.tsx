@@ -132,9 +132,11 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     });
 
     const totalRemaining = Math.max(0, totalExpected - totalCollected);
-    const progressPercent = totalExpected > 0
+    const progressPercentValue = totalExpected > 0
       ? Math.min(100, Math.round((totalCollected / totalExpected) * 100))
       : 0;
+    
+    const progressPercent = isNaN(progressPercentValue) ? 0 : progressPercentValue;
 
     return {
       totalTravellers: trip.travellers.length,
@@ -854,8 +856,8 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
       {/* 4. RECEIVE PAYMENT BOTTOM SHEET / MODAL */}
       {activePaymentTraveller && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex max-sm:items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg max-sm:rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-200">
             {/* Sheet Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
@@ -881,7 +883,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                   setActivePaymentTraveller(null);
                   setEditingPaymentRecord(null);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl"
+                className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -939,7 +941,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                       setPaymentAmount(e.target.value === "" ? "" : Number(e.target.value))
                     }
                     placeholder="Enter collected amount"
-                    className="w-full pl-10 pr-4 py-2.5 text-sm font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-4 py-3 sm:py-2.5 text-base sm:text-sm font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -980,7 +982,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                   required
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm font-semibold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-3 sm:py-2.5 text-base sm:text-sm font-semibold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -994,7 +996,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
                   placeholder="e.g. Transaction ID, GPay Ref, or cash receipt notes"
-                  className="w-full px-3 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-3 sm:py-2.5 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 

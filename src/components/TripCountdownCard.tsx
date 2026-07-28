@@ -56,7 +56,8 @@ export const TripCountdownCard: React.FC<TripCountdownCardProps> = ({
         setIsCompleted(false);
         const totalTime = end.getTime() - start.getTime();
         const elapsed = now.getTime() - start.getTime();
-        setTripProgress(Math.min(100, Math.max(0, (elapsed / totalTime) * 100)));
+        const progressValue = totalTime > 0 ? (elapsed / totalTime) * 100 : 0;
+        setTripProgress(Math.min(100, Math.max(0, isNaN(progressValue) ? 0 : progressValue)));
         
         const currentDay = Math.floor(elapsed / (1000 * 60 * 60 * 24)) + 1;
         setDayNumber(currentDay);

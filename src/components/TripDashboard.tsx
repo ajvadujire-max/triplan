@@ -42,29 +42,31 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
   // Calculate total spent from trip expenses
-  const totalSpent = trip.expenses.reduce((acc, exp) => acc + exp.amount, 0);
-  const remainingBudget = trip.totalBudget - totalSpent;
+  const totalSpent = trip.expenses.reduce((acc, exp) => acc + (Number(exp.amount) || 0), 0);
+  const remainingBudget = (Number(trip.totalBudget) || 0) - totalSpent;
   const budgetUsagePercent =
-    trip.totalBudget > 0 ? Math.round((totalSpent / trip.totalBudget) * 100) : 0;
+    Number(trip.totalBudget) > 0 ? Math.round((totalSpent / Number(trip.totalBudget)) * 100) : 0;
 
   // Collections widget metrics
   const totalExpectedCollection = (trip.travellers || []).reduce(
-    (sum, t) => sum + (t.allocatedBudget || 0),
+    (sum, t) => sum + (Number(t.allocatedBudget) || 0),
     0
   );
   const totalCollectedAmount = (trip.travellers || []).reduce((sum, t) => {
     const history = t.paymentHistory || [];
     const paid =
       history.length > 0
-        ? history.reduce((acc, curr) => acc + curr.amount, 0)
-        : t.paidAmount || 0;
+        ? history.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0)
+        : (Number(t.paidAmount) || 0);
     return sum + paid;
   }, 0);
 
-  const collectionPercent =
+  const collectionPercentValue =
     totalExpectedCollection > 0
       ? Math.min(100, Math.round((totalCollectedAmount / totalExpectedCollection) * 100))
       : 0;
+  
+  const collectionPercent = isNaN(collectionPercentValue) ? 0 : collectionPercentValue;
 
   let paidTravellersCount = 0;
   let partialTravellersCount = 0;
@@ -174,7 +176,7 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
       <TripCountdownCard trip={trip} onNavigateTab={onNavigateTab} />
 
       {/* Summary Stats Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Total Budget Allocation */}
         <div className="bg-white dark:bg-slate-900 p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/60 dark:border-slate-800/80 shadow-xs">
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -189,7 +191,7 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 sm:h-1.5 rounded-full mt-2 sm:mt-4 overflow-hidden">
             <div
               className="bg-indigo-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(budgetUsagePercent, 100)}%` }}
+              style={{ width: `${isNaN(budgetUsagePercent) ? 0 : Math.min(budgetUsagePercent, 100)}%` }}
             />
           </div>
           <p className="text-[9px] sm:text-[10px] mt-1.5 sm:mt-2.5 text-slate-500 dark:text-slate-400 font-bold">
@@ -306,7 +308,7 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
             <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-indigo-900">
               <div
                 className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                style={{ width: `${collectionPercent}%` }}
+                style={{ width: `${isNaN(collectionPercent) ? 0 : collectionPercent}%` }}
               />
             </div>
           </div>
@@ -326,7 +328,7 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
       </div>
 
       {/* Secondary Details Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3">
         <div className="bg-white dark:bg-slate-900 p-2.5 sm:p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/60 shadow-xs">
           <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Travellers</p>
           <p className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5 sm:mt-1">{trip.travellers.length} Members</p>
@@ -350,7 +352,7 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
         <h3 className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 sm:mb-3">
           Quick Travel Management Modules
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-3">
           <button
             onClick={() => onNavigateTab("planner")}
             className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 hover:border-indigo-500 dark:hover:border-indigo-500 text-left group transition-all active:scale-95 cursor-pointer shadow-xs min-h-[85px] sm:min-h-[100px]"

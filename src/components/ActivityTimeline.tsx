@@ -364,9 +364,11 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
     const totalActivities = trip.timeline.length;
     const totalSegments = trip.segments.length;
     const completedActivities = trip.timeline.filter((a) => a.status === "Completed").length;
-    const completionRate = totalActivities + totalSegments > 0 
+    const completionRateValue = totalActivities + totalSegments > 0 
       ? Math.round(((completedActivities + totalSegments) / (totalActivities + totalSegments)) * 100) 
       : 0;
+    
+    const completionRate = isNaN(completionRateValue) ? 0 : completionRateValue;
 
     const activityCost = trip.timeline.reduce((sum, a) => sum + (a.estimatedCost || 0), 0);
     const transportCost = trip.segments.reduce((sum, s) => sum + (s.fare || 0), 0);
@@ -958,7 +960,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                       <div
                         className="bg-emerald-500 h-full rounded-full transition-all"
                         style={{
-                          width: `${activities.length > 0 ? (dayCompleted / activities.length) * 100 : 0}%`,
+                          width: `${activities.length > 0 ? Math.min(100, Math.round((dayCompleted / activities.length) * 100)) : 0}%`,
                         }}
                       />
                     </div>
