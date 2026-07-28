@@ -1,15 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { User, Phone, Mail, Calendar, Users, Shield, Camera, Upload, CheckCircle2 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { fetchTripByInviteCode } from "../lib/firestoreSync";
+import { Trip } from "../types";
 
 export default function JoinTrip() {
   const { tripCode } = useParams();
   const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [fetchingTrip, setFetchingTrip] = useState(true);
+  const [trip, setTrip] = useState<Trip | null>(null);
+  
   const [formData, setFormData] = useState({
     fullName: "",
     mobileNumber: "",
@@ -20,14 +24,68 @@ export default function JoinTrip() {
     profilePhoto: null as string | null,
   });
 
+  useEffect(() => {
+    async function loadTrip() {
+      if (!tripCode) return;
+      const foundTrip = await fetchTripByInviteCode(tripCode);
+      setTrip(foundTrip);
+      setFetchingTrip(false);
+    }
+    loadTrip();
+  }, [tripCode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate join logic
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    try {
+      if (trip) {
+        const { collection, addDoc } = await import("firebase/firestore");
+        const { db } = await import("../lib/firebase");
+        
+        await addDoc(collection(db, "joinRequests"), {
+          tripId: trip.id,
+          inviteCode: tripCode,
+          ...formData,
+          status: "pending",
+          createdAt: new Date().toISOString()
+        });
+
+        // Add the trip to local storage so they can view it in the dashboard
+        const savedTrips = localStorage.getItem("trippro_trips");
+        const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
+        if (!currentTrips.find(t => t.id === trip.id)) {
+          currentTrips.unshift(trip);
+          localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    
     setIsLoading(false);
     setIsSuccess(true);
   };
+
+  if (fetchingTrip) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!trip && !fetchingTrip) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Code</h2>
+          <p className="text-slate-500 mb-6">We couldn't find a trip with code {tripCode}.</p>
+          <button onClick={() => navigate("/")} className="text-indigo-600 font-bold hover:underline">Go Home</button>
+        </div>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -41,7 +99,7 @@ export default function JoinTrip() {
             <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
           <h2 className="text-3xl font-extrabold text-slate-900 mb-2">You're In!</h2>
-          <p className="text-slate-600 mb-8">Successfully joined the trip. The organizer has been notified.</p>
+          <p className="text-slate-600 mb-8">Successfully joined <strong>{trip?.name}</strong>. The organizer has been notified.</p>
           <button 
             onClick={() => navigate("/dashboard")}
             className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100"
@@ -60,8 +118,9 @@ export default function JoinTrip() {
           <div className="inline-block px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold tracking-widest uppercase mb-4">
             Invite Link Active
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Join Trip: {tripCode}</h1>
-          <p className="text-slate-500">Fill in your details to get added to the group.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Join {trip?.name}</h1>
+          <p className="text-slate-500">Destination: {trip?.destination}</p>
+          <p className="text-slate-500 mt-2">Fill in your details to get added to the group.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100 space-y-6">
@@ -95,7 +154,6 @@ export default function JoinTrip() {
                 placeholder="John Doe"
               />
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Mobile Number *</label>

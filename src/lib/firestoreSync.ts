@@ -3,7 +3,8 @@ import {
   doc, 
   setDoc, 
   deleteDoc, 
-  getDocs, 
+  getDocs,
+  getDoc,
   query,
   where,
   getDocFromServer
@@ -42,6 +43,35 @@ function sanitizeForFirestore<T>(obj: T): T {
     return cleaned;
   }
   return obj;
+}
+
+export async function fetchTripByInviteCode(code: string): Promise<Trip | null> {
+  const path = `trips`;
+  try {
+    const q = query(collection(db, path), where("inviteCode", "==", code));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      return snapshot.docs[0].data() as Trip;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
+export async function fetchTripById(tripId: string): Promise<Trip | null> {
+  const path = `trips/${tripId}`;
+  try {
+    const docSnap = await getDoc(doc(db, "trips", tripId));
+    if (docSnap.exists()) {
+      return docSnap.data() as Trip;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
 }
 
 export async function fetchUserTrips(orgId: string): Promise<Trip[]> {

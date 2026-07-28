@@ -43,6 +43,7 @@ import {
   deleteUserAccount,
   deleteUserCashbookEntry,
   migrateLocalDataToFirestore,
+  fetchTripById,
 } from "./lib/firestoreSync";
 
 function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
@@ -145,7 +146,21 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             cashbookToMigrate
           );
 
-          const cloudTrips = await fetchUserTrips(orgId);
+          const fetchedCloudTrips = await fetchUserTrips(orgId);
+          let cloudTrips = [...fetchedCloudTrips];
+          
+          const savedTripsStr = localStorage.getItem("trippro_trips");
+          const localTrips: Trip[] = savedTripsStr ? JSON.parse(savedTripsStr) : [];
+          for (const lt of localTrips) {
+            if (!cloudTrips.find(ct => ct.id === lt.id)) {
+              const latestTrip = await fetchTripById(lt.id);
+              if (latestTrip) {
+                cloudTrips.push(latestTrip);
+              } else {
+                cloudTrips.push(lt);
+              }
+            }
+          }
           const cloudAccounts = await fetchUserAccounts(orgId);
           const cloudCashbook = await fetchUserCashbook(orgId);
 
@@ -158,11 +173,29 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           setIsLoadingCloud(false);
         }
       },
-      () => {
+      async () => {
         setUser(null);
         setOrganizationId(null);
         const saved = localStorage.getItem("trippro_trips");
-        setTrips(saved ? JSON.parse(saved) : initialTrips);
+        const localTrips: Trip[] = saved ? JSON.parse(saved) : initialTrips;
+        setTrips(localTrips);
+        
+        // Then fetch latest updates for these trips
+        if (saved) {
+          const updatedTrips: Trip[] = [];
+          for (const lt of localTrips) {
+            const latestTrip = await fetchTripById(lt.id);
+            if (latestTrip) {
+              updatedTrips.push(latestTrip);
+            } else {
+              updatedTrips.push(lt);
+            }
+          }
+          if (updatedTrips.length > 0) {
+            setTrips(updatedTrips);
+          }
+        }
+
         const savedAccs = localStorage.getItem("trippro_accounts");
         setAccounts(savedAccs ? JSON.parse(savedAccs) : initialAccounts);
         const savedCb = localStorage.getItem("trippro_cashbook");

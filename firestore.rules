@@ -1,27 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isAuthenticated() {
       return request.auth != null;
     }
-
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-
     function isSuperAdmin() {
       return isAuthenticated() && getUserData().role == 'super_admin';
     }
-
     function isOrganizer() {
       return isAuthenticated() && getUserData().role == 'organizer';
     }
-
     function isTraveller() {
       return isAuthenticated() && getUserData().role == 'traveller';
     }
-
     function isTripOrganizer(tripId) {
       let trip = get(/databases/$(database)/documents/trips/$(tripId)).data;
       return isOrganizer() && trip.organizerId == request.auth.uid;
@@ -31,48 +25,39 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
       allow write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
     }
-
     match /organizations/{orgId} {
       allow read: if isSuperAdmin() || (isAuthenticated() && getUserData().organizationId == orgId);
       allow write: if isSuperAdmin();
     }
-
     match /trips/{tripId} {
-      allow read: if isAuthenticated(); // Broadly allowed for now, refine based on traveller list if needed
+      allow read: if true;
       allow write: if isSuperAdmin() || isOrganizer();
       allow update: if isTripOrganizer(tripId) || isSuperAdmin();
     }
-
     match /travellers/{travellerId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isOrganizer() || isSuperAdmin();
     }
-
     match /joinRequests/{requestId} {
-      allow create: if isAuthenticated();
+      allow create: if true;
       allow read, update: if isOrganizer() || isSuperAdmin();
     }
-
     match /inviteLinks/{linkId} {
-      allow read: if true; // Publicly accessible to join
+      allow read: if true; 
       allow write: if isOrganizer() || isSuperAdmin();
     }
-
     match /expenses/{expenseId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isOrganizer() || isSuperAdmin();
     }
-
     match /journeys/{journeyId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isOrganizer() || isSuperAdmin();
     }
-
     match /budgets/{budgetId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isOrganizer() || isSuperAdmin();
     }
-
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
