@@ -12,19 +12,6 @@ import {
 import { db, handleFirestoreError, OperationType } from "./firebase";
 import { Trip, FinanceAccount, CashbookEntry } from "../types";
 
-export async function testFirestoreConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firestore connection test completed successfully.");
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
-    }
-  }
-}
-
-testFirestoreConnection();
-
 function sanitizeForFirestore<T>(obj: T): T {
   if (obj === null || obj === undefined) {
     return obj;
@@ -46,9 +33,10 @@ function sanitizeForFirestore<T>(obj: T): T {
 }
 
 export async function fetchTripByInviteCode(code: string): Promise<Trip | null> {
+  const normalizedCode = code.trim().toUpperCase();
   const path = `trips`;
   try {
-    const q = query(collection(db, path), where("inviteCode", "==", code));
+    const q = query(collection(db, path), where("inviteCode", "==", normalizedCode));
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
       return snapshot.docs[0].data() as Trip;
@@ -90,19 +78,72 @@ export async function fetchUserTrips(orgId: string): Promise<Trip[]> {
   }
 }
 
-export async function saveUserTrip(orgId: string, trip: Trip): Promise<void> {
-  const path = `trips/${trip.id}`;
+export async function saveUserTrip(orgId: string | Trip, trip?: Trip): Promise<void> {
+  let actualTrip: Trip;
+  if (typeof orgId === "object") {
+    actualTrip = orgId;
+  } else {
+    actualTrip = trip!;
+  }
+
+  const path = `trips/${actualTrip.id}`;
   try {
-    await setDoc(doc(db, "trips", trip.id), sanitizeForFirestore({ ...trip, organizationId: orgId }));
+    const orgUid = actualTrip.organizerUid || actualTrip.organizerId || "trv_ajva";
+    const memberUids = [orgUid];
+    const members: Record<string, any> = {
+      [orgUid]: {
+        role: "organizer",
+        fullName: "Primary Organizer",
+        status: "active"
+      }
+    };
+
+    if (actualTrip.travellers) {
+      actualTrip.travellers.forEach((t) => {
+        if (t.id) {
+          if (!memberUids.includes(t.id)) {
+            memberUids.push(t.id);
+          }
+          members[t.id] = {
+            role: t.role ? t.role.toLowerCase() : "traveller",
+            fullName: t.fullName || "",
+            email: t.email || "",
+            status: "active"
+          };
+        }
+      });
+    }
+
+    const sanitizedTrip = sanitizeForFirestore({
+      ...actualTrip,
+      organizerUid: orgUid,
+      organizerId: orgUid,
+      memberUids,
+      members
+    });
+
+    // Write to trip document
+    await setDoc(doc(db, "trips", actualTrip.id), sanitizedTrip);
+
+    // Sync registrations to subcollection
+    if (actualTrip.pendingRegistrations) {
+      for (const reg of actualTrip.pendingRegistrations) {
+        if (reg.id) {
+          const regRef = doc(db, "trips", actualTrip.id, "registrations", reg.id);
+          await setDoc(regRef, sanitizeForFirestore(reg), { merge: true });
+        }
+      }
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
-export async function deleteUserTrip(orgId: string, tripId: string): Promise<void> {
-  const path = `trips/${tripId}`;
+export async function deleteUserTrip(orgId: string | any, tripId?: string): Promise<void> {
+  const actualTripId = typeof orgId === "string" && tripId ? tripId : (orgId as string);
+  const path = `trips/${actualTripId}`;
   try {
-    await deleteDoc(doc(db, "trips", tripId));
+    await deleteDoc(doc(db, "trips", actualTripId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -184,15 +225,27 @@ export async function migrateLocalDataToFirestore(
 ): Promise<void> {
   try {
     const remoteTrips = await fetchUserTrips(orgId);
-    if (remoteTrips.length === 0) {
-      console.log("Migrating local data to Firestore for organization:", orgId);
-      for (const trip of localTrips) {
+    const remoteTripIds = new Set(remoteTrips.map(t => t.id));
+    
+    for (const trip of localTrips) {
+      if (!remoteTripIds.has(trip.id)) {
+        console.log("Migrating trip to Firestore:", trip.id);
         await saveUserTrip(orgId, trip);
       }
-      for (const account of localAccounts) {
+    }
+
+    const remoteAccounts = await fetchUserAccounts(orgId);
+    const remoteAccountIds = new Set(remoteAccounts.map(a => a.id));
+    for (const account of localAccounts) {
+      if (!remoteAccountIds.has(account.id)) {
         await saveUserAccount(orgId, account);
       }
-      for (const entry of localCashbook) {
+    }
+
+    const remoteCashbook = await fetchUserCashbook(orgId);
+    const remoteCashbookIds = new Set(remoteCashbook.map(e => e.id));
+    for (const entry of localCashbook) {
+      if (!remoteCashbookIds.has(entry.id)) {
         await saveUserCashbookEntry(orgId, entry);
       }
     }

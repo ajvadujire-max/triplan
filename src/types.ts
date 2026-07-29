@@ -442,6 +442,11 @@ export interface Trip {
   documents: DocumentItem[];
   checklist: ChecklistItem[];
   timeline: TimelineActivity[];
+  
+  organizerUid?: string;
+  memberUids?: string[];
+  members?: Record<string, any>;
+  pendingRegistrations?: PendingTravellerRegistration[];
 }
 
 export interface AIInsightsResponse {

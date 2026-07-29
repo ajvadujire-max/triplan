@@ -6,13 +6,7 @@ import firebaseConfig from "../../firebase-applet-config.json";
 export { firebaseConfig };
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-let firestoreDb;
-try {
-  firestoreDb = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
-} catch (error) {
-  firestoreDb = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-}
-export const db = firestoreDb;
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 export enum OperationType {
   CREATE = 'create',

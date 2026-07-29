@@ -4,10 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { 
   Plane, MapPin, Users, Wallet, Lock, CheckCircle2, 
   ChevronLeft, ChevronRight, Upload, Camera, 
-  User, Phone, Mail, Globe, Sparkles
+  User, Phone, Mail, Globe, Sparkles, LogIn
 } from "lucide-react";
 import { cn, generateTripCode } from "../lib/utils";
 import { QRCodeSVG } from "qrcode.react";
+import { auth, googleSignIn } from "../lib/googleAuth";
+import { saveUserTrip } from "../lib/firestoreSync";
+import { Trip } from "../types";
+import { getRichDefaultChecklist } from "../utils/checklistDefaults";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 
 const STEPS = [
   { id: 1, name: "Trip Details", icon: MapPin },
@@ -32,8 +37,8 @@ export default function OnboardingWizard() {
     tripName: "",
     destination: "",
     tripType: "Friends",
-    startDate: "",
-    endDate: "",
+    startDate: "2026-08-01",
+    endDate: "2026-08-07",
     coverImage: "",
     // Step 2
     fullName: "",
@@ -43,14 +48,31 @@ export default function OnboardingWizard() {
     country: "",
     // Step 3
     expectedTravellers: 1,
-    expectedBudget: 0,
+    expectedBudget: 50000,
     currency: "INR",
     defaultExpenseSplit: "Equal",
     approvalRequired: false,
-    // Step 4
-    password: "",
-    confirmPassword: "",
   });
+
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
+
+  React.useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return unsub;
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setCurrentUser(result.user);
+      }
+    } catch (err) {
+      console.error("Sign in failed", err);
+    }
+  };
 
   const updateFormData = (data: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -104,11 +126,86 @@ export default function OnboardingWizard() {
   };
 
   const handleSubmit = async () => {
+    if (!currentUser) {
+      setCurrentStep(4);
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API calls
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    setIsSuccess(true);
+    try {
+      const newTripId = `trip_${Date.now()}`;
+      const newTrip: Trip = {
+        id: newTripId,
+        name: formData.tripName,
+        destination: formData.destination,
+        type: formData.tripType,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        coverImage: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=1000&auto=format&fit=crop",
+        organizerId: currentUser.uid,
+        organizationId: `personal_${currentUser.uid}`,
+        expectedTravellers: formData.expectedTravellers,
+        expectedBudget: formData.expectedBudget,
+        currency: formData.currency === "INR" ? "₹" : formData.currency === "USD" ? "$" : "€",
+        defaultExpenseSplit: formData.defaultExpenseSplit as any,
+        approvalRequired: formData.approvalRequired,
+        inviteCode: tripCode,
+        createdAt: new Date().toISOString(),
+        purpose: "Vacation",
+        color: "#06b6d4",
+        coverPhoto: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=1000&auto=format&fit=crop",
+        notes: `Created via Onboarding Wizard. Organizer: ${formData.fullName}`,
+        status: "Upcoming",
+        travelCategory: formData.tripType,
+        totalBudget: formData.expectedBudget,
+        totalSpent: 0,
+        remainingBudget: formData.expectedBudget,
+        totalDistanceKm: 0,
+        totalDuration: `${Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 3600 * 24))} Days`,
+        currentJourneyStatus: "Planning",
+        travellers: [
+          {
+            id: `trv_${currentUser.uid}`,
+            fullName: formData.fullName || currentUser.displayName || "Organizer",
+            email: formData.email || currentUser.email || "",
+            phone: formData.mobileNumber,
+            age: 30, // Default for onboarding
+            gender: "Male", // Default for onboarding
+            emergencyContact: formData.mobileNumber, // Fallback
+            bloodGroup: "O+", // Default for onboarding
+            role: "Organizer",
+            allocatedBudget: formData.expectedBudget,
+          }
+        ],
+        segments: [],
+        vehicles: [],
+        fuelLogs: [],
+        flights: [],
+        trains: [],
+        buses: [],
+        hotels: [],
+        expenses: [],
+        documents: [],
+        checklist: getRichDefaultChecklist(newTripId),
+        timeline: [],
+      };
+
+      // Save to local storage
+      const savedTrips = localStorage.getItem("trippro_trips");
+      const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
+      currentTrips.unshift(newTrip);
+      localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
+
+      // Save to Firestore
+      await saveUserTrip(`personal_${currentUser.uid}`, newTrip);
+      
+      setIsSuccess(true);
+    } catch (err) {
+      console.error("Failed to create trip:", err);
+      alert("Failed to save trip to cloud. Please check your connection.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSuccess) {
@@ -430,51 +527,40 @@ export default function OnboardingWizard() {
           )}
 
           {currentStep === 4 && (
-            <div className="space-y-6">
+            <div className="space-y-8 text-center py-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Create Account</h2>
-                <p className="text-slate-500 text-sm">Secure your organizer account for TripPro.</p>
+                <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Lock className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Secure Your Account</h2>
+                <p className="text-slate-500 text-sm">Sign in to save your trip and access your professional dashboard.</p>
               </div>
 
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Organizer Email</label>
-                  <input 
-                    type="email" 
-                    value={formData.email}
-                    disabled
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Password *</label>
-                  <input 
-                    type="password" 
-                    value={formData.password}
-                    onChange={(e) => updateFormData({ password: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
-                    placeholder="••••••••"
-                  />
-                  <div className="flex gap-1 h-1 mt-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className={cn("flex-1 rounded-full", getPasswordStrength(formData.password).score >= i ? getPasswordStrength(formData.password).color : "bg-slate-100")} />
-                    ))}
+              {currentUser ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 flex items-center gap-4 text-left">
+                  <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                    {currentUser.displayName?.[0] || currentUser.email?.[0]?.toUpperCase() || "U"}
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Strength: {getPasswordStrength(formData.password).label}
+                  <div>
+                    <div className="text-sm font-bold text-emerald-900">Signed in as {currentUser.displayName || currentUser.email}</div>
+                    <div className="text-xs text-emerald-700">Your trip will be securely saved to this account.</div>
+                  </div>
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 ml-auto" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <button 
+                    onClick={handleGoogleSignIn}
+                    className="w-full flex items-center justify-center gap-3 py-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-100 transition-all"
+                  >
+                    <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
+                    Continue with Google
+                  </button>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    One-click secure access to TripPro Cloud
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Confirm Password *</label>
-                  <input 
-                    type="password" 
-                    value={formData.confirmPassword}
-                    onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
+              )}
             </div>
           )}
 

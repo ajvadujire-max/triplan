@@ -72,7 +72,7 @@ Provide a concise, high-impact response.
 `;
 
     const response = await aiClient.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-1.5-flash",
       contents: fullPrompt,
       config: {
         systemInstruction,

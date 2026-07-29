@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { User, Phone, Mail, Calendar, Users, Shield, Camera, Upload, CheckCircle2 } from "lucide-react";
+import { User, Phone, Mail, Calendar, Users, Shield, Camera, Upload, CheckCircle2, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 import { Trip } from "../types";
+import { auth, db } from "../lib/firebase";
 
 export default function JoinTrip() {
   const { tripCode } = useParams();
@@ -13,6 +14,9 @@ export default function JoinTrip() {
   const [isLoading, setIsLoading] = useState(false);
   const [fetchingTrip, setFetchingTrip] = useState(true);
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -25,11 +29,22 @@ export default function JoinTrip() {
   });
 
   useEffect(() => {
+    return auth.onAuthStateChanged(user => {
+      setCurrentUser(user);
+    });
+  }, []);
+
+  useEffect(() => {
     async function loadTrip() {
       if (!tripCode) return;
-      const foundTrip = await fetchTripByInviteCode(tripCode);
-      setTrip(foundTrip);
-      setFetchingTrip(false);
+      try {
+        const foundTrip = await fetchTripByInviteCode(tripCode.trim().toUpperCase());
+        setTrip(foundTrip);
+      } catch (err) {
+        console.error("Failed to load trip:", err);
+      } finally {
+        setFetchingTrip(false);
+      }
     }
     loadTrip();
   }, [tripCode]);
@@ -37,34 +52,74 @@ export default function JoinTrip() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMsg(null);
     
     try {
       if (trip) {
-        const { collection, addDoc } = await import("firebase/firestore");
-        const { db } = await import("../lib/firebase");
-        
-        await addDoc(collection(db, "joinRequests"), {
-          tripId: trip.id,
-          inviteCode: tripCode,
-          ...formData,
-          status: "pending",
-          createdAt: new Date().toISOString()
-        });
+        let activeUid = currentUser?.uid;
 
-        // Add the trip to local storage so they can view it in the dashboard
+        // Sign Up user if not logged in
+        if (!activeUid) {
+          if (!password || password.length < 6) {
+            setErrorMsg("Password must be at least 6 characters to secure your account.");
+            setIsLoading(false);
+            return;
+          }
+          
+          const { createUserWithEmailAndPassword } = await import("firebase/auth");
+          const { doc, setDoc } = await import("firebase/firestore");
+          
+          const cred = await createUserWithEmailAndPassword(auth, formData.email, password);
+          activeUid = cred.user.uid;
+
+          // Create user profile
+          await setDoc(doc(db, "users", activeUid), {
+            uid: activeUid,
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.mobileNumber,
+            role: "traveller",
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
+
+        const { doc, setDoc } = await import("firebase/firestore");
+        
+        // Save registration directly to the subcollection of the trip
+        const regRef = doc(db, "trips", trip.id, "registrations", activeUid);
+        await setDoc(regRef, {
+          id: activeUid,
+          fullName: formData.fullName,
+          age: Number(formData.age) || 25,
+          gender: formData.gender,
+          phone: formData.mobileNumber,
+          emergencyContact: formData.emergencyContact,
+          bloodGroup: "O+",
+          email: formData.email || currentUser?.email || "",
+          profilePhoto: formData.profilePhoto || "",
+          status: "Pending",
+          submissionDate: new Date().toISOString(),
+          accuracyConfirmed: true,
+          role: "Traveller",
+          allocatedBudget: 0
+        }, { merge: true });
+
+        // Add the trip to local storage so they can view it in the dashboard (optional fallback)
         const savedTrips = localStorage.getItem("trippro_trips");
         const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
         if (!currentTrips.find(t => t.id === trip.id)) {
           currentTrips.unshift(trip);
           localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
         }
+
+        setIsSuccess(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMsg(err.message || "An error occurred while joining the trip.");
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
-    setIsSuccess(true);
   };
 
   if (fetchingTrip) {
@@ -123,6 +178,12 @@ export default function JoinTrip() {
           <p className="text-slate-500 mt-2">Fill in your details to get added to the group.</p>
         </div>
 
+        {errorMsg && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-600 font-semibold rounded-2xl text-center">
+            {errorMsg}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100 space-y-6">
           <div className="flex justify-center mb-8">
             <div className="relative group">
@@ -167,8 +228,9 @@ export default function JoinTrip() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Email</label>
+                <label className="text-sm font-bold text-slate-700">Email {!currentUser && "*"}</label>
                 <input 
+                  required={!currentUser}
                   type="email" 
                   value={formData.email}
                   onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
@@ -177,6 +239,24 @@ export default function JoinTrip() {
                 />
               </div>
             </div>
+
+            {!currentUser && (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Secure Your Account Password *</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                  <input 
+                    required
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+                <p className="text-xs text-slate-400">Since you're not logged in, we will automatically set up a traveller account for you using this password.</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

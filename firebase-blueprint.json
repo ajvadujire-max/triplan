@@ -1,125 +1,121 @@
 {
   "entities": {
-    "Organization": {
-      "title": "Organization",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "ownerId": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
-      }
-    },
     "User": {
       "title": "User",
+      "description": "User profile information.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "email": { "type": "string" },
         "fullName": { "type": "string" },
-        "role": { "type": "string" },
-        "organizationId": { "type": "string" },
+        "email": { "type": "string" },
         "phone": { "type": "string" },
         "createdAt": { "type": "string" }
       }
     },
     "Trip": {
       "title": "Trip",
+      "description": "Core trip metadata.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "name": { "type": "string" },
         "destination": { "type": "string" },
-        "organizationId": { "type": "string" },
-        "organizerId": { "type": "string" },
+        "type": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "currency": { "type": "string" },
+        "totalBudget": { "type": "number" },
         "inviteCode": { "type": "string" },
+        "organizerUid": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "TripMember": {
+      "title": "TripMember",
+      "description": "User role and access within a trip.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "role": { "type": "string", "enum": ["organizer", "traveller", "driver"] },
+        "status": { "type": "string", "enum": ["active", "pending", "removed"] },
+        "joinedAt": { "type": "string" }
+      }
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Financial records for a trip.",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "paidBy": { "type": "string" },
+        "splitType": { "type": "string" },
+        "date": { "type": "string" },
         "createdAt": { "type": "string" }
       }
     },
     "Traveller": {
       "title": "Traveller",
+      "description": "Detailed traveller info within a trip.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "tripId": { "type": "string" },
-        "userId": { "type": "string" },
-        "role": { "type": "string" }
-      }
-    },
-    "Expense": {
-      "title": "Expense",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "tripId": { "type": "string" },
-        "amount": { "type": "number" }
-      }
-    },
-    "Journey": {
-      "title": "Journey",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "tripId": { "type": "string" }
-      }
-    },
-    "Budget": {
-      "title": "Budget",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "tripId": { "type": "string" }
-      }
-    },
-    "JoinRequest": {
-      "title": "JoinRequest",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "tripId": { "type": "string" },
         "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string" },
+        "emergencyContact": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "role": { "type": "string" },
+        "allocatedBudget": { "type": "number" }
+      }
+    },
+    "JourneySegment": {
+      "title": "JourneySegment",
+      "description": "Itinerary segments.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
         "status": { "type": "string" }
       }
     },
-    "InviteLink": {
-      "title": "InviteLink",
+    "Collection": {
+      "title": "Collection",
+      "description": "Group fund collections.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "tripId": { "type": "string" },
-        "code": { "type": "string" }
+        "title": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "deadline": { "type": "string" },
+        "status": { "type": "string" }
       }
     },
-    "Role": {
-      "title": "Role",
+    "Registration": {
+      "title": "Registration",
+      "description": "Join requests for a trip.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" }
-      }
-    },
-    "Permission": {
-      "title": "Permission",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "roleId": { "type": "string" },
-        "action": { "type": "string" }
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "requestedAt": { "type": "string" }
       }
     }
   },
   "firestore": {
-    "/organizations/{organizationId}": { "schema": "Organization" },
-    "/users/{userId}": { "schema": "User" },
-    "/trips/{tripId}": { "schema": "Trip" },
-    "/travellers/{travellerId}": { "schema": "Traveller" },
-    "/expenses/{expenseId}": { "schema": "Expense" },
-    "/journeys/{journeyId}": { "schema": "Journey" },
-    "/budgets/{budgetId}": { "schema": "Budget" },
-    "/joinRequests/{requestId}": { "schema": "JoinRequest" },
-    "/inviteLinks/{linkId}": { "schema": "InviteLink" },
-    "/roles/{roleId}": { "schema": "Role" },
-    "/permissions/{permissionId}": { "schema": "Permission" }
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/trips/{tripId}": { "schema": "Trip", "description": "Trips collection." },
+    "/trips/{tripId}/members/{userId}": { "schema": "TripMember", "description": "Trip membership." },
+    "/trips/{tripId}/expenses/{expenseId}": { "schema": "Expense", "description": "Trip expenses." },
+    "/trips/{tripId}/travellers/{travellerId}": { "schema": "Traveller", "description": "Detailed travellers." },
+    "/trips/{tripId}/journey/{segmentId}": { "schema": "JourneySegment", "description": "Trip itinerary segments." },
+    "/trips/{tripId}/collections/{collectionId}": { "schema": "Collection", "description": "Group collections." },
+    "/trips/{tripId}/registrations/{registrationId}": { "schema": "Registration", "description": "Join requests." }
   }
 }

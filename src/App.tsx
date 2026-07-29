@@ -102,35 +102,50 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = initAuth(
+    let unsubscribeTrips: (() => void) | null = null;
+    let unsubscribeAccounts: (() => void) | null = null;
+    let unsubscribeCashbook: (() => void) | null = null;
+
+    const unsubscribeAuth = initAuth(
       async (loggedInUser) => {
         setUser(loggedInUser);
         setIsLoadingCloud(true);
         try {
-          // Fetch admin doc to get organizationId
-          const { getDoc, doc } = await import("firebase/firestore");
+          const { getDoc, doc, collection, query, where, onSnapshot } = await import("firebase/firestore");
           const { db } = await import("./lib/firebase");
+
+          // Determine user role and details from /users/{uid}
+          const userDoc = await getDoc(doc(db, "users", loggedInUser.uid));
+          let role: "traveller" | "organizer" | "super_admin" = "traveller";
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.role) {
+              role = userData.role;
+              setUserRole(userData.role);
+            }
+          }
+
+          // Check admin collection for backwards compatibility
           const adminDoc = await getDoc(doc(db, "admins", loggedInUser.uid));
-          
           if (adminDoc.exists()) {
-            const role = adminDoc.data().role;
-            if (role === "super_admin" || role === "admin" || role === "Admin") {
-              if (!window.location.pathname.startsWith("/admin-portal")) {
-                window.location.href = "/admin-portal/dashboard";
+            const adminRole = adminDoc.data().role || "organizer";
+            if (adminRole === "super_admin" || adminRole === "admin" || adminRole === "Admin") {
+              role = "super_admin";
+              setUserRole("super_admin");
+              if (!window.location.pathname.startsWith("/admin")) {
+                window.location.href = "/admin/dashboard";
+                return;
               }
-              return;
             }
           }
 
           let orgId = `personal_${loggedInUser.uid}`;
-          if (!adminDoc.exists() || !adminDoc.data().organizationId) {
-            console.warn("User is not a valid admin or missing organizationId. Using personal sandbox.");
-          } else {
+          if (adminDoc.exists() && adminDoc.data().organizationId) {
             orgId = adminDoc.data().organizationId;
           }
-
           setOrganizationId(orgId);
 
+          // Migrate local storage once on sign-in
           const savedTrips = localStorage.getItem("trippro_trips");
           const savedAccounts = localStorage.getItem("trippro_accounts");
           const savedCashbook = localStorage.getItem("trippro_cashbook");
@@ -146,48 +161,82 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             cashbookToMigrate
           );
 
-          const fetchedCloudTrips = await fetchUserTrips(orgId);
-          let cloudTrips = [...fetchedCloudTrips];
-          
-          const savedTripsStr = localStorage.getItem("trippro_trips");
-          const localTrips: Trip[] = savedTripsStr ? JSON.parse(savedTripsStr) : [];
-          for (const lt of localTrips) {
-            if (!cloudTrips.find(ct => ct.id === lt.id)) {
-              const latestTrip = await fetchTripById(lt.id);
-              if (latestTrip) {
-                cloudTrips.push(latestTrip);
-              } else {
-                cloudTrips.push(lt);
-              }
-            }
-          }
-          const cloudAccounts = await fetchUserAccounts(orgId);
-          const cloudCashbook = await fetchUserCashbook(orgId);
+          // Real-time trips listener based on role
+          const tripsRef = collection(db, "trips");
+          const tripsQuery = role === "organizer"
+            ? query(tripsRef, where("organizerUid", "==", loggedInUser.uid))
+            : query(tripsRef, where("memberUids", "array-contains", loggedInUser.uid));
 
-          if (cloudTrips.length > 0) setTrips(cloudTrips);
-          if (cloudAccounts.length > 0) setAccounts(cloudAccounts);
-          if (cloudCashbook.length > 0) setCashbook(cloudCashbook);
+          unsubscribeTrips = onSnapshot(tripsQuery, (snapshot) => {
+            const fetchedTrips: Trip[] = [];
+            snapshot.forEach((docSnap) => {
+              fetchedTrips.push(docSnap.data() as Trip);
+            });
+            if (fetchedTrips.length > 0) {
+              setTrips(fetchedTrips);
+              setSelectedTripId((prevId) => {
+                if (fetchedTrips.some((t) => t.id === prevId)) return prevId;
+                return fetchedTrips[0].id;
+              });
+            }
+          }, (err) => {
+            console.error("Trips real-time subscription error:", err);
+          });
+
+          // Real-time accounts listener
+          const accountsQuery = query(collection(db, "accounts"), where("organizationId", "==", orgId));
+          unsubscribeAccounts = onSnapshot(accountsQuery, (snapshot) => {
+            const fetchedAccs: FinanceAccount[] = [];
+            snapshot.forEach((docSnap) => {
+              fetchedAccs.push(docSnap.data() as FinanceAccount);
+            });
+            if (fetchedAccs.length > 0) {
+              setAccounts(fetchedAccs);
+            }
+          });
+
+          // Real-time cashbook listener
+          const cashbookQuery = query(collection(db, "cashbook"), where("organizationId", "==", orgId));
+          unsubscribeCashbook = onSnapshot(cashbookQuery, (snapshot) => {
+            const fetchedCb: CashbookEntry[] = [];
+            snapshot.forEach((docSnap) => {
+              fetchedCb.push(docSnap.data() as CashbookEntry);
+            });
+            if (fetchedCb.length > 0) {
+              setCashbook(fetchedCb);
+            }
+          });
+
         } catch (err) {
-          console.error("Cloud synchronization error:", err);
+          console.error("Cloud initialization error:", err);
         } finally {
           setIsLoadingCloud(false);
         }
       },
       async () => {
+        // Handle Logout / Offline
         setUser(null);
         setOrganizationId(null);
+        if (unsubscribeTrips) unsubscribeTrips();
+        if (unsubscribeAccounts) unsubscribeAccounts();
+        if (unsubscribeCashbook) unsubscribeCashbook();
+
         const saved = localStorage.getItem("trippro_trips");
         const localTrips: Trip[] = saved ? JSON.parse(saved) : initialTrips;
         setTrips(localTrips);
-        
-        // Then fetch latest updates for these trips
+
+        // Fetch latest updates offline/cached
         if (saved) {
           const updatedTrips: Trip[] = [];
           for (const lt of localTrips) {
-            const latestTrip = await fetchTripById(lt.id);
-            if (latestTrip) {
-              updatedTrips.push(latestTrip);
-            } else {
+            try {
+              const latestTrip = await fetchTripById(lt.id);
+              if (latestTrip) {
+                updatedTrips.push(latestTrip);
+              } else {
+                updatedTrips.push(lt);
+              }
+            } catch (err) {
               updatedTrips.push(lt);
             }
           }
@@ -202,8 +251,60 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         setCashbook(savedCb ? JSON.parse(savedCb) : initialCashbookEntries);
       }
     );
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeTrips) unsubscribeTrips();
+      if (unsubscribeAccounts) unsubscribeAccounts();
+      if (unsubscribeCashbook) unsubscribeCashbook();
+    };
   }, []);
+
+  // Real-time registrations listener for loaded trips
+  useEffect(() => {
+    if (!user || trips.length === 0) return;
+
+    let unsubs: (() => void)[] = [];
+
+    async function setupRegistrationListeners() {
+      const { collection, onSnapshot } = await import("firebase/firestore");
+      const { db } = await import("./lib/firebase");
+
+      unsubs = trips.map((trip) => {
+        const registrationsRef = collection(db, "trips", trip.id, "registrations");
+        return onSnapshot(registrationsRef, (snapshot) => {
+          const regs: any[] = [];
+          snapshot.forEach((docSnap) => {
+            regs.push({ id: docSnap.id, ...docSnap.data() });
+          });
+
+          // Update this trip's pendingRegistrations in state if changed
+          setTrips((prevTrips) =>
+            prevTrips.map((t) => {
+              if (t.id === trip.id) {
+                // Avoid infinite re-renders by checking if they actually changed
+                const currentRegsJson = JSON.stringify(t.pendingRegistrations || []);
+                const newRegsJson = JSON.stringify(regs);
+                if (currentRegsJson !== newRegsJson) {
+                  return {
+                    ...t,
+                    pendingRegistrations: regs,
+                  };
+                }
+              }
+              return t;
+            })
+          );
+        });
+      });
+    }
+
+    setupRegistrationListeners();
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [user, trips.map((t) => t.id).join(",")]);
 
   const handleSignIn = async () => {
     if (isAuthLoading) return;

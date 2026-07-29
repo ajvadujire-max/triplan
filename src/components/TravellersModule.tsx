@@ -85,7 +85,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     }
 
     const newTraveller: Traveller = {
-      id: `trv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      id: reg.id || `trv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       fullName: reg.fullName.trim(),
       age: Number(reg.age),
       gender: reg.gender,
@@ -133,7 +133,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   // Handle Save and Approve from Edit Modal
   const handleSaveAndApproveEdit = (updatedReg: PendingTravellerRegistration) => {
     const newTraveller: Traveller = {
-      id: `trv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      id: updatedReg.id || `trv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       fullName: updatedReg.fullName.trim(),
       age: Number(updatedReg.age),
       gender: updatedReg.gender,

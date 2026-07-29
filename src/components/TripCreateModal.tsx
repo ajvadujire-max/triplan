@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Trip, TripPurpose, TripStatus } from "../types";
 import { X, Image as ImageIcon, Palette, Compass } from "lucide-react";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
+import { auth } from "../lib/firebase";
 
 interface TripCreateModalProps {
   isOpen: boolean;
@@ -48,6 +49,11 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
     e.preventDefault();
     if (!name.trim() || !destination.trim() || !startDate || !endDate) return;
 
+    const currentUser = auth.currentUser;
+    const orgUid = currentUser?.uid || initialTrip?.organizerId || "trv_ajva";
+    const orgName = currentUser?.displayName || "Primary Organizer";
+    const orgEmail = currentUser?.email || "organizer@example.com";
+
     const newTrip: Trip = {
       id: initialTrip?.id || `trip_${Date.now()}`,
       name,
@@ -56,8 +62,8 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
       startDate,
       endDate,
       coverImage: coverPhoto,
-      organizerId: initialTrip?.organizerId || "trv_ajva",
-      organizationId: initialTrip?.organizationId || "org_default",
+      organizerId: orgUid,
+      organizationId: initialTrip?.organizationId || `personal_${orgUid}`,
       expectedTravellers: initialTrip?.expectedTravellers || 1,
       expectedBudget: Number(totalBudget) || 0,
       currency,
@@ -79,12 +85,12 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
       currentJourneyStatus: initialTrip?.currentJourneyStatus || "Planning & Booking",
       travellers: initialTrip?.travellers || [
         {
-          id: `trv_${Date.now()}`,
-          fullName: "Primary Organizer",
+          id: orgUid,
+          fullName: orgName,
           age: 30,
           gender: "Male",
           phone: "+91 98765 00000",
-          email: "organizer@example.com",
+          email: orgEmail,
           emergencyContact: "+91 98765 11111",
           bloodGroup: "O+",
           role: "Organizer",
