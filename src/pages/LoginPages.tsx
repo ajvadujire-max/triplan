@@ -50,18 +50,28 @@ const LoginCard = ({ type }: LoginProps) => {
   }[type];
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      setErrorMsg("Please enter your email address to reset your password.");
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMsg("Please enter your email address in the field above to reset your password.");
       return;
     }
     setErrorMsg(null);
     setInfoMsg(null);
     setIsLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
-      setInfoMsg("Password reset email sent. Please check your inbox.");
+      await sendPasswordResetEmail(auth, cleanEmail);
+      setInfoMsg(`Password reset email sent to ${cleanEmail}. Please check your inbox and spam folder.`);
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to send password reset email.");
+      console.error("Password reset error:", err);
+      let friendlyMessage = "Failed to send password reset email.";
+      if (err.code === "auth/user-not-found") {
+        friendlyMessage = "No registered account found with this email address.";
+      } else if (err.code === "auth/invalid-email") {
+        friendlyMessage = "Please enter a valid email address.";
+      } else if (err.message) {
+        friendlyMessage = err.message;
+      }
+      setErrorMsg(friendlyMessage);
     } finally {
       setIsLoading(false);
     }
@@ -266,17 +276,41 @@ const LoginCard = ({ type }: LoginProps) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-          <button 
-            type="button" 
-            onClick={() => {
-              setIsRegister(!isRegister);
-              setErrorMsg(null);
-            }} 
-            className="text-sm font-bold text-indigo-600 hover:underline"
-          >
-            {isRegister ? "Already have an account? Sign In" : "Don't have an account? Create one"}
-          </button>
+        <div className="mt-8 pt-8 border-t border-slate-100 text-center space-y-3">
+          {type === "organizer" ? (
+            <div>
+              <p className="text-xs text-slate-500 mb-2">Organizers create accounts by starting a new trip.</p>
+              <button 
+                type="button" 
+                onClick={() => navigate("/onboarding")} 
+                className="text-sm font-bold text-indigo-600 hover:underline cursor-pointer"
+              >
+                Create New Trip & Organizer Account
+              </button>
+            </div>
+          ) : type === "traveller" ? (
+            <div>
+              <p className="text-xs text-slate-500 mb-2">Have a trip code from your organizer?</p>
+              <button 
+                type="button" 
+                onClick={() => navigate("/join")} 
+                className="text-sm font-bold text-indigo-600 hover:underline cursor-pointer"
+              >
+                Join Existing Trip with Code
+              </button>
+            </div>
+          ) : (
+            <button 
+              type="button" 
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setErrorMsg(null);
+              }} 
+              className="text-sm font-bold text-indigo-600 hover:underline cursor-pointer"
+            >
+              {isRegister ? "Already have an account? Sign In" : "Don't have an account? Create one"}
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

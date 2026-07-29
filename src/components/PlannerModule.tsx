@@ -23,11 +23,13 @@ import {
 interface PlannerModuleProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  role?: string;
 }
 
 export const PlannerModule: React.FC<PlannerModuleProps> = ({
   trip,
   onUpdateTrip,
+  role
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"journey" | "activities" | "combined">("journey");
 
@@ -84,7 +86,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <JourneyBuilder trip={trip} onUpdateTrip={onUpdateTrip} />
+              <JourneyBuilder trip={trip} onUpdateTrip={onUpdateTrip} role={role} />
             </motion.div>
           )}
 

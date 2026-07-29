@@ -77,6 +77,7 @@ export interface Traveller {
   allocatedBudget: number; // Individual budget
   paidAmount?: number; // Total amount collected so far
   paymentHistory?: PaymentRecord[]; // History of payments
+  status?: string;
 }
 
 export interface TransportSegment {
@@ -414,6 +415,7 @@ export interface Trip {
   defaultExpenseSplit: "Equal" | "Manual" | "Percentage";
   approvalRequired: boolean;
   inviteCode: string;
+  tripCode?: string;
   createdAt: string;
   
   // Existing fields for compatibility

@@ -575,16 +575,16 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         )}
         
         {activeTab === "planner" && (
-          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
         )}
 
         {/* Fallbacks for internal navigation if any */}
         {activeTab === "journey" && (
-          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
         )}
 
         {activeTab === "timeline" && (
-          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
         )}
 
         {activeTab === "expenses" && (

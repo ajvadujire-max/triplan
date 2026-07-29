@@ -125,6 +125,39 @@ export default function OnboardingWizard() {
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const handleEmailSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    if (!formData.email) {
+      setAuthError("Email address is required.");
+      return;
+    }
+    if (!password || password.length < 6) {
+      setAuthError("Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setAuthError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const { createUserWithEmailAndPassword } = await import("firebase/auth");
+      const cred = await createUserWithEmailAndPassword(auth, formData.email, password);
+      setCurrentUser(cred.user);
+    } catch (err: any) {
+      console.error("Sign up failed:", err);
+      setAuthError(err.message || "Failed to create account.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!currentUser) {
       setCurrentStep(4);
@@ -143,6 +176,7 @@ export default function OnboardingWizard() {
         endDate: formData.endDate,
         coverImage: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=1000&auto=format&fit=crop",
         organizerId: currentUser.uid,
+        organizerUid: currentUser.uid,
         organizationId: `personal_${currentUser.uid}`,
         expectedTravellers: formData.expectedTravellers,
         expectedBudget: formData.expectedBudget,
@@ -163,16 +197,17 @@ export default function OnboardingWizard() {
         totalDistanceKm: 0,
         totalDuration: `${Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 3600 * 24))} Days`,
         currentJourneyStatus: "Planning",
+        memberUids: [currentUser.uid],
         travellers: [
           {
-            id: `trv_${currentUser.uid}`,
+            id: currentUser.uid,
             fullName: formData.fullName || currentUser.displayName || "Organizer",
             email: formData.email || currentUser.email || "",
             phone: formData.mobileNumber,
-            age: 30, // Default for onboarding
-            gender: "Male", // Default for onboarding
-            emergencyContact: formData.mobileNumber, // Fallback
-            bloodGroup: "O+", // Default for onboarding
+            age: 30,
+            gender: "Male",
+            emergencyContact: formData.mobileNumber,
+            bloodGroup: "O+",
             role: "Organizer",
             allocatedBudget: formData.expectedBudget,
           }
@@ -189,6 +224,22 @@ export default function OnboardingWizard() {
         checklist: getRichDefaultChecklist(newTripId),
         timeline: [],
       };
+
+      // Save user record in Firestore /users/{uid} with role: organizer, tripCode, tripId
+      const { doc, setDoc } = await import("firebase/firestore");
+      const { db } = await import("../lib/firebase");
+
+      await setDoc(doc(db, "users", currentUser.uid), {
+        uid: currentUser.uid,
+        fullName: formData.fullName || currentUser.displayName || "Organizer",
+        name: formData.fullName || currentUser.displayName || "Organizer",
+        email: formData.email || currentUser.email || "",
+        phone: formData.mobileNumber || "",
+        role: "organizer",
+        tripCode: tripCode,
+        tripId: newTripId,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
 
       // Save to local storage
       const savedTrips = localStorage.getItem("trippro_trips");
@@ -543,22 +594,82 @@ export default function OnboardingWizard() {
                   </div>
                   <div>
                     <div className="text-sm font-bold text-emerald-900">Signed in as {currentUser.displayName || currentUser.email}</div>
-                    <div className="text-xs text-emerald-700">Your trip will be securely saved to this account.</div>
+                    <div className="text-xs text-emerald-700">Your trip will be securely saved to this account as Organizer.</div>
                   </div>
                   <CheckCircle2 className="w-6 h-6 text-emerald-600 ml-auto" />
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6 text-left">
+                  {authError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl text-center">
+                      {authError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleEmailSignUp} className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Organizer Email *</label>
+                      <input 
+                        required
+                        type="email" 
+                        value={formData.email}
+                        onChange={(e) => updateFormData({ email: e.target.value })}
+                        placeholder="organizer@example.com"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Password *</label>
+                        <input 
+                          required
+                          type="password" 
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Min 6 characters"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Confirm Password *</label>
+                        <input 
+                          required
+                          type="password" 
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Repeat password"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg cursor-pointer"
+                    >
+                      {isLoading ? "Creating Account..." : "Create Organizer Account & Continue"}
+                    </button>
+                  </form>
+
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-slate-400 font-bold">Or</span>
+                    </div>
+                  </div>
+
                   <button 
+                    type="button"
                     onClick={handleGoogleSignIn}
-                    className="w-full flex items-center justify-center gap-3 py-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-100 transition-all"
+                    className="w-full flex items-center justify-center gap-3 py-3.5 border-2 border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer text-sm"
                   >
                     <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
                     Continue with Google
                   </button>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    One-click secure access to TripPro Cloud
-                  </p>
                 </div>
               )}
             </div>

@@ -4,16 +4,34 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
+    
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
+
     function isSuperAdmin() {
       return isAuthenticated() && getUserData().role == 'super_admin';
     }
 
+    function isOrganizer() {
+      return isAuthenticated() && (
+        getUserData().role == 'organizer' || 
+        getUserData().role == 'super_admin'
+      );
+    }
+
+    function isTripOrganizer(tripData) {
+      return isAuthenticated() && (
+        tripData.organizerUid == request.auth.uid || 
+        tripData.organizerId == request.auth.uid || 
+        isSuperAdmin()
+      );
+    }
+
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow read, update: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
       allow delete: if isSuperAdmin();
     }
 
@@ -23,25 +41,36 @@ service cloud.firestore {
 
     match /trips/{tripId} {
       allow create: if isAuthenticated();
-      allow read: if true; // Allows fetching by code before login
-      allow update, delete: if isAuthenticated() && (resource.data.organizerUid == request.auth.uid || resource.data.organizerId == request.auth.uid || isSuperAdmin());
+      allow read: if true; // Publicly fetchable by invite code
+      
+      // Full update/delete restricted to Trip Organizer or Super Admin
+      // Travellers can update expenses, travellers array, pendingRegistrations, or memberUids when joining/adding expenses
+      allow delete: if isTripOrganizer(resource.data);
+      allow update: if isAuthenticated() && (
+        isTripOrganizer(resource.data) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expenses', 'travellers', 'pendingRegistrations', 'memberUids', 'updatedAt'])
+      );
 
-      // Registrations subcollection
-      match /registrations/{regId} {
-        allow read, write: if isAuthenticated();
+      // Subcollections
+      match /{subcollection=**} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
       }
     }
 
     match /accounts/{accountId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isOrganizer();
     }
 
     match /cashbook/{entryId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isOrganizer();
     }
 
     match /{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isOrganizer();
     }
   }
 }
