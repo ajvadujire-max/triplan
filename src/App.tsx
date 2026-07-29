@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from "react";
 import { User } from "firebase/auth";
+import { getDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "./lib/firebase";
 import { Routes, Route } from "react-router-dom";
 import { AdminPortal } from "./components/AdminPortal";
 import { AdminDashboard } from "./components/AdminDashboard";
@@ -111,9 +113,6 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         setUser(loggedInUser);
         setIsLoadingCloud(true);
         try {
-          const { getDoc, doc, collection, query, where, onSnapshot } = await import("firebase/firestore");
-          const { db } = await import("./lib/firebase");
-
           // Determine user role and details from /users/{uid}
           const userDoc = await getDoc(doc(db, "users", loggedInUser.uid));
           let role: "traveller" | "organizer" | "super_admin" = "traveller";
@@ -266,10 +265,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
     let unsubs: (() => void)[] = [];
 
-    async function setupRegistrationListeners() {
-      const { collection, onSnapshot } = await import("firebase/firestore");
-      const { db } = await import("./lib/firebase");
-
+    function setupRegistrationListeners() {
       unsubs = trips.map((trip) => {
         const registrationsRef = collection(db, "trips", trip.id, "registrations");
         return onSnapshot(registrationsRef, (snapshot) => {

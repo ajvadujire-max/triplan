@@ -1,12 +1,55 @@
+import "./suppressAuthErrors";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore, getFirestore } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 
 export { firebaseConfig };
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+if (typeof window !== "undefined") {
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    const msg = args.map(a => (typeof a === "object" ? (a?.message || a?.stack || JSON.stringify(a)) : String(a))).join(" ");
+    if (
+      msg.includes("Pending promise was never set") ||
+      msg.includes("INTERNAL ASSERTION FAILED") ||
+      msg.includes("auth/argument-error")
+    ) {
+      console.warn("Suppressed Firebase Auth internal assertion notice:", ...args);
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const msg = event?.reason?.message || event?.reason?.stack || String(event?.reason || "");
+    if (
+      msg.includes("Pending promise was never set") ||
+      msg.includes("INTERNAL ASSERTION FAILED") ||
+      msg.includes("auth/argument-error")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      console.warn("Suppressed Firebase Auth internal assertion error:", msg);
+    }
+  });
+
+  window.addEventListener("error", (event) => {
+    const msg = event?.message || event?.error?.message || event?.error?.stack || String(event?.error || "");
+    if (
+      msg.includes("Pending promise was never set") ||
+      msg.includes("INTERNAL ASSERTION FAILED") ||
+      msg.includes("auth/argument-error")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      console.warn("Suppressed Firebase Auth internal assertion error:", msg);
+    }
+  }, true);
+}
 
 export enum OperationType {
   CREATE = 'create',

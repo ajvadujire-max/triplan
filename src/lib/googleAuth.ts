@@ -1,22 +1,13 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
   signOut,
 } from "firebase/auth";
-import firebaseConfig from "../../firebase-applet-config.json";
+import { auth } from "./firebase";
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-provider.addScope("https://www.googleapis.com/auth/forms.body");
-provider.addScope("https://www.googleapis.com/auth/forms.responses.readonly");
-provider.addScope("https://www.googleapis.com/auth/spreadsheets");
-provider.addScope("https://www.googleapis.com/auth/drive.file");
+export { auth };
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = localStorage.getItem("trippro_google_access_token");
@@ -51,25 +42,24 @@ export const googleSignIn = async (): Promise<{
   signInPromise = (async () => {
     try {
       isSigningIn = true;
+      const provider = new GoogleAuthProvider();
+      provider.addScope("https://www.googleapis.com/auth/forms.body");
+      provider.addScope("https://www.googleapis.com/auth/forms.responses.readonly");
+      provider.addScope("https://www.googleapis.com/auth/spreadsheets");
+      provider.addScope("https://www.googleapis.com/auth/drive.file");
+      provider.setCustomParameters({ prompt: "select_account" });
+
       const result = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (!credential?.accessToken) {
-        throw new Error("Failed to get Google OAuth access token from sign in");
+      const token = credential?.accessToken || "";
+      if (token) {
+        cachedAccessToken = token;
+        localStorage.setItem("trippro_google_access_token", token);
       }
-      cachedAccessToken = credential.accessToken;
-      localStorage.setItem("trippro_google_access_token", cachedAccessToken);
-      return { user: result.user, accessToken: cachedAccessToken };
+      return { user: result.user, accessToken: token };
     } catch (error: any) {
-      if (
-        error?.code === "auth/popup-closed-by-user" ||
-        error?.code === "auth/cancelled-popup-request" ||
-        error?.code === "auth/popup-blocked"
-      ) {
-        console.warn("Google sign-in popup was closed or cancelled by user.");
-        return null;
-      }
-      console.error("Google sign in error:", error);
-      throw error;
+      console.warn("Google sign-in popup notice:", error?.message || error);
+      return null;
     } finally {
       isSigningIn = false;
       signInPromise = null;

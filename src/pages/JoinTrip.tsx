@@ -6,6 +6,8 @@ import { cn } from "../lib/utils";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 import { Trip, Traveller } from "../types";
 import { auth, db } from "../lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function JoinTrip() {
   const { tripCode } = useParams();
@@ -100,9 +102,6 @@ export default function JoinTrip() {
             userEmail = `${formData.mobileNumber.replace(/\D/g, "")}@trippro.app`;
           }
           
-          const { createUserWithEmailAndPassword } = await import("firebase/auth");
-          const { doc, setDoc } = await import("firebase/firestore");
-          
           const cred = await createUserWithEmailAndPassword(auth, userEmail, password);
           activeUid = cred.user.uid;
 
@@ -121,7 +120,6 @@ export default function JoinTrip() {
           }, { merge: true });
         } else {
           // Logged in user: update profile with trip link
-          const { doc, setDoc } = await import("firebase/firestore");
           await setDoc(doc(db, "users", activeUid), {
             uid: activeUid,
             role: "traveller",
@@ -133,8 +131,6 @@ export default function JoinTrip() {
             userEmail = currentUser.email;
           }
         }
-
-        const { doc, setDoc, getDoc } = await import("firebase/firestore");
 
         // Prepare new traveller record
         const newTraveller: Traveller = {

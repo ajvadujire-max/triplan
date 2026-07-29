@@ -12,7 +12,9 @@ import { auth, googleSignIn } from "../lib/googleAuth";
 import { saveUserTrip } from "../lib/firestoreSync";
 import { Trip } from "../types";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, User as FirebaseUser } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 const STEPS = [
   { id: 1, name: "Trip Details", icon: MapPin },
@@ -147,7 +149,6 @@ export default function OnboardingWizard() {
 
     try {
       setIsLoading(true);
-      const { createUserWithEmailAndPassword } = await import("firebase/auth");
       const cred = await createUserWithEmailAndPassword(auth, formData.email, password);
       setCurrentUser(cred.user);
     } catch (err: any) {
@@ -226,9 +227,6 @@ export default function OnboardingWizard() {
       };
 
       // Save user record in Firestore /users/{uid} with role: organizer, tripCode, tripId
-      const { doc, setDoc } = await import("firebase/firestore");
-      const { db } = await import("../lib/firebase");
-
       await setDoc(doc(db, "users", currentUser.uid), {
         uid: currentUser.uid,
         fullName: formData.fullName || currentUser.displayName || "Organizer",

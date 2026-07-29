@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
 import { Shield, Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export const AdminPortal: React.FC = () => {
@@ -19,7 +19,6 @@ export const AdminPortal: React.FC = () => {
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
   
   const navigate = useNavigate();
-  const auth = getAuth();
 
   useEffect(() => {
     const checkSetup = async () => {

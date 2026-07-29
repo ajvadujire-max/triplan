@@ -4,10 +4,10 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { initializeApp, deleteApp } from "firebase/app";
+import { createUserWithEmailAndPassword, signOut, initializeAuth, inMemoryPersistence, getAuth } from "firebase/auth";
+import { initializeApp, getApps } from "firebase/app";
 import { doc, getDoc, collection, getDocs, updateDoc, setDoc } from "firebase/firestore";
-import { db, firebaseConfig } from "../lib/firebase";
+import { db, auth, firebaseConfig } from "../lib/firebase";
 import { useNavigate } from "react-router-dom";
 import { Users, Building2, Activity, Settings, LogOut, Plus, X, Loader2 } from "lucide-react";
 
@@ -42,7 +42,6 @@ export const AdminDashboard: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
-  const auth = getAuth();
   const navigate = useNavigate();
 
   const fetchAdminData = async () => {
@@ -91,9 +90,20 @@ export const AdminDashboard: React.FC = () => {
     setCreateError("");
 
     try {
-      // Create a secondary app to avoid signing out the current Super Admin
-      const secondaryApp = initializeApp(firebaseConfig, "Secondary");
-      const secondaryAuth = getAuth(secondaryApp);
+      // Create or reuse secondary app to avoid signing out the current Super Admin
+      const existingApps = getApps();
+      let secondaryApp = existingApps.find(a => a.name === "SecondaryAdminApp");
+      if (!secondaryApp) {
+        secondaryApp = initializeApp(firebaseConfig, "SecondaryAdminApp");
+      }
+      let secondaryAuth;
+      try {
+        secondaryAuth = initializeAuth(secondaryApp, {
+          persistence: inMemoryPersistence
+        });
+      } catch {
+        secondaryAuth = getAuth(secondaryApp);
+      }
       
       const cred = await createUserWithEmailAndPassword(secondaryAuth, newAdmin.email, newAdmin.password);
       
@@ -122,9 +132,8 @@ export const AdminDashboard: React.FC = () => {
         createdAt: new Date().toISOString()
       });
 
-      // Cleanup
+      // Cleanup secondary auth session
       await signOut(secondaryAuth);
-      await deleteApp(secondaryApp);
 
       setIsCreateModalOpen(false);
       setNewAdmin({ name: "", email: "", phone: "", organizationName: "", password: "", status: "Active" });

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
 import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
@@ -9,7 +9,6 @@ export const InitSuperAdmin: React.FC = () => {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
-  const auth = getAuth();
 
   const handleInit = async () => {
     setStatus("loading");
