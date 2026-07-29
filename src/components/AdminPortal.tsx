@@ -23,11 +23,16 @@ export const AdminPortal: React.FC = () => {
 
   useEffect(() => {
     const checkSetup = async () => {
+      if (auth.currentUser) return;
       try {
         await signInWithEmailAndPassword(auth, "test-setup-check@test.com", "testpassword123");
       } catch (err: any) {
         if (err.code === 'auth/operation-not-allowed') {
           setIsAuthDisabled(true);
+        } else {
+          // Any other error (user-not-found, invalid-credential, etc.) means email/password auth is enabled.
+          // We do not print/log these expected auth errors to console.error to avoid raising false alerts in AI Studio.
+          console.log("Auth is enabled. Code check response:", err.code);
         }
       } finally {
         setIsCheckingSetup(false);

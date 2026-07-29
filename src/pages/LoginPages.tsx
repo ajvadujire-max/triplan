@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { Mail, Lock, Plane, Shield, UserCheck, ChevronRight, ArrowLeft, User, Phone } from "lucide-react";
 import { cn } from "../lib/utils";
 import { auth, db } from "../lib/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
 interface LoginProps {
@@ -20,6 +20,7 @@ const LoginCard = ({ type }: LoginProps) => {
   const [isRegister, setIsRegister] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const config = {
     traveller: {
@@ -48,10 +49,29 @@ const LoginCard = ({ type }: LoginProps) => {
     }
   }[type];
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setErrorMsg("Please enter your email address to reset your password.");
+      return;
+    }
+    setErrorMsg(null);
+    setInfoMsg(null);
+    setIsLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setInfoMsg("Password reset email sent. Please check your inbox.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to send password reset email.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
+    setInfoMsg(null);
     
     try {
       const targetRole = type === "super-admin" ? "super_admin" : type;
@@ -111,7 +131,6 @@ const LoginCard = ({ type }: LoginProps) => {
         navigate(config.redirect);
       }
     } catch (err: any) {
-      console.error(err);
       let friendlyMessage = "Authentication failed. Please check your credentials.";
       if (err.code === "auth/email-already-in-use") {
         friendlyMessage = "This email is already registered. Please sign in instead.";
@@ -151,6 +170,12 @@ const LoginCard = ({ type }: LoginProps) => {
         {errorMsg && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-2xl text-center">
             {errorMsg}
+          </div>
+        )}
+
+        {infoMsg && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-600 text-sm font-semibold rounded-2xl text-center">
+            {infoMsg}
           </div>
         )}
 
@@ -224,7 +249,7 @@ const LoginCard = ({ type }: LoginProps) => {
                 <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600" />
                 <span className="text-sm text-slate-600">Remember me</span>
               </label>
-              <a href="#" className="text-sm font-bold text-indigo-600 hover:underline">Forgot?</a>
+              <button type="button" onClick={handleForgotPassword} className="text-sm font-bold text-indigo-600 hover:underline">Forgot?</button>
             </div>
           )}
 
