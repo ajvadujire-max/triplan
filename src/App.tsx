@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { User } from "firebase/auth";
 import { getDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "./lib/firebase";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AdminPortal } from "./components/AdminPortal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { InitSuperAdmin } from "./components/InitSuperAdmin";
@@ -49,10 +49,13 @@ import {
 } from "./lib/firestoreSync";
 
 function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userRole, setUserRole] = useState<"traveller" | "organizer" | "super_admin">(role as any);
+  const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
 
   const [trips, setTrips] = useState<Trip[]>(() => {
     const saved = localStorage.getItem("trippro_trips");
@@ -299,6 +302,27 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
       if (unsubscribeCashbook) unsubscribeCashbook();
     };
   }, []);
+
+  // Protect routes from unauthorized travellers
+  useEffect(() => {
+    if (!user) return;
+
+    if (userRole === "traveller" && location.pathname.startsWith("/admin")) {
+      navigate("/dashboard", {
+        replace: true,
+        state: { error: "Access denied. You do not have organizer permissions." },
+      });
+    }
+  }, [user, userRole, location.pathname, navigate]);
+
+  // Handle access denied message from navigation state
+  useEffect(() => {
+    if (location.state?.error) {
+      setAccessDeniedMessage(location.state.error);
+      // Clear location state to avoid showing it continuously
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   // Real-time registrations listener for loaded trips
   useEffect(() => {
@@ -586,6 +610,21 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 space-y-6">
+        {accessDeniedMessage && (
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 p-4 rounded-xl text-red-700 dark:text-red-350 text-sm font-semibold flex items-center justify-between shadow-sm animate-pulse">
+            <div className="flex items-center gap-2">
+              <span className="text-red-500">⚠️</span>
+              {accessDeniedMessage}
+            </div>
+            <button
+              onClick={() => setAccessDeniedMessage(null)}
+              className="text-red-400 hover:text-red-600 dark:hover:text-red-350 font-bold px-2 py-1 rounded cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {activeTab === "dashboard" && (
           <TripDashboard
             trip={activeTrip}
@@ -599,7 +638,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           />
         )}
 
-        {activeTab === "collections" && (
+        {activeTab === "collections" && (userRole === "organizer" || userRole === "super_admin") && (
           <CollectionsModule
             trip={activeTrip}
             onUpdateTrip={handleUpdateTrip}
@@ -643,7 +682,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           <WeatherMapsTimeline trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
         )}
 
-        {activeTab === "finance" && (
+        {activeTab === "finance" && (userRole === "organizer" || userRole === "super_admin") && (
           <FinanceIntegration
             trip={activeTrip}
             accounts={accounts}
