@@ -703,6 +703,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route path="/join" element={<JoinTripByCode />} />
+        <Route path="/join/:tripCode" element={<JoinTrip />} />
         <Route path="/t/:tripCode" element={<JoinTrip />} />
         
         {/* Auth Routes */}
