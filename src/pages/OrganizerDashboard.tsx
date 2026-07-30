@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Plane, LayoutDashboard, Wallet, Briefcase, 
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { QRCodeSVG } from "qrcode.react";
+import { fetchTripById } from "../lib/firestoreSync";
 
 const NAV_ITEMS = [
   { id: "dashboard", name: "Overview", icon: LayoutDashboard },
@@ -27,13 +28,86 @@ export default function OrganizerDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showQr, setShowQr] = useState(false);
+  const [currentTrip, setCurrentTrip] = useState<any>(null);
+  const [loadingTrip, setLoadingTrip] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadActiveTrip() {
+      setLoadingTrip(true);
+      try {
+        const activeId = localStorage.getItem("trippro_active_trip_id");
+        const savedTripsStr = localStorage.getItem("trippro_trips");
+        let found: any = null;
+        if (savedTripsStr) {
+          const trips = JSON.parse(savedTripsStr);
+          if (Array.isArray(trips)) {
+            found = trips.find((t: any) => t.id === activeId || t.tripCode === activeId || t.inviteCode === activeId);
+            if (!found && trips.length > 0) found = trips[0];
+          }
+        }
+        if (!found && activeId) {
+          found = await fetchTripById(activeId);
+        }
+        setCurrentTrip(found || null);
+      } catch (e) {
+        console.error("Error loading active trip:", e);
+      } finally {
+        setLoadingTrip(false);
+      }
+    }
+
+    loadActiveTrip();
+
+    const handleTripChange = () => {
+      loadActiveTrip();
+    };
+
+    window.addEventListener("trip_changed", handleTripChange);
+    window.addEventListener("storage", handleTripChange);
+
+    return () => {
+      window.removeEventListener("trip_changed", handleTripChange);
+      window.removeEventListener("storage", handleTripChange);
+    };
+  }, []);
+
+  const inviteCode = currentTrip?.inviteCode || currentTrip?.tripCode || currentTrip?.id || "";
+  const inviteLink = `https://triplan-zeta.vercel.app/join/${inviteCode}`;
+
+  const handleCopyCode = () => {
+    if (!inviteCode) return;
+    navigator.clipboard.writeText(inviteCode);
+    setToastMessage("Trip code copied.");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleShare = async () => {
+    if (!inviteCode) return;
+    const shareText = `Join my trip on TripPro!\n\nTrip Code: ${inviteCode}\n\nhttps://triplan-zeta.vercel.app/join/${inviteCode}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join my trip on TripPro",
+          text: shareText,
+          url: inviteLink,
+        });
+      } catch (err) {
+        // user cancelled or failed
+      }
+    } else {
+      navigator.clipboard.writeText(shareText);
+      setToastMessage("Trip code copied.");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  const tripCode = inviteCode || "GOA8F3A";
 
   const pendingRequests = [
     { id: "1", name: "Alice Johnson", phone: "+91 9876543210", email: "alice@example.com", photo: "AJ" },
     { id: "2", name: "Bob Smith", phone: "+91 9123456789", email: "bob@test.com", photo: "BS" },
   ];
-
-  const inviteLink = "https://triplan-zeta.vercel.app/t/GOA8F3A";
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -98,7 +172,7 @@ export default function OrganizerDashboard() {
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-bold">Admin Organizer</div>
-                <div className="text-xs text-slate-500">Trip: GOA8F3A</div>
+                <div className="text-xs text-slate-500">Trip: {tripCode}</div>
               </div>
               <div className="w-10 h-10 bg-emerald-100 rounded-full border border-emerald-200 flex items-center justify-center font-bold text-emerald-600">
                 AO
@@ -193,37 +267,54 @@ export default function OrganizerDashboard() {
 
                   {/* Invite System Section */}
                   <div className="space-y-6">
-                    <div className="bg-emerald-950 text-white p-8 rounded-[32px] shadow-2xl relative overflow-hidden group">
-                      <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
-                      <div className="relative z-10">
-                        <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-900/40">
-                          <Link className="text-white w-6 h-6" />
+                    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold text-slate-900">Trip Invite</h3>
+                        {toastMessage && (
+                          <span className="text-xs bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full font-bold animate-pulse">
+                            {toastMessage}
+                          </span>
+                        )}
+                      </div>
+
+                      {!currentTrip ? (
+                        <div className="text-slate-500 text-sm py-6 text-center font-medium">
+                          No active trip selected.
                         </div>
-                        <h3 className="text-xl font-bold mb-2">Trip Invite</h3>
-                        <p className="text-emerald-100/70 text-sm mb-6 leading-relaxed">Share this link or QR code with your travellers to join the trip instantly.</p>
-                        
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 mb-6 border border-white/10">
-                          <div className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2">Invite Code</div>
-                          <div className="text-2xl font-black tracking-wider mb-2">GOA8F3A</div>
-                          <div className="text-[10px] text-emerald-200/50 truncate mb-4">{inviteLink}</div>
-                          
-                          <div className="flex gap-2">
-                            <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white text-emerald-950 rounded-xl text-xs font-bold hover:bg-emerald-50 transition-colors">
-                              <Copy className="w-3.5 h-3.5" /> Copy
+                      ) : (
+                        <div className="space-y-6">
+                          <div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Invite Code</div>
+                            <div className="text-3xl font-black text-slate-900 tracking-wider">
+                              {currentTrip.inviteCode || currentTrip.tripCode || currentTrip.id || "N/A"}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3">
+                            <button 
+                              onClick={handleCopyCode}
+                              className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-md"
+                            >
+                              <Copy className="w-4 h-4" /> Copy
                             </button>
                             <button 
-                              onClick={() => setShowQr(!showQr)}
-                              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-400 transition-colors"
+                              onClick={handleShare}
+                              className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
                             >
-                              <QrCode className="w-3.5 h-3.5" /> QR Code
+                              <Share2 className="w-4 h-4" /> Share
                             </button>
                           </div>
-                        </div>
 
-                        <button className="w-full flex items-center justify-center gap-2 py-3 border border-emerald-400/30 rounded-xl text-sm font-bold hover:bg-white/10 transition-all">
-                          <Share2 className="w-4 h-4" /> Share WhatsApp
-                        </button>
-                      </div>
+                          <div className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                              <QRCodeSVG value={inviteLink} size={160} />
+                            </div>
+                            <div className="text-xs font-medium text-slate-500 text-center break-all select-all">
+                              {inviteLink}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">

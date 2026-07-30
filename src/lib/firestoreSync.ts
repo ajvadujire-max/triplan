@@ -9,8 +9,9 @@ import {
   where,
   getDocFromServer
 } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "./firebase";
+import { db, handleFirestoreError, OperationType, firebaseConfig } from "./firebase";
 import { Trip, FinanceAccount, CashbookEntry } from "../types";
+import { initialTrips } from "../data/mockData";
 
 function sanitizeForFirestore<T>(obj: T): T {
   if (obj === null || obj === undefined) {
@@ -33,19 +34,63 @@ function sanitizeForFirestore<T>(obj: T): T {
 }
 
 export async function fetchTripByInviteCode(code: string): Promise<Trip | null> {
-  const normalizedCode = code.trim().toUpperCase();
+  if (!code) return null;
+  const cleanCode = code.trim();
+  const normalizedCode = cleanCode.toUpperCase();
   const path = `trips`;
+
+  console.log("[Trip Lookup Debug] Starting trip lookup in Firestore collection:", path, {
+    firebaseProjectId: firebaseConfig.projectId,
+    enteredCode: code,
+    normalizedTripCode: normalizedCode,
+  });
+
   try {
-    const q = query(collection(db, path), where("inviteCode", "==", normalizedCode));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      return snapshot.docs[0].data() as Trip;
+    const colRef = collection(db, path);
+    const allSnapshot = await getDocs(colRef);
+    console.log("[Trip Lookup Debug] Total documents in collection 'trips' scanned =", allSnapshot.size);
+
+    let matchingDoc: any = null;
+    let matchingTrip: Trip | null = null;
+
+    allSnapshot.forEach((docSnap) => {
+      const data = docSnap.data() as Trip;
+      const tripCodeMatch = data.tripCode && data.tripCode.toUpperCase() === normalizedCode;
+      const inviteCodeMatch = data.inviteCode && data.inviteCode.toUpperCase() === normalizedCode;
+      const idMatch = data.id && data.id.toUpperCase() === normalizedCode;
+
+      if (tripCodeMatch || inviteCodeMatch || idMatch) {
+        const organizerEmail = data.travellers?.find(t => t.role?.toLowerCase() === "organizer")?.email || data.organizerId || "unknown";
+        const organizerUid = data.organizerUid || data.organizerId || "unknown";
+        const docPath = `${path}/${docSnap.id}`;
+        
+        console.log("[Trip Lookup Debug] MATCH FOUND:", {
+          documentId: docSnap.id,
+          collectionPath: docPath,
+          tripName: data.name,
+          organizerEmail,
+          organizerUid,
+          tripCode: data.tripCode,
+          inviteCode: data.inviteCode,
+        });
+
+        if (!matchingTrip) {
+          matchingTrip = data;
+          matchingDoc = docSnap;
+        }
+      }
+    });
+
+    if (matchingTrip) {
+      return matchingTrip;
     }
-    return null;
+
+    console.warn("[Trip Lookup Debug] Zero documents found in Firestore matching tripCode or inviteCode:", normalizedCode);
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, path);
-    return null;
+    console.error("[Trip Lookup Debug] Firestore query error during trip lookup:", error);
   }
+
+  return null;
 }
 
 export async function fetchTripById(tripId: string): Promise<Trip | null> {

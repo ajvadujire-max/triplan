@@ -9,6 +9,9 @@ export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
+console.log("[TripPro Firebase] Connected Project ID:", firebaseConfig.projectId);
+console.log("[TripPro Firebase] Firestore Database ID:", firebaseConfig.firestoreDatabaseId || "(default)");
+
 if (typeof window !== "undefined") {
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {

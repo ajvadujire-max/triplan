@@ -212,6 +212,8 @@ export default function JoinTrip() {
           currentTrips.unshift(updatedTripDoc);
         }
         localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
+        localStorage.setItem("trippro_active_trip_id", trip.id);
+        window.dispatchEvent(new Event("trip_changed"));
 
         setIsSuccess(true);
       }
@@ -262,7 +264,13 @@ export default function JoinTrip() {
           <h2 className="text-3xl font-extrabold text-slate-900 mb-2">You're In!</h2>
           <p className="text-slate-600 mb-8">Successfully joined <strong>{trip?.name}</strong>. Welcome to the trip!</p>
           <button 
-            onClick={() => navigate("/dashboard")}
+            onClick={() => {
+              if (trip) {
+                localStorage.setItem("trippro_active_trip_id", trip.id);
+                window.dispatchEvent(new Event("trip_changed"));
+              }
+              navigate("/dashboard");
+            }}
             className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 cursor-pointer"
           >
             Go to My Dashboard

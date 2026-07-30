@@ -60,8 +60,49 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   });
 
   const [selectedTripId, setSelectedTripId] = useState<string>(() => {
+    const active = localStorage.getItem("trippro_active_trip_id");
+    if (active && trips.some((t) => t.id === active)) return active;
     return trips[0]?.id || "trip_goa_01";
   });
+
+  useEffect(() => {
+    if (selectedTripId) {
+      localStorage.setItem("trippro_active_trip_id", selectedTripId);
+    }
+  }, [selectedTripId]);
+
+  useEffect(() => {
+    const syncActiveTrip = () => {
+      const savedTripsStr = localStorage.getItem("trippro_trips");
+      if (savedTripsStr) {
+        try {
+          const parsed = JSON.parse(savedTripsStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTrips(parsed);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      const active = localStorage.getItem("trippro_active_trip_id");
+      if (active) {
+        setSelectedTripId(active);
+      }
+    };
+
+    window.addEventListener("trip_changed", syncActiveTrip);
+    window.addEventListener("storage", syncActiveTrip);
+
+    const active = localStorage.getItem("trippro_active_trip_id");
+    if (active && trips.some((t) => t.id === active)) {
+      setSelectedTripId(active);
+    }
+
+    return () => {
+      window.removeEventListener("trip_changed", syncActiveTrip);
+      window.removeEventListener("storage", syncActiveTrip);
+    };
+  }, []);
 
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "ai" | "ai_insights"

@@ -185,6 +185,7 @@ export default function OnboardingWizard() {
         defaultExpenseSplit: formData.defaultExpenseSplit as any,
         approvalRequired: formData.approvalRequired,
         inviteCode: tripCode,
+        tripCode: tripCode,
         createdAt: new Date().toISOString(),
         purpose: "Vacation",
         color: "#06b6d4",

@@ -59,18 +59,16 @@ service cloud.firestore {
     }
 
     match /accounts/{accountId} {
-      allow read: if isAuthenticated();
-      allow write: if isOrganizer();
+      allow read, write: if isAuthenticated();
     }
 
     match /cashbook/{entryId} {
-      allow read: if isAuthenticated();
-      allow write: if isOrganizer();
+      allow read, write: if isAuthenticated();
     }
 
     match /{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isOrganizer();
+      allow write: if isAuthenticated();
     }
   }
 }

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Trip } from "../types";
 import { TripCountdownCard } from "./TripCountdownCard";
+import { QRCodeSVG } from "qrcode.react";
 import {
   MapPin,
   Calendar,
@@ -25,6 +26,8 @@ import {
   ChevronRight,
   IndianRupee,
   CloudSun,
+  Copy,
+  Share2,
 } from "lucide-react";
 
 interface TripDashboardProps {
@@ -40,6 +43,37 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
   onNavigateTab,
   role = "traveller",
 }) => {
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const inviteCode = trip ? (trip.inviteCode || trip.tripCode || trip.id || "") : "";
+  const inviteLink = inviteCode ? `https://triplan-zeta.vercel.app/join/${inviteCode}` : "";
+
+  const handleCopyCode = () => {
+    if (!inviteCode) return;
+    navigator.clipboard.writeText(inviteCode);
+    setToastMessage("Trip code copied.");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleShare = async () => {
+    if (!inviteCode) return;
+    const shareText = `Join my trip on TripPro!\n\nTrip Code: ${inviteCode}\n\n${inviteLink}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join my trip on TripPro",
+          text: shareText,
+          url: inviteLink,
+        });
+      } catch (err) {
+        // user cancelled or failed
+      }
+    } else {
+      navigator.clipboard.writeText(shareText);
+      setToastMessage("Trip code copied.");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
   const isOrganizer = role === "organizer" || role === "super_admin";
   // Calculate total spent from trip expenses
   const totalSpent = trip.expenses.reduce((acc, exp) => acc + (Number(exp.amount) || 0), 0);
@@ -262,6 +296,59 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Trip Invite Card */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Trip Invite</h3>
+          {toastMessage && (
+            <span className="text-xs bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full font-bold animate-pulse">
+              {toastMessage}
+            </span>
+          )}
+        </div>
+
+        {!trip ? (
+          <div className="text-slate-500 dark:text-slate-400 text-sm py-4 text-center font-medium">
+            No active trip selected.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Invite Code</div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-wider">
+                {inviteCode || "N/A"}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={handleCopyCode}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-800 dark:hover:bg-slate-700 transition-all shadow-xs cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" /> Copy
+              </button>
+              <button 
+                onClick={handleShare}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-3">
+              {inviteCode ? (
+                <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-100 dark:border-slate-800">
+                  <QRCodeSVG value={inviteLink} size={140} />
+                </div>
+              ) : null}
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center break-all select-all">
+                {inviteLink}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* COLLECTIONS & TREASURY WIDGET */}
