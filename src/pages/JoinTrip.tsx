@@ -56,7 +56,7 @@ export default function JoinTrip() {
 
   const organizerName = React.useMemo(() => {
     if (!trip) return "Trip Organizer";
-    const org = trip.travellers?.find(t => t.role === "Organizer" || t.role === "organizer");
+    const org = trip.travellers?.find(t => (t.role as string) === "Organizer" || (t.role as string) === "organizer");
     return org?.fullName || "Primary Organizer";
   }, [trip]);
 
@@ -125,7 +125,7 @@ export default function JoinTrip() {
           id: activeUid,
           fullName: formData.fullName,
           age: Number(formData.age) || 25,
-          gender: formData.gender,
+          gender: formData.gender as "Other" | "Male" | "Female",
           phone: formData.mobileNumber,
           email: userEmail,
           emergencyContact: formData.emergencyContact || "",
@@ -225,7 +225,7 @@ export default function JoinTrip() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Trip Code</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Trip not found.</h2>
           <p className="text-slate-500 mb-6">We couldn't find an active trip matching code <strong>{tripCode}</strong>.</p>
           <button 
             onClick={() => navigate("/join")} 

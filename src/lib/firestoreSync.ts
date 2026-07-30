@@ -39,7 +39,7 @@ export async function fetchTripByInviteCode(code: string): Promise<Trip | null> 
   const normalizedCode = cleanCode.toUpperCase();
   const path = `trips`;
 
-  console.log("[Trip Lookup Debug] Starting trip lookup in Firestore collection:", path, {
+  console.log("[Trip Lookup Debug] Starting direct trip lookup in Firestore collection:", path, {
     firebaseProjectId: firebaseConfig.projectId,
     enteredCode: code,
     normalizedTripCode: normalizedCode,
@@ -47,42 +47,54 @@ export async function fetchTripByInviteCode(code: string): Promise<Trip | null> 
 
   try {
     const colRef = collection(db, path);
-    const allSnapshot = await getDocs(colRef);
-    console.log("[Trip Lookup Debug] Total documents in collection 'trips' scanned =", allSnapshot.size);
+    
+    // Direct query using inviteCode
+    const qInvite = query(colRef, where("inviteCode", "==", cleanCode));
+    const snapInvite = await getDocs(qInvite);
+    if (!snapInvite.empty) {
+      console.log("[Trip Lookup Debug] Found trip by inviteCode:", cleanCode);
+      return snapInvite.docs[0].data() as Trip;
+    }
 
-    let matchingDoc: any = null;
-    let matchingTrip: Trip | null = null;
-
-    allSnapshot.forEach((docSnap) => {
-      const data = docSnap.data() as Trip;
-      const tripCodeMatch = data.tripCode && data.tripCode.toUpperCase() === normalizedCode;
-      const inviteCodeMatch = data.inviteCode && data.inviteCode.toUpperCase() === normalizedCode;
-      const idMatch = data.id && data.id.toUpperCase() === normalizedCode;
-
-      if (tripCodeMatch || inviteCodeMatch || idMatch) {
-        const organizerEmail = data.travellers?.find(t => t.role?.toLowerCase() === "organizer")?.email || data.organizerId || "unknown";
-        const organizerUid = data.organizerUid || data.organizerId || "unknown";
-        const docPath = `${path}/${docSnap.id}`;
-        
-        console.log("[Trip Lookup Debug] MATCH FOUND:", {
-          documentId: docSnap.id,
-          collectionPath: docPath,
-          tripName: data.name,
-          organizerEmail,
-          organizerUid,
-          tripCode: data.tripCode,
-          inviteCode: data.inviteCode,
-        });
-
-        if (!matchingTrip) {
-          matchingTrip = data;
-          matchingDoc = docSnap;
-        }
+    // Direct query using inviteCode (uppercase)
+    if (normalizedCode !== cleanCode) {
+      const qInviteUpper = query(colRef, where("inviteCode", "==", normalizedCode));
+      const snapInviteUpper = await getDocs(qInviteUpper);
+      if (!snapInviteUpper.empty) {
+        console.log("[Trip Lookup Debug] Found trip by inviteCode (upper):", normalizedCode);
+        return snapInviteUpper.docs[0].data() as Trip;
       }
-    });
+    }
 
-    if (matchingTrip) {
-      return matchingTrip;
+    // Direct query using tripCode
+    const qTrip = query(colRef, where("tripCode", "==", cleanCode));
+    const snapTrip = await getDocs(qTrip);
+    if (!snapTrip.empty) {
+      console.log("[Trip Lookup Debug] Found trip by tripCode:", cleanCode);
+      return snapTrip.docs[0].data() as Trip;
+    }
+
+    // Direct query using tripCode (uppercase)
+    if (normalizedCode !== cleanCode) {
+      const qTripUpper = query(colRef, where("tripCode", "==", normalizedCode));
+      const snapTripUpper = await getDocs(qTripUpper);
+      if (!snapTripUpper.empty) {
+        console.log("[Trip Lookup Debug] Found trip by tripCode (upper):", normalizedCode);
+        return snapTripUpper.docs[0].data() as Trip;
+      }
+    }
+
+    // Direct query by doc ID
+    const docSnap = await getDoc(doc(db, path, cleanCode));
+    if (docSnap.exists()) {
+      console.log("[Trip Lookup Debug] Found trip by ID:", cleanCode);
+      return docSnap.data() as Trip;
+    }
+    
+    const docSnapUpper = await getDoc(doc(db, path, normalizedCode));
+    if (docSnapUpper.exists()) {
+      console.log("[Trip Lookup Debug] Found trip by ID (upper):", normalizedCode);
+      return docSnapUpper.data() as Trip;
     }
 
     console.warn("[Trip Lookup Debug] Zero documents found in Firestore matching tripCode or inviteCode:", normalizedCode);
