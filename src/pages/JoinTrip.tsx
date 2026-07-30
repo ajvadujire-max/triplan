@@ -43,22 +43,10 @@ export default function JoinTrip() {
       if (!tripCode) return;
       try {
         const foundTrip = await fetchTripByInviteCode(tripCode.trim().toUpperCase());
-        if (!foundTrip) {
-          // Check local storage fallback
-          const savedTrips = localStorage.getItem("trippro_trips");
-          const localTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
-          const foundLocal = localTrips.find(t => 
-            (t.inviteCode && t.inviteCode.toUpperCase() === tripCode.trim().toUpperCase()) ||
-            (t.tripCode && t.tripCode.toUpperCase() === tripCode.trim().toUpperCase())
-          );
-          if (foundLocal) {
-            setTrip(foundLocal);
-          }
-        } else {
-          setTrip(foundTrip);
-        }
+        setTrip(foundTrip || null);
       } catch (err) {
         console.error("Failed to load trip:", err);
+        setTrip(null);
       } finally {
         setFetchingTrip(false);
       }
