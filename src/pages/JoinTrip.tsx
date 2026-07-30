@@ -215,7 +215,7 @@ export default function JoinTrip() {
         localStorage.setItem("trippro_active_trip_id", trip.id);
         window.dispatchEvent(new Event("trip_changed"));
 
-        setIsSuccess(true);
+        navigate("/dashboard");
       }
     } catch (err: any) {
       console.error(err);
