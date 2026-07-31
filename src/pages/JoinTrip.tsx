@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 import { Trip, Traveller } from "../types";
 import { auth, db } from "../lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function JoinTrip() {
@@ -43,10 +43,22 @@ export default function JoinTrip() {
       if (!tripCode) return;
       try {
         const foundTrip = await fetchTripByInviteCode(tripCode.trim().toUpperCase());
-        setTrip(foundTrip || null);
+        if (!foundTrip) {
+          // Check local storage fallback
+          const savedTrips = localStorage.getItem("trippro_trips");
+          const localTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
+          const foundLocal = localTrips.find(t => 
+            (t.inviteCode && t.inviteCode.toUpperCase() === tripCode.trim().toUpperCase()) ||
+            (t.tripCode && t.tripCode.toUpperCase() === tripCode.trim().toUpperCase())
+          );
+          if (foundLocal) {
+            setTrip(foundLocal);
+          }
+        } else {
+          setTrip(foundTrip);
+        }
       } catch (err) {
         console.error("Failed to load trip:", err);
-        setTrip(null);
       } finally {
         setFetchingTrip(false);
       }
@@ -56,7 +68,7 @@ export default function JoinTrip() {
 
   const organizerName = React.useMemo(() => {
     if (!trip) return "Trip Organizer";
-    const org = trip.travellers?.find(t => (t.role as string) === "Organizer" || (t.role as string) === "organizer");
+    const org = trip.travellers?.find(t => t.role === "Organizer" || t.role === "organizer");
     return org?.fullName || "Primary Organizer";
   }, [trip]);
 
@@ -90,7 +102,25 @@ export default function JoinTrip() {
             userEmail = `${formData.mobileNumber.replace(/\D/g, "")}@trippro.app`;
           }
           
-          const cred = await createUserWithEmailAndPassword(auth, userEmail, password);
+          let cred;
+          try {
+            cred = await createUserWithEmailAndPassword(auth, userEmail, password);
+          } catch (err: any) {
+            if (err.code === "auth/email-already-in-use") {
+              try {
+                cred = await signInWithEmailAndPassword(auth, userEmail, password);
+              } catch (signInErr: any) {
+                if (signInErr.code === "auth/invalid-credential" || signInErr.code === "auth/wrong-password") {
+                  setErrorMsg("This email is already registered. Please enter the correct password to join.");
+                  setIsLoading(false);
+                  return;
+                }
+                throw signInErr;
+              }
+            } else {
+              throw err;
+            }
+          }
           activeUid = cred.user.uid;
 
           // Create user profile in /users/{uid}
@@ -125,7 +155,7 @@ export default function JoinTrip() {
           id: activeUid,
           fullName: formData.fullName,
           age: Number(formData.age) || 25,
-          gender: formData.gender as "Other" | "Male" | "Female",
+          gender: formData.gender,
           phone: formData.mobileNumber,
           email: userEmail,
           emergencyContact: formData.emergencyContact || "",
@@ -203,7 +233,7 @@ export default function JoinTrip() {
         localStorage.setItem("trippro_active_trip_id", trip.id);
         window.dispatchEvent(new Event("trip_changed"));
 
-        navigate("/dashboard");
+        setIsSuccess(true);
       }
     } catch (err: any) {
       console.error(err);
@@ -225,7 +255,7 @@ export default function JoinTrip() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Trip not found.</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Trip Code</h2>
           <p className="text-slate-500 mb-6">We couldn't find an active trip matching code <strong>{tripCode}</strong>.</p>
           <button 
             onClick={() => navigate("/join")} 

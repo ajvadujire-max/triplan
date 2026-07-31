@@ -51,6 +51,7 @@ import {
 interface JourneyBuilderProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  role?: string;
 }
 
 const transportTypesList: { type: TransportType; iconName: string; color: string }[] = [
@@ -72,6 +73,7 @@ const transportTypesList: { type: TransportType; iconName: string; color: string
 export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
   trip,
   onUpdateTrip,
+  role,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     "route" | "vehicles" | "fuel" | "flights" | "trains" | "buses" | "hotels"
@@ -658,13 +660,15 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 </p>
               </div>
 
-              <button
-                onClick={handleOpenAddSegment}
-                className="flex items-center gap-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] sm:text-xs font-bold h-8 sm:h-10 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-sm transition-all shrink-0 animate-fadeIn"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Segment</span>
-              </button>
+              {role !== "traveller" && (
+                <button
+                  onClick={handleOpenAddSegment}
+                  className="flex items-center gap-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] sm:text-xs font-bold h-8 sm:h-10 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-sm transition-all shrink-0 animate-fadeIn"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Add Segment</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -995,6 +999,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <p className="text-xs text-slate-500">Track fuel refill receipts, cost per litre, and km mileage.</p>
             </div>
 
+          {role !== "traveller" && (
             <button
               onClick={() => setIsFuelModalOpen(true)}
               className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
@@ -1002,6 +1007,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <Plus className="w-4 h-4" />
               + Log Fuel Refill
             </button>
+          )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1174,6 +1180,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <p className="text-xs text-slate-500">Check-in times, room numbers, and booking vouchers.</p>
             </div>
 
+          {role !== "traveller" && (
             <button
               onClick={() => setIsHotelModalOpen(true)}
               className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
@@ -1181,6 +1188,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <Plus className="w-4 h-4" />
               + Add Hotel Booking
             </button>
+          )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
