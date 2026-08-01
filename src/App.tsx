@@ -636,6 +636,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             onDeleteExpense={handleDeleteExpense}
             onUpdateTrip={handleUpdateTrip}
             role={userRole}
+            currentUser={user}
           />
         )}
 

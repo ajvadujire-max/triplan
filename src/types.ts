@@ -196,6 +196,18 @@ export interface Expense {
   notes?: string;
 }
 
+export interface PersonalExpense {
+  id: string;
+  tripId: string;
+  travellerUid: string;
+  title: string;
+  amount: number;
+  category: string;
+  date: string;
+  notes: string;
+  createdAt: string;
+}
+
 export interface DocumentItem {
   id: string;
   tripId: string;

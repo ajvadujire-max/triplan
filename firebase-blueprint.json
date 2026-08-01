@@ -106,6 +106,22 @@
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
         "requestedAt": { "type": "string" }
       }
+    },
+    "PersonalExpense": {
+      "title": "PersonalExpense",
+      "description": "Private financial records for an individual traveller.",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string" },
+        "travellerUid": { "type": "string" },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["tripId", "travellerUid", "title", "amount", "category", "date"]
     }
   },
   "firestore": {
@@ -116,6 +132,7 @@
     "/trips/{tripId}/travellers/{travellerId}": { "schema": "Traveller", "description": "Detailed travellers." },
     "/trips/{tripId}/journey/{segmentId}": { "schema": "JourneySegment", "description": "Trip itinerary segments." },
     "/trips/{tripId}/collections/{collectionId}": { "schema": "Collection", "description": "Group collections." },
-    "/trips/{tripId}/registrations/{registrationId}": { "schema": "Registration", "description": "Join requests." }
+    "/trips/{tripId}/registrations/{registrationId}": { "schema": "Registration", "description": "Join requests." },
+    "/personalExpenses/{expenseId}": { "schema": "PersonalExpense", "description": "Private personal expenses." }
   }
 }

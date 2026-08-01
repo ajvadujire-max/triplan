@@ -10,7 +10,7 @@ import {
   getDocFromServer
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType, firebaseConfig } from "./firebase";
-import { Trip, FinanceAccount, CashbookEntry } from "../types";
+import { Trip, FinanceAccount, CashbookEntry, PersonalExpense } from "../types";
 import { initialTrips } from "../data/mockData";
 
 function sanitizeForFirestore<T>(obj: T): T {
@@ -296,5 +296,44 @@ export async function migrateLocalDataToFirestore(
     }
   } catch (error) {
     console.error("Migration to Firestore failed:", error);
+  }
+}
+
+export async function fetchPersonalExpenses(tripId: string, travellerUid: string): Promise<PersonalExpense[]> {
+  const path = "personalExpenses";
+  try {
+    const q = query(
+      collection(db, path),
+      where("tripId", "==", tripId),
+      where("travellerUid", "==", travellerUid)
+    );
+    const snapshot = await getDocs(q);
+    const expenses: PersonalExpense[] = [];
+    snapshot.forEach((docSnap) => {
+      expenses.push(docSnap.data() as PersonalExpense);
+    });
+    // Sort by createdAt descending or date descending
+    return expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return [];
+  }
+}
+
+export async function savePersonalExpense(expense: PersonalExpense): Promise<void> {
+  const path = `personalExpenses/${expense.id}`;
+  try {
+    await setDoc(doc(db, "personalExpenses", expense.id), sanitizeForFirestore(expense));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deletePersonalExpense(expenseId: string): Promise<void> {
+  const path = `personalExpenses/${expenseId}`;
+  try {
+    await deleteDoc(doc(db, "personalExpenses", expenseId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }

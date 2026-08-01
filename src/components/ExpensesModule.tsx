@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { User as FirebaseUser } from "firebase/auth";
 import {
   Trip,
   Expense,
   ExpenseCategory,
   SplitType,
   FinanceAccount,
+  PersonalExpense,
 } from "../types";
+import { fetchPersonalExpenses, savePersonalExpense, deletePersonalExpense } from "../lib/firestoreSync";
 import {
   Receipt,
   Plus,
@@ -42,6 +45,7 @@ import {
   Tag,
   Quote,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 
 interface ExpensesModuleProps {
@@ -51,6 +55,7 @@ interface ExpensesModuleProps {
   onDeleteExpense: (expenseId: string) => void;
   onUpdateTrip?: (updatedTrip: Trip) => void;
   role?: "traveller" | "organizer" | "super_admin";
+  currentUser?: FirebaseUser | null;
 }
 
 const categoriesList: ExpenseCategory[] = [
@@ -112,11 +117,34 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   onDeleteExpense,
   onUpdateTrip,
   role = "traveller",
+  currentUser,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
+  const [activeSection, setActiveSection] = useState<"trip" | "personal">("trip");
+  const [personalExpenses, setPersonalExpenses] = useState<PersonalExpense[]>([]);
+  const [isLoadingPersonal, setIsLoadingPersonal] = useState(false);
+  const [editingPersonalExpense, setEditingPersonalExpense] = useState<PersonalExpense | null>(null);
+
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const [selectedPersonalExpenseId, setSelectedPersonalExpenseId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  useEffect(() => {
+    if (trip?.id && currentUser?.uid) {
+      setIsLoadingPersonal(true);
+      fetchPersonalExpenses(trip.id, currentUser.uid)
+        .then((res) => {
+          setPersonalExpenses(res);
+        })
+        .catch((err) => {
+          console.error("Error fetching personal expenses:", err);
+        })
+        .finally(() => {
+          setIsLoadingPersonal(false);
+        });
+    }
+  }, [trip?.id, currentUser?.uid]);
 
   // Form state
   const [description, setDescription] = useState("");
@@ -152,6 +180,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
   const handleOpenAdd = () => {
     setEditingExpense(null);
+    setEditingPersonalExpense(null);
     setDescription("");
     setAmount("");
     setCategory("Food");
@@ -167,8 +196,20 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
     setIsAddModalOpen(true);
   };
 
+  const handleOpenEditPersonal = (exp: PersonalExpense) => {
+    setEditingPersonalExpense(exp);
+    setEditingExpense(null);
+    setDescription(exp.title);
+    setAmount(exp.amount);
+    setCategory(exp.category as any);
+    setNotes(exp.notes || "");
+    setDate(exp.date || new Date().toISOString().split("T")[0]);
+    setIsAddModalOpen(true);
+  };
+
   const handleOpenEdit = (exp: Expense) => {
     setEditingExpense(exp);
+    setEditingPersonalExpense(null);
     setDescription(exp.description);
     setAmount(exp.amount);
     setCategory(exp.category);
@@ -227,84 +268,134 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       return;
     }
 
-    if (splitType === "percentage") {
-      let totalPct = 0;
-      whoUsedIds.forEach((id) => {
-        totalPct += customPercentages[id] || 0;
-      });
-      if (Math.abs(totalPct - 100) > 0.01) {
-        alert(`Total percentage must be exactly 100%. Currently: ${totalPct}%`);
-        return;
-      }
-    } else if (splitType === "custom") {
-      let totalCustom = 0;
-      whoUsedIds.forEach((id) => {
-        totalCustom += customSplits[id] || 0;
-      });
-      if (Math.abs(totalCustom - numAmount) > 0.01) {
-        alert(
-          `Total custom split amounts must equal the expense total (${trip.currency}${numAmount}). Currently: ${trip.currency}${totalCustom}`
-        );
-        return;
+    if (activeSection === "trip") {
+      if (splitType === "percentage") {
+        let totalPct = 0;
+        whoUsedIds.forEach((id) => {
+          totalPct += customPercentages[id] || 0;
+        });
+        if (Math.abs(totalPct - 100) > 0.01) {
+          alert(`Total percentage must be exactly 100%. Currently: ${totalPct}%`);
+          return;
+        }
+      } else if (splitType === "custom") {
+        let totalCustom = 0;
+        whoUsedIds.forEach((id) => {
+          totalCustom += customSplits[id] || 0;
+        });
+        if (Math.abs(totalCustom - numAmount) > 0.01) {
+          alert(
+            `Total custom split amounts must equal the expense total (${trip.currency}${numAmount}). Currently: ${trip.currency}${totalCustom}`
+          );
+          return;
+        }
       }
     }
 
     setIsSubmitting(true);
     try {
-      const calculatedSplits = calculateFinalSplits();
-
-      if (editingExpense) {
-        const updatedExpense: Expense = {
-          ...editingExpense,
-          description,
-          amount: numAmount,
-          whoPaidId,
-          whoUsedIds,
-          category,
-          accountUsedId,
-          splitType,
-          splits: calculatedSplits,
-          receiptUrl,
-          date,
-          notes,
-        };
-
-        const updatedExpenses = trip.expenses.map((e) =>
-          e.id === editingExpense.id ? updatedExpense : e
-        );
-        const newTotalSpent = updatedExpenses.reduce((acc, e) => acc + e.amount, 0);
-        const newRemaining = trip.totalBudget - newTotalSpent;
-
-        if (onUpdateTrip) {
-          onUpdateTrip({
-            ...trip,
-            expenses: updatedExpenses,
-            totalSpent: newTotalSpent,
-            remainingBudget: newRemaining,
-          });
+      if (activeSection === "personal") {
+        if (!currentUser) {
+          alert("You must be logged in to manage personal expenses.");
+          return;
         }
-        showToast("Expense updated successfully");
+        if (editingPersonalExpense) {
+          const updated: PersonalExpense = {
+            ...editingPersonalExpense,
+            title: description,
+            amount: numAmount,
+            category,
+            date,
+            notes,
+          };
+          savePersonalExpense(updated)
+            .then(() => {
+              setPersonalExpenses(personalExpenses.map((p) => (p.id === updated.id ? updated : p)));
+              showToast("Personal expense updated successfully");
+            })
+            .catch((err) => {
+              console.error(err);
+              showToast("Error updating personal expense", "error");
+            });
+        } else {
+          const newPersonal: PersonalExpense = {
+            id: `pexp_${Date.now()}`,
+            tripId: trip.id,
+            travellerUid: currentUser.uid,
+            title: description,
+            amount: numAmount,
+            category,
+            date,
+            notes,
+            createdAt: new Date().toISOString(),
+          };
+          savePersonalExpense(newPersonal)
+            .then(() => {
+              setPersonalExpenses([newPersonal, ...personalExpenses]);
+              showToast("Personal expense added successfully");
+            })
+            .catch((err) => {
+              console.error(err);
+              showToast("Error adding personal expense", "error");
+            });
+        }
+        setIsAddModalOpen(false);
       } else {
-        const newExpense: Expense = {
-          id: `exp_${Date.now()}`,
-          tripId: trip.id,
-          description,
-          amount: numAmount,
-          whoPaidId,
-          whoUsedIds,
-          category,
-          accountUsedId,
-          splitType,
-          splits: calculatedSplits,
-          receiptUrl,
-          date,
-          notes,
-        };
+        const calculatedSplits = calculateFinalSplits();
 
-        onAddExpense(newExpense, accountUsedId, numAmount);
-        showToast("Expense added successfully");
+        if (editingExpense) {
+          const updatedExpense: Expense = {
+            ...editingExpense,
+            description,
+            amount: numAmount,
+            whoPaidId,
+            whoUsedIds,
+            category,
+            accountUsedId,
+            splitType,
+            splits: calculatedSplits,
+            receiptUrl,
+            date,
+            notes,
+          };
+
+          const updatedExpenses = trip.expenses.map((e) =>
+            e.id === editingExpense.id ? updatedExpense : e
+          );
+          const newTotalSpent = updatedExpenses.reduce((acc, e) => acc + e.amount, 0);
+          const newRemaining = trip.totalBudget - newTotalSpent;
+
+          if (onUpdateTrip) {
+            onUpdateTrip({
+              ...trip,
+              expenses: updatedExpenses,
+              totalSpent: newTotalSpent,
+              remainingBudget: newRemaining,
+            });
+          }
+          showToast("Expense updated successfully");
+        } else {
+          const newExpense: Expense = {
+            id: `exp_${Date.now()}`,
+            tripId: trip.id,
+            description,
+            amount: numAmount,
+            whoPaidId,
+            whoUsedIds,
+            category,
+            accountUsedId,
+            splitType,
+            splits: calculatedSplits,
+            receiptUrl,
+            date,
+            notes,
+          };
+
+          onAddExpense(newExpense, accountUsedId, numAmount);
+          showToast("Expense added successfully");
+        }
+        setIsAddModalOpen(false);
       }
-      setIsAddModalOpen(false);
     } catch (err) {
       showToast("Error saving expense", "error");
     } finally {
@@ -318,12 +409,28 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
   const confirmDelete = () => {
     if (confirmDeleteId) {
-      onDeleteExpense(confirmDeleteId);
-      if (selectedExpenseId === confirmDeleteId) {
-        setSelectedExpenseId(null);
+      if (activeSection === "personal") {
+        deletePersonalExpense(confirmDeleteId)
+          .then(() => {
+            setPersonalExpenses(personalExpenses.filter(p => p.id !== confirmDeleteId));
+            if (selectedPersonalExpenseId === confirmDeleteId) {
+              setSelectedPersonalExpenseId(null);
+            }
+            setConfirmDeleteId(null);
+            showToast("Personal expense deleted successfully");
+          })
+          .catch((err) => {
+            console.error(err);
+            showToast("Error deleting personal expense", "error");
+          });
+      } else {
+        onDeleteExpense(confirmDeleteId);
+        if (selectedExpenseId === confirmDeleteId) {
+          setSelectedExpenseId(null);
+        }
+        setConfirmDeleteId(null);
+        showToast("Expense deleted successfully");
       }
-      setConfirmDeleteId(null);
-      showToast("Expense deleted successfully");
     }
   };
 
@@ -365,8 +472,232 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
   const totalExpenseAmount = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
 
+  const filteredPersonalExpenses =
+    selectedCategoryFilter === "All"
+      ? personalExpenses
+      : personalExpenses.filter((e) => e.category === selectedCategoryFilter);
+
+  const totalPersonalExpenseAmount = filteredPersonalExpenses.reduce((acc, e) => acc + e.amount, 0);
+
   // Selected Expense Details Page View
   const selectedExpense = trip.expenses.find((e) => e.id === selectedExpenseId);
+  const selectedPersonalExpense = personalExpenses.find((e) => e.id === selectedPersonalExpenseId);
+
+  if (selectedPersonalExpense) {
+    return (
+      <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+        {/* Navigation Bar */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <button
+            onClick={() => setSelectedPersonalExpenseId(null)}
+            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-3 py-2 rounded-xl transition-all"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Back to Expenses</span>
+          </button>
+          <span className="text-xs sm:text-sm font-extrabold text-slate-500 dark:text-slate-400">
+            Personal Expense Details
+          </span>
+        </div>
+
+        {/* Details Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6"
+        >
+          {/* Main info row */}
+          <div className="flex justify-between items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                {getCategoryIcon(selectedPersonalExpense.category as any)}
+                {selectedPersonalExpense.category}
+              </span>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 leading-tight">
+                {selectedPersonalExpense.title}
+              </h1>
+              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Recorded on {selectedPersonalExpense.date}</span>
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                {trip.currency}
+                {selectedPersonalExpense.amount.toLocaleString()}
+              </span>
+              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold uppercase tracking-wider mt-1 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md inline-block">
+                Private Expense
+              </p>
+            </div>
+          </div>
+
+          <hr className="border-slate-100 dark:border-slate-800" />
+
+          {/* Notes Section */}
+          {selectedPersonalExpense.notes && (
+            <div className="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                Personal Notes
+              </span>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 italic font-medium">
+                "{selectedPersonalExpense.notes}"
+              </p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            <button
+              onClick={() => handleOpenEditPersonal(selectedPersonalExpense)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-emerald-500/20 text-xs sm:text-sm"
+            >
+              <Edit className="w-4 h-4" /> Edit Expense
+            </button>
+            <button
+              onClick={() => handleDeleteSelectedExpense(selectedPersonalExpense.id)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Expense
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (selectedPersonalExpense) {
+    return (
+      <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+        {/* Navigation Bar */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <button
+            onClick={() => setSelectedPersonalExpenseId(null)}
+            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-2 rounded-xl transition-all"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Back to Personal Expenses</span>
+          </button>
+          <span className="text-xs sm:text-sm font-extrabold text-slate-500 dark:text-slate-400">
+            Private Expense Details
+          </span>
+        </div>
+
+        {/* Details Container with Material page transition */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="space-y-4 sm:space-y-6"
+        >
+          {/* Header Card */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-7 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 relative overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                  {getCategoryIcon(selectedPersonalExpense.category as any)}
+                  {selectedPersonalExpense.category}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">
+                  {selectedPersonalExpense.date}
+                </span>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-indigo-400" />
+                Private to You
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                {selectedPersonalExpense.title}
+              </h1>
+
+              {/* Large Prominent Total Amount */}
+              <div className="pt-2">
+                <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                  Total Amount Paid
+                </p>
+                <p className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight mt-0.5">
+                  {trip.currency}
+                  {selectedPersonalExpense.amount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes Card */}
+          {selectedPersonalExpense.notes && (
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold text-sm">
+                <Quote className="w-4 h-4 text-indigo-500" />
+                <h3>Personal Notes</h3>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed">
+                "{selectedPersonalExpense.notes}"
+              </div>
+            </div>
+          )}
+
+          {/* Expense Information Card */}
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-extrabold text-base border-b border-slate-100 dark:border-slate-800 pb-3">
+              <FileText className="w-5 h-5 text-indigo-500" />
+              <h3>Expense Information</h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1">
+                  <Tag className="w-3.5 h-3.5 text-indigo-500" /> Category
+                </p>
+                <p className="font-bold text-slate-900 dark:text-white">
+                  {selectedPersonalExpense.category}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-500" /> Transaction Date
+                </p>
+                <p className="font-bold text-slate-900 dark:text-white">
+                  {selectedPersonalExpense.date}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 sm:col-span-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1">
+                  <Lock className="w-3.5 h-3.5 text-indigo-500" /> Privacy & Visibility
+                </p>
+                <p className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  Private to You (Invisible to Organizers, Admins, and other travellers)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            <button
+              onClick={() => handleOpenEditPersonal(selectedPersonalExpense)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm"
+            >
+              <Edit className="w-4 h-4" /> Edit Personal Expense
+            </button>
+            <button
+              onClick={() => handleDeleteSelectedExpense(selectedPersonalExpense.id)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Personal Expense
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (selectedExpense) {
     const paidByPerson = trip.travellers.find(
@@ -913,22 +1244,60 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   // Primary Expenses List View
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+      {/* Privacy-Based Tab Switcher */}
+      <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <button
+          onClick={() => {
+            setActiveSection("trip");
+            setSelectedCategoryFilter("All");
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+            activeSection === "trip"
+              ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-800/80"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+          }`}
+        >
+          <Receipt className="w-4 h-4" />
+          <span>Trip Expenses (Shared)</span>
+        </button>
+        <button
+          onClick={() => {
+            setActiveSection("personal");
+            setSelectedCategoryFilter("All");
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+            activeSection === "personal"
+              ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-800/80"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+          }`}
+        >
+          <Lock className="w-4 h-4" />
+          <span>My Personal Expenses (Private)</span>
+        </button>
+      </div>
+
       {/* Header & Quick Action */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex-1">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Receipt className="w-4 h-4 sm:w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            {activeSection === "personal" ? (
+              <Lock className="w-4 h-4 sm:w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            ) : (
+              <Receipt className="w-4 h-4 sm:w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            )}
             <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
-              Trip Expenses & Transaction History
+              {activeSection === "personal" ? "My Personal Expenses" : "Trip Expenses & Transaction History"}
             </h2>
           </div>
           <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-            Tap any expense to view full details, traveller split breakdowns, notes, and actions.
+            {activeSection === "personal"
+              ? "Add and manage your private personal expenses that are not shared with anyone."
+              : "Tap any expense to view full details, traveller split breakdowns, notes, and actions."}
           </p>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {isOrganizer && (
+          {activeSection === "trip" && isOrganizer && (
             <>
               <button
                 onClick={handleAddBudget}
@@ -957,7 +1326,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       </div>
 
       {/* Budget Warning Alert */}
-      {(() => {
+      {activeSection === "trip" && (() => {
         const totalSpent = trip.expenses.reduce((acc, exp) => acc + exp.amount, 0);
         const budgetUsagePercentValue = trip.totalBudget > 0 ? Math.round((totalSpent / trip.totalBudget) * 100) : 0;
         const budgetUsagePercent = isNaN(budgetUsagePercentValue) ? 0 : budgetUsagePercentValue;
@@ -989,10 +1358,12 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
           }`}
         >
-          All Categories ({trip.expenses.length})
+          All Categories ({activeSection === "personal" ? personalExpenses.length : trip.expenses.length})
         </button>
         {categoriesList.map((cat) => {
-          const count = trip.expenses.filter((e) => e.category === cat).length;
+          const count = activeSection === "personal"
+            ? personalExpenses.filter((e) => e.category === cat).length
+            : trip.expenses.filter((e) => e.category === cat).length;
           if (count === 0) return null;
           return (
             <button
@@ -1017,36 +1388,34 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       <div className="space-y-2.5">
         <div className="flex items-center justify-between px-1">
           <span className="text-[10px] sm:text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            {filteredExpenses.length} TRANSACTIONS
+            {activeSection === "personal" ? filteredPersonalExpenses.length : filteredExpenses.length} TRANSACTIONS
           </span>
           <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
             Total: {trip.currency}
-            {totalExpenseAmount.toLocaleString()}
+            {activeSection === "personal" ? totalPersonalExpenseAmount.toLocaleString() : totalExpenseAmount.toLocaleString()}
           </span>
         </div>
 
-        {filteredExpenses.length === 0 ? (
-          <div className="p-10 sm:p-12 text-center text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-40" />
-            <p className="text-xs sm:text-sm font-medium">No expenses recorded for this view.</p>
-            <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a transaction.</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {filteredExpenses.map((exp) => {
-              const paidByPerson = trip.travellers.find((t) => t.id === exp.whoPaidId);
-
-              return (
+        {activeSection === "personal" ? (
+          filteredPersonalExpenses.length === 0 ? (
+            <div className="p-10 sm:p-12 text-center text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <Lock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-40 text-slate-400" />
+              <p className="text-xs sm:text-sm font-medium">No personal expenses recorded for this view.</p>
+              <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a private transaction.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filteredPersonalExpenses.map((exp) => (
                 <div
                   key={exp.id}
-                  onClick={() => setSelectedExpenseId(exp.id)}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
+                  onClick={() => setSelectedPersonalExpenseId(exp.id)}
+                  className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
                 >
                   <div className="flex-1 min-w-0 space-y-1">
                     {/* Top Row: Category badge & Date */}
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
-                        {getCategoryIcon(exp.category)}
+                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 shrink-0">
+                        {getCategoryIcon(exp.category as any)}
                         {exp.category}
                       </span>
                       <span className="text-[10px] sm:text-xs text-slate-400 font-medium truncate">
@@ -1056,19 +1425,16 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
                     {/* Middle Row: Expense Title */}
                     <h4 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate leading-tight">
-                      {exp.description}
+                      {exp.title}
                     </h4>
 
-                    {/* Bottom Row: Paid By */}
-                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                      Paid by{" "}
-                      <span className="font-bold text-slate-700 dark:text-slate-300">
-                        {paidByPerson?.fullName || "Member"}
-                      </span>
+                    {/* Bottom Row: Private indicator */}
+                    <p className="text-[11px] sm:text-xs text-indigo-500 dark:text-indigo-400 font-bold flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Private Expense
                     </p>
                   </div>
 
-                  {/* Right Side: Total Amount (No arrow) */}
+                  {/* Right Side: Total Amount */}
                   <div className="text-right shrink-0">
                     <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">
                       {trip.currency}
@@ -1076,9 +1442,65 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )
+        ) : (
+          filteredExpenses.length === 0 ? (
+            <div className="p-10 sm:p-12 text-center text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-40" />
+              <p className="text-xs sm:text-sm font-medium">No expenses recorded for this view.</p>
+              <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a transaction.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filteredExpenses.map((exp) => {
+                const paidByPerson = trip.travellers.find((t) => t.id === exp.whoPaidId);
+
+                return (
+                  <div
+                    key={exp.id}
+                    onClick={() => setSelectedExpenseId(exp.id)}
+                    className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
+                  >
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Top Row: Category badge & Date */}
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                          {getCategoryIcon(exp.category)}
+                          {exp.category}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 font-medium truncate">
+                          • {exp.date}
+                        </span>
+                      </div>
+
+                      {/* Middle Row: Expense Title */}
+                      <h4 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate leading-tight">
+                        {exp.description}
+                      </h4>
+
+                      {/* Bottom Row: Paid By */}
+                      <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                        Paid by{" "}
+                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                          {paidByPerson?.fullName || "Member"}
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Right Side: Total Amount */}
+                    <div className="text-right shrink-0">
+                      <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">
+                        {trip.currency}
+                        {exp.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 
@@ -1093,9 +1515,13 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           >
             <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
               <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-emerald-600" />
+                {activeSection === "personal" ? (
+                  <Lock className="w-5 h-5 text-indigo-600" />
+                ) : (
+                  <Receipt className="w-5 h-5 text-emerald-600" />
+                )}
                 <h3 className="font-bold text-slate-900 dark:text-white">
-                  {editingExpense ? "Edit Expense" : "Record & Split Expense"}
+                  {editingPersonalExpense ? "Edit Personal Expense" : editingExpense ? "Edit Expense" : activeSection === "personal" ? "Record Personal Expense" : "Record & Split Expense"}
                 </h3>
               </div>
               <button onClick={() => setIsAddModalOpen(false)}>
@@ -1107,12 +1533,12 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Description *
+                    {activeSection === "personal" ? "Title *" : "Description *"}
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Dinner at Britto's"
+                    placeholder={activeSection === "personal" ? "e.g. Souvenirs, taxi, dinner" : "e.g. Dinner at Britto's"}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -1136,7 +1562,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={activeSection === "personal" ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 sm:grid-cols-2 gap-3"}>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Expense Category
@@ -1154,224 +1580,232 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Account Used
-                  </label>
-                  <select
-                    value={accountUsedId}
-                    onChange={(e) => setAccountUsedId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  >
-                    {accounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({trip.currency}
-                        {acc.balance.toLocaleString()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Paid By
-                </label>
-                <select
-                  value={whoPaidId}
-                  onChange={(e) => setWhoPaidId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                >
-                  {trip.travellers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.fullName} ({t.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Split Between
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {trip.travellers.map((t) => {
-                    const isSelected = whoUsedIds.includes(t.id);
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => toggleUserSelection(t.id)}
-                        className={`flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-all text-left ${
-                          isSelected
-                            ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
-                            : "bg-slate-50 dark:bg-slate-800/60 text-slate-500 border-slate-200 dark:border-slate-700"
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${
-                            isSelected
-                              ? "bg-emerald-600 text-white"
-                              : "border border-slate-400"
-                          }`}
-                        >
-                          {isSelected && <Check className="w-3 h-3" />}
-                        </div>
-                        <span className="truncate">{t.fullName}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Split Rule
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSplitType("equal")}
-                    className={`py-2 text-xs font-bold rounded-lg border ${
-                      splitType === "equal"
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    Split Equally
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSplitType("percentage")}
-                    className={`py-2 text-xs font-bold rounded-lg border ${
-                      splitType === "percentage"
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    Split %
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSplitType("custom")}
-                    className={`py-2 text-xs font-bold rounded-lg border ${
-                      splitType === "custom"
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    Custom Amount
-                  </button>
-                </div>
-              </div>
-
-              {/* Split Details Section */}
-              <AnimatePresence>
-                {(splitType === "percentage" || splitType === "custom") && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 overflow-hidden"
-                  >
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {splitType === "percentage" ? "Set Percentages (%)" : "Set Custom Amounts"}
-                  </h4>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const count = whoUsedIds.length;
-                        if (count === 0) return;
-                        if (splitType === "percentage") {
-                          const equalPct = Math.floor(100 / count);
-                          const newPcts: Record<string, number> = {};
-                          whoUsedIds.forEach(id => newPcts[id] = equalPct);
-                          // Handle remainder
-                          if (whoUsedIds.length > 0) newPcts[whoUsedIds[0]] += (100 - (equalPct * count));
-                          setCustomPercentages(newPcts);
-                        } else {
-                          const total = Number(amount) || 0;
-                          const equalAmt = Math.round((total / count) * 100) / 100;
-                          const newAmts: Record<string, number> = {};
-                          whoUsedIds.forEach(id => newAmts[id] = equalAmt);
-                          // Handle remainder
-                          if (whoUsedIds.length > 0) {
-                            const currentSum = equalAmt * count;
-                            newAmts[whoUsedIds[0]] = Math.round((newAmts[whoUsedIds[0]] + (total - currentSum)) * 100) / 100;
-                          }
-                          setCustomSplits(newAmts);
-                        }
-                      }}
-                      className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"
+                {activeSection === "trip" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Account Used
+                    </label>
+                    <select
+                      value={accountUsedId}
+                      onChange={(e) => setAccountUsedId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
-                      Auto-Fill Equal
-                    </button>
-                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
-                      Total {splitType === "percentage" ? "%" : trip.currency}:{" "}
-                      {splitType === "percentage"
-                        ? `${(Object.values(customPercentages) as number[]).reduce((a, b) => a + b, 0)}%`
-                        : `${trip.currency}${(Object.values(customSplits) as number[]).reduce(
-                            (a, b) => a + b,
-                            0
-                          ).toLocaleString()}`}
-                    </span>
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({trip.currency}
+                          {acc.balance.toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-                    <div className="space-y-2">
-                      {whoUsedIds.map((id) => {
-                        const trv = trip.travellers.find((t) => t.id === id);
-                        if (!trv) return null;
+                )}
+              </div>
+
+              {activeSection === "trip" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Paid By
+                    </label>
+                    <select
+                      value={whoPaidId}
+                      onChange={(e) => setWhoPaidId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    >
+                      {trip.travellers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.fullName} ({t.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Split Between
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {trip.travellers.map((t) => {
+                        const isSelected = whoUsedIds.includes(t.id);
                         return (
-                          <div key={id} className="flex items-center gap-3">
-                            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 flex-1 truncate">
-                              {trv.fullName}
-                            </span>
-                            <div className="relative w-28">
-                              <input
-                                type="number"
-                                placeholder={splitType === "percentage" ? "0" : "0.00"}
-                                value={
-                                  splitType === "percentage"
-                                    ? customPercentages[id] || ""
-                                    : customSplits[id] || ""
-                                }
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  if (splitType === "percentage") {
-                                    setCustomPercentages((prev) => ({ ...prev, [id]: val }));
-                                  } else {
-                                    setCustomSplits((prev) => ({ ...prev, [id]: val }));
-                                  }
-                                }}
-                                className="w-full pl-3 pr-8 py-1.5 text-xs font-bold rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-right"
-                              />
-                              <span className="absolute right-3 top-1.5 text-[10px] font-bold text-slate-400">
-                                {splitType === "percentage" ? "%" : trip.currency}
-                              </span>
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => toggleUserSelection(t.id)}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-all text-left ${
+                              isSelected
+                                ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                : "bg-slate-50 dark:bg-slate-800/60 text-slate-500 border-slate-200 dark:border-slate-700"
+                            }`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${
+                                isSelected
+                                  ? "bg-emerald-600 text-white"
+                                  : "border border-slate-400"
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3" />}
                             </div>
-                          </div>
+                            <span className="truncate">{t.fullName}</span>
+                          </button>
                         );
                       })}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Receipt URL
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={receiptUrl}
-                    onChange={(e) => setReceiptUrl(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Split Rule
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSplitType("equal")}
+                        className={`py-2 text-xs font-bold rounded-lg border ${
+                          splitType === "equal"
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        Split Equally
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSplitType("percentage")}
+                        className={`py-2 text-xs font-bold rounded-lg border ${
+                          splitType === "percentage"
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        Split %
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSplitType("custom")}
+                        className={`py-2 text-xs font-bold rounded-lg border ${
+                          splitType === "custom"
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        Custom Amount
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Split Details Section */}
+                  <AnimatePresence>
+                    {(splitType === "percentage" || splitType === "custom") && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            {splitType === "percentage" ? "Set Percentages (%)" : "Set Custom Amounts"}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const count = whoUsedIds.length;
+                                if (count === 0) return;
+                                if (splitType === "percentage") {
+                                  const equalPct = Math.floor(100 / count);
+                                  const newPcts: Record<string, number> = {};
+                                  whoUsedIds.forEach(id => newPcts[id] = equalPct);
+                                  // Handle remainder
+                                  if (whoUsedIds.length > 0) newPcts[whoUsedIds[0]] += (100 - (equalPct * count));
+                                  setCustomPercentages(newPcts);
+                                } else {
+                                  const total = Number(amount) || 0;
+                                  const equalAmt = Math.round((total / count) * 100) / 100;
+                                  const newAmts: Record<string, number> = {};
+                                  whoUsedIds.forEach(id => newAmts[id] = equalAmt);
+                                  // Handle remainder
+                                  if (whoUsedIds.length > 0) {
+                                    const currentSum = equalAmt * count;
+                                    newAmts[whoUsedIds[0]] = Math.round((newAmts[whoUsedIds[0]] + (total - currentSum)) * 100) / 100;
+                                  }
+                                  setCustomSplits(newAmts);
+                                }
+                              }}
+                              className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"
+                            >
+                              Auto-Fill Equal
+                            </button>
+                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                              Total {splitType === "percentage" ? "%" : trip.currency}:{" "}
+                              {splitType === "percentage"
+                                ? `${(Object.values(customPercentages) as number[]).reduce((a, b) => a + b, 0)}%`
+                                : `${trip.currency}${(Object.values(customSplits) as number[]).reduce(
+                                    (a, b) => a + b,
+                                    0
+                                  ).toLocaleString()}`}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {whoUsedIds.map((id) => {
+                            const trv = trip.travellers.find((t) => t.id === id);
+                            if (!trv) return null;
+                            return (
+                              <div key={id} className="flex items-center gap-3">
+                                <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 flex-1 truncate">
+                                  {trv.fullName}
+                                </span>
+                                <div className="relative w-28">
+                                  <input
+                                    type="number"
+                                    placeholder={splitType === "percentage" ? "0" : "0.00"}
+                                    value={
+                                      splitType === "percentage"
+                                        ? customPercentages[id] || ""
+                                        : customSplits[id] || ""
+                                    }
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      if (splitType === "percentage") {
+                                        setCustomPercentages((prev) => ({ ...prev, [id]: val }));
+                                      } else {
+                                        setCustomSplits((prev) => ({ ...prev, [id]: val }));
+                                      }
+                                    }}
+                                    className="w-full pl-3 pr-8 py-1.5 text-xs font-bold rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-right"
+                                  />
+                                  <span className="absolute right-3 top-1.5 text-[10px] font-bold text-slate-400">
+                                    {splitType === "percentage" ? "%" : trip.currency}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
+
+              <div className={activeSection === "personal" ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 sm:grid-cols-2 gap-3"}>
+                {activeSection === "trip" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Receipt URL
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={receiptUrl}
+                      onChange={(e) => setReceiptUrl(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1409,9 +1843,9 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 shadow-md"
+                  className="px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 shadow-md animate-none"
                 >
-                  Save Changes
+                  {editingPersonalExpense || editingExpense ? "Save Changes" : activeSection === "personal" ? "Save Private Expense" : "Confirm & Split"}
                 </button>
               </div>
             </form>
