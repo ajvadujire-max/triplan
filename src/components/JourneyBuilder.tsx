@@ -46,12 +46,14 @@ import {
   ArrowDown,
   Share2,
   ChevronDown,
+  Presentation,
 } from "lucide-react";
 
 interface JourneyBuilderProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
   role?: string;
+  onOpenPresentation?: () => void;
 }
 
 const transportTypesList: { type: TransportType; iconName: string; color: string }[] = [
@@ -63,7 +65,7 @@ const transportTypesList: { type: TransportType; iconName: string; color: string
   { type: "Auto", iconName: "Auto", color: "#f59e0b" },
   { type: "Bus", iconName: "Bus", color: "#8b5cf6" },
   { type: "Metro", iconName: "Train", color: "#6366f1" },
-  { type: "Train", iconName: "Train", color: "#4f46e5" },
+  { type: "Train", iconName: "Train", color: "#1B3EBF" },
   { type: "Flight", iconName: "Plane", color: "#0284c7" },
   { type: "Ship", iconName: "Ship", color: "#0d9488" },
   { type: "Ferry", iconName: "Ship", color: "#0f766e" },
@@ -74,6 +76,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
   trip,
   onUpdateTrip,
   role = "traveller",
+  onOpenPresentation,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
   const [activeSubTab, setActiveSubTab] = useState<
@@ -332,7 +335,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 reader.readAsDataURL(file);
               }
             }}
-            className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center transition-all cursor-pointer hover:border-cyan-500 dark:hover:border-cyan-600 bg-slate-50/50 dark:bg-slate-900/50"
+            className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center transition-all cursor-pointer hover:border-[#1B3EBF] dark:hover:border-[#1B3EBF] bg-slate-50/50 dark:bg-slate-900/50"
           >
             <input
               type="file"
@@ -355,7 +358,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
             <label htmlFor="ticket-file-input" className="cursor-pointer space-y-1 block">
               <Ticket className="w-5 h-5 mx-auto text-slate-400" />
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Drag & drop ticket or <span className="text-cyan-600 font-bold hover:underline">browse</span>
+                Drag & drop ticket or <span className="text-[#1B3EBF] font-bold hover:underline">browse</span>
               </p>
             </label>
           </div>
@@ -369,7 +372,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
       <button
         type="button"
         onClick={() => setShowMoreDetails(!showMoreDetails)}
-        className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+        className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
       >
         <span>{showMoreDetails ? "Hide Optional Details" : (customLabel || "Show More Details")}</span>
         <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -634,11 +637,11 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 onClick={() => setActiveSubTab(tab.id as any)}
                 className={`flex items-center gap-1.5 px-3 h-[42px] text-[11px] sm:text-xs font-bold rounded-lg transition-all justify-start sm:justify-center border ${
                   isActive
-                    ? "bg-cyan-600 text-white shadow-sm border-cyan-600"
+                    ? "bg-[#1B3EBF] text-white shadow-sm border-[#1B3EBF]"
                     : "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-100 dark:border-slate-800"
                 } ${tab.id === 'route' ? 'col-span-2 sm:col-span-1' : ''}`}
               >
-                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-cyan-500" />
+                <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isActive ? "text-white" : "text-[#1B3EBF] dark:text-[#5B7FFF]"}`} />
                 <span className="truncate">{tab.label === "Multi-Segment" && activeSubTab === "route" ? "Multi-Segment Route" : tab.label}</span>
               </button>
             );
@@ -653,7 +656,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="text-sm sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600 shrink-0" />
+                  <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-[#1B3EBF] shrink-0" />
                   <span className="truncate">Journey Builder ({trip.segments.length} Segments)</span>
                 </h3>
                 <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 leading-none">
@@ -661,15 +664,29 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 </p>
               </div>
 
-              {isOrganizer && (
-                <button
-                  onClick={handleOpenAddSegment}
-                  className="flex items-center gap-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] sm:text-xs font-bold h-8 sm:h-10 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-sm transition-all shrink-0 animate-fadeIn"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add Segment</span>
-                </button>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {onOpenPresentation && (
+                  <button
+                    onClick={onOpenPresentation}
+                    className="flex items-center gap-1 bg-[#1B3EBF]/10 hover:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] text-[10px] sm:text-xs font-bold h-8 sm:h-10 px-2.5 sm:px-3 rounded-lg sm:rounded-xl transition-all border border-[#1B3EBF]/20 cursor-pointer"
+                    title="Generate PowerPoint Presentation"
+                  >
+                    <Presentation className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#1B3EBF] dark:text-[#5B7FFF]" />
+                    <span className="hidden sm:inline">Presentation</span>
+                    <span className="sm:hidden">PPT</span>
+                  </button>
+                )}
+
+                {isOrganizer && (
+                  <button
+                    onClick={handleOpenAddSegment}
+                    className="flex items-center gap-1 bg-[#1B3EBF] hover:bg-[#1633a1] text-white text-[10px] sm:text-xs font-bold h-8 sm:h-10 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-sm transition-all shrink-0 animate-fadeIn"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Segment</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -690,18 +707,18 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 <div key={seg.id} className="relative pl-5 sm:pl-10">
                   {/* Vertical Connecting Line */}
                   {idx < trip.segments.length - 1 && (
-                    <div className="absolute left-2.5 sm:left-[19px] top-8 bottom-0 w-0.5 bg-cyan-300 dark:bg-cyan-800 -mb-4 z-0" />
+                    <div className="absolute left-2.5 sm:left-[19px] top-8 bottom-0 w-0.5 bg-[#1B3EBF]/30 dark:bg-[#1B3EBF]/50 -mb-4 z-0" />
                   )}
 
                   {/* Timeline Dot */}
-                  <div className="absolute left-[7px] sm:left-[15px] top-4.5 w-2 h-2 rounded-full bg-cyan-500 border border-white dark:border-slate-900 z-10" />
+                  <div className="absolute left-[7px] sm:left-[15px] top-4.5 w-2 h-2 rounded-full bg-[#1B3EBF] border border-white dark:border-slate-900 z-10" />
 
                   {/* Segment Card */}
-                  <div className="relative z-10 p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-cyan-500 transition-all">
+                  <div className="relative z-10 p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#1B3EBF] transition-all">
                     {/* Mode Icon & Details */}
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       {/* Mode Icon Badge */}
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 font-bold flex items-center justify-center shrink-0 border border-cyan-200 dark:border-cyan-800">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] font-bold flex items-center justify-center shrink-0 border border-[#1B3EBF]/20 dark:border-[#1B3EBF]/40">
                         {seg.transportType === "Flight" ? (
                           <Plane className="w-4 h-4 sm:w-5 sm:h-5" />
                         ) : seg.transportType === "Train" ? (
@@ -718,7 +735,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center justify-between gap-1.5 flex-wrap">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-100 dark:border-cyan-800">
+                            <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] border border-[#1B3EBF]/20 dark:border-[#1B3EBF]/40">
                               {seg.transportType}
                             </span>
                             <span className="text-[10px] sm:text-xs text-slate-500 font-medium">• {seg.distanceKm} km</span>
@@ -733,7 +750,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         {/* Route Display */}
                         <div className="flex items-center gap-1.5 text-xs sm:text-base font-extrabold text-slate-900 dark:text-white pt-1 pb-0.5">
                           <span className="truncate max-w-[100px] sm:max-w-[150px]">{seg.from}</span>
-                          <ArrowRight className="w-3 h-3 text-cyan-500 shrink-0" />
+                          <ArrowRight className="w-3 h-3 text-[#1B3EBF] shrink-0" />
                           <span className="truncate max-w-[100px] sm:max-w-[150px]">{seg.to}</span>
                         </div>
 
@@ -759,7 +776,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                               {seg.operator && <div><span className="text-slate-400">Train Info:</span> <span className="font-semibold text-slate-700 dark:text-slate-200">{seg.operator}</span></div>}
                               {seg.coach && <div><span className="text-slate-400">Coach:</span> <span className="font-semibold text-slate-700 dark:text-slate-200">{seg.coach}</span></div>}
                               {seg.seatNumber && <div><span className="text-slate-400">Seat/Berth:</span> <span className="font-semibold text-slate-700 dark:text-slate-200">{seg.seatNumber}</span></div>}
-                              {seg.pnr && <div><span className="text-slate-400">PNR:</span> <span className="font-semibold text-indigo-600 dark:text-indigo-400 font-mono">{seg.pnr}</span></div>}
+                              {seg.pnr && <div><span className="text-slate-400">PNR:</span> <span className="font-semibold text-[#1B3EBF] dark:text-[#5B7FFF] font-mono">{seg.pnr}</span></div>}
                             </div>
                           )}
                           {(seg.transportType === "Flight" || seg.transportType === "Helicopter") && (
@@ -784,13 +801,13 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                           )}
                           {seg.ticketUrl && (
                             <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-1.5">
-                              <Ticket className="w-3.5 h-3.5 text-cyan-600" />
+                              <Ticket className="w-3.5 h-3.5 text-[#1B3EBF]" />
                               <a
                                 href={seg.ticketUrl}
                                 download="ticket"
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+                                className="text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:underline flex items-center gap-1"
                               >
                                 View Ticket Attachment
                               </a>
@@ -861,7 +878,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                                 }}
                                 className="w-full px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 text-left font-semibold"
                               >
-                                <Edit className="w-3.5 h-3.5 text-cyan-500" /> Edit
+                                <Edit className="w-3.5 h-3.5 text-[#1B3EBF]" /> Edit
                               </button>
                               <button
                                 type="button"
@@ -1088,7 +1105,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Total Cost</span>
-                    <span className="font-black text-indigo-600 dark:text-indigo-400">{trip.currency}{log.totalCost.toLocaleString()}</span>
+                    <span className="font-black text-[#1B3EBF] dark:text-[#5B7FFF]">{trip.currency}{log.totalCost.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -1258,7 +1275,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 <select
                   value={transType}
                   onChange={(e) => setTransType(e.target.value as TransportType)}
-                  className="w-full h-11 px-3 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 font-medium transition-all"
+                  className="w-full h-11 px-3 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1B3EBF]/20 focus:border-[#1B3EBF] font-medium transition-all"
                 >
                   {transportTypesList.map((t) => (
                     <option key={t.type} value={t.type}>{t.type}</option>
@@ -1278,7 +1295,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         value={operatorName}
                         onChange={(e) => setOperatorName(e.target.value)}
                         placeholder="e.g. KSRTC, RedBus, VRL"
-                        className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#1B3EBF]"
                       />
                     </div>
 
@@ -1357,7 +1374,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         <select
                           value={bookingStatus}
                           onChange={(e) => setBookingStatus(e.target.value as any)}
-                          className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                          className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#1B3EBF]"
                         >
                           <option value="Booked">Booked</option>
                           <option value="Pending">Pending</option>
@@ -1369,7 +1386,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
                     >
                       <span>{showMoreDetails ? "Hide Optional Details" : "Show More Details (Bus Number, Ticket, Notes)"}</span>
                       <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -1499,7 +1516,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
                     >
                       <span>{showMoreDetails ? "Hide Optional Details" : "Show More Details (PNR, Ticket, Notes)"}</span>
                       <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -1641,7 +1658,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
                     >
                       <span>{showMoreDetails ? "Hide Optional Details" : "Show More Details (Ticket, Notes)"}</span>
                       <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -1735,7 +1752,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
                     >
                       <span>{showMoreDetails ? "Hide Optional Details" : "Show More Details (Driver, Notes)"}</span>
                       <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -1839,7 +1856,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
                     >
                       <span>{showMoreDetails ? "Hide Optional Details" : "Show More Details (Fuel Costs, Tolls, Notes)"}</span>
                       <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -1945,7 +1962,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:text-[#1633a1] transition-all border-t border-slate-100 dark:border-slate-800 mt-2"
                     >
                       <span>{showMoreDetails ? "Hide Optional Details" : "Show More Details (Notes)"}</span>
                       <ChevronDown className={`w-4 h-4 transform transition-transform ${showMoreDetails ? "rotate-180" : ""}`} />
@@ -1984,7 +2001,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg shadow-md transition-all"
+                  className="px-4 py-2 text-xs font-bold bg-[#1B3EBF] hover:bg-[#1633a1] text-white rounded-lg shadow-md transition-all"
                 >
                   Save Segment
                 </button>
