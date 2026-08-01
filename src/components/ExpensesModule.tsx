@@ -341,6 +341,10 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         }
         setIsAddModalOpen(false);
       } else {
+        if (!isOrganizer) {
+          alert("Only organizers and super admins are allowed to add or modify shared trip expenses.");
+          return;
+        }
         const calculatedSplits = calculateFinalSplits();
 
         if (editingExpense) {
@@ -1315,13 +1319,15 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               </button>
             </>
           )}
-          <button
-            onClick={handleOpenAdd}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-sm font-bold px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-md transition-all shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>Record Expense</span>
-          </button>
+          {(activeSection === "personal" || isOrganizer) && (
+            <button
+              onClick={handleOpenAdd}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-sm font-bold px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-md transition-all shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>{activeSection === "personal" ? "Record Personal Expense" : "Record Expense"}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1450,7 +1456,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
             <div className="p-10 sm:p-12 text-center text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-40" />
               <p className="text-xs sm:text-sm font-medium">No expenses recorded for this view.</p>
-              <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a transaction.</p>
+              {isOrganizer && <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a transaction.</p>}
             </div>
           ) : (
             <div className="space-y-2.5">
