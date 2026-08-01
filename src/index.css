@@ -1,3 +1,17 @@
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-indigo-50: #EEF4FF;
+  --color-indigo-100: #DBE8FF;
+  --color-indigo-200: #B8D0FF;
+  --color-indigo-300: #8EB3FF;
+  --color-indigo-400: #5C8FFF;
+  --color-indigo-500: #2D6BF7;
+  --color-indigo-600: #2D6BF7;
+  --color-indigo-700: #245AD4;
+  --color-indigo-800: #1C46AA;
+  --color-indigo-900: #163686;
+  --color-indigo-950: #0D1D4B;
+}

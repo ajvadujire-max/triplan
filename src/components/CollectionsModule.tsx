@@ -92,13 +92,52 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     record: PaymentRecord;
   } | null>(null);
 
+  // Deduplicate active travellers for automatic equal budget allocation
+  const uniqueTravellers = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Traveller[] = [];
+    (trip.travellers || []).forEach((trv) => {
+      if (!trv) return;
+      if (trv.status === "Cancelled" || trv.status === "Rejected" || trv.status === "Inactive") {
+        return;
+      }
+      const key = trv.id || `${trv.fullName}_${trv.phone || trv.email}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      list.push(trv);
+    });
+    return list;
+  }, [trip.travellers]);
+
+  // Compute map of traveller ID -> allocated equal budget derived from Total Trip Budget
+  const travellerBudgetMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const totalTripBudget = Number(trip.totalBudget || trip.expectedBudget) || 0;
+    const n = uniqueTravellers.length;
+
+    if (n > 0 && totalTripBudget > 0) {
+      const base = Math.floor(totalTripBudget / n);
+      const remainder = totalTripBudget - (base * n);
+
+      uniqueTravellers.forEach((trv, idx) => {
+        const allocated = base + (idx < remainder ? 1 : 0);
+        map.set(trv.id, allocated);
+      });
+    } else {
+      (trip.travellers || []).forEach((trv) => {
+        map.set(trv.id, trv.allocatedBudget || 0);
+      });
+    }
+    return map;
+  }, [uniqueTravellers, trip.totalBudget, trip.expectedBudget, trip.travellers]);
+
   // Helper calculation for traveller stats
   const getTravellerStats = (traveller: Traveller) => {
-    const budget = traveller.allocatedBudget || 0;
+    const budget = travellerBudgetMap.get(traveller.id) ?? (traveller.allocatedBudget || 0);
     const history = traveller.paymentHistory || [];
     const paid = history.length > 0
-      ? history.reduce((acc, curr) => acc + curr.amount, 0)
-      : traveller.paidAmount || 0;
+      ? history.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0)
+      : (Number(traveller.paidAmount) || 0);
     const remaining = Math.max(0, budget - paid);
 
     let status: CollectionStatus = "Unpaid";
@@ -119,7 +158,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     let partialCount = 0;
     let unpaidCount = 0;
 
-    const list = (trip.travellers || []).map((trv) => {
+    const list = uniqueTravellers.map((trv) => {
       const stats = getTravellerStats(trv);
       totalExpected += stats.budget;
       totalCollected += stats.paid;
@@ -139,7 +178,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     const progressPercent = isNaN(progressPercentValue) ? 0 : progressPercentValue;
 
     return {
-      totalTravellers: trip.travellers.length,
+      totalTravellers: uniqueTravellers.length,
       totalExpected,
       totalCollected,
       totalRemaining,
@@ -149,7 +188,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
       unpaidCount,
       list,
     };
-  }, [trip.travellers]);
+  }, [uniqueTravellers, travellerBudgetMap]);
 
   // Filter & Sort Travellers
   const filteredTravellers = useMemo(() => {
@@ -287,6 +326,9 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
   // Edit Budget for a traveller
   const handleSaveTravellerBudget = (travellerId: string, newBudget: number) => {
+    const activeCount = Math.max(1, uniqueTravellers.length);
+    const updatedTotalBudget = Math.max(0, newBudget) * activeCount;
+
     const updatedTravellers = trip.travellers.map((trv) => {
       if (trv.id === travellerId) {
         return {
@@ -299,6 +341,8 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
     onUpdateTrip({
       ...trip,
+      totalBudget: updatedTotalBudget,
+      expectedBudget: updatedTotalBudget,
       travellers: updatedTravellers,
     });
     setEditingBudgetTraveller(null);
@@ -412,19 +456,19 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
       ) : (
         <>
           {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-800/40 text-white shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#EDF4FF] dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-[22px] border border-[#D8E6FF] dark:border-slate-800 text-slate-900 dark:text-white shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              <IndianRupee className="w-5 h-5 text-indigo-400" />
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-[#2D6BF7]/10 dark:bg-indigo-500/20 text-[#2D6BF7] dark:text-indigo-400 border border-[#2D6BF7]/20 dark:border-indigo-500/30">
+              <IndianRupee className="w-5 h-5 text-[#2D6BF7] dark:text-indigo-400" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-[#111827] dark:text-white">
               Trip Treasury & Collections
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-indigo-200/80 font-medium mt-1">
-            Track member budgets, record payments, and monitor collection status for{" "}
-            <span className="text-white font-bold">{trip.name}</span>
+          <p className="text-xs text-[#64748B] dark:text-slate-400 font-medium mt-1">
+            Track member budgets, payments and collection status for{" "}
+            <span className="text-[#2D6BF7] dark:text-indigo-400 font-bold">{trip.name}</span>
           </p>
         </div>
 
@@ -432,144 +476,128 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
           <button
             type="button"
             onClick={() => setIsReportsOpen(!isReportsOpen)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-blue-100/80 hover:bg-blue-200/80 dark:bg-indigo-950/60 text-[#2D6BF7] dark:text-indigo-300 transition-all border border-blue-200/60 dark:border-indigo-800/50"
           >
-            <PieChart className="w-4 h-4 text-indigo-300" />
+            <PieChart className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-indigo-300" />
             <span>{isReportsOpen ? "Hide Analytics" : "Reports"}</span>
           </button>
 
           <button
             type="button"
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white shadow-xs transition-all"
           >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export CSV</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
           </button>
         </div>
       </div>
 
-      {/* 1. TOP COMPACT SUMMARY CARDS & PROGRESS BAR */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {/* Total Travellers */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Total Travellers</span>
-              <Users className="w-3.5 h-3.5 text-slate-400" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-              {collectionSummary.totalTravellers}
-            </div>
-            <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-              Active trip members
-            </div>
+      {/* 1. TOP COMPACT SUMMARY CARDS (2x2 Grid) */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        {/* Total Travellers */}
+        <div className="p-3.5 rounded-[18px] bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800">
+          <div className="text-[11px] font-extrabold text-[#111827] dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
+            <span>Total Travellers</span>
+            <Users className="w-3.5 h-3.5 text-slate-400" />
           </div>
-
-          {/* Expected Collection */}
-          <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50">
-            <div className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center justify-between">
-              <span>Expected</span>
-              <IndianRupee className="w-3.5 h-3.5 text-indigo-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-indigo-950 dark:text-indigo-100 mt-1">
-              ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
-            </div>
-            <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
-              Sum of all budgets
-            </div>
+          <div className="text-2xl font-black text-[#111827] dark:text-white mt-1">
+            {collectionSummary.totalTravellers}
           </div>
-
-          {/* Collected */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
-            <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider flex items-center justify-between">
-              <span>Collected</span>
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-1">
-              ₹{collectionSummary.totalCollected.toLocaleString("en-IN")}
-            </div>
-            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-              Received so far
-            </div>
-          </div>
-
-          {/* Remaining */}
-          <div className="p-3.5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50">
-            <div className="text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center justify-between">
-              <span>Remaining</span>
-              <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-amber-950 dark:text-amber-100 mt-1">
-              ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")}
-            </div>
-            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5">
-              Pending collection
-            </div>
-          </div>
-
-          {/* Collection Progress */}
-          <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-slate-900 text-white dark:bg-slate-800 border border-slate-800 flex flex-col justify-between">
-            <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-              <span>Progress</span>
-              <Percent className="w-3.5 h-3.5 text-indigo-400" />
-            </div>
-            <div className="text-2xl font-black text-emerald-400 mt-1">
-              {collectionSummary.progressPercent}%
-            </div>
-            <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                style={{ width: `${collectionSummary.progressPercent}%` }}
-              />
-            </div>
+          <div className="text-[11px] text-[#64748B] dark:text-slate-400 font-medium mt-0.5">
+            Active members
           </div>
         </div>
 
-        {/* Global Progress Bar Bar visual */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-            <span>Overall Collection Progress</span>
-            <span className="text-indigo-600 dark:text-indigo-400">
-              ₹{collectionSummary.totalCollected.toLocaleString("en-IN")} / ₹
-              {collectionSummary.totalExpected.toLocaleString("en-IN")}
-            </span>
+        {/* Expected */}
+        <div className="p-3.5 rounded-[18px] bg-[#EFF6FF] dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
+          <div className="text-[11px] font-extrabold text-[#2D6BF7] dark:text-blue-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Expected</span>
+            <IndianRupee className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-blue-400" />
           </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200/60 dark:border-slate-700/60 flex">
-            <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${collectionSummary.progressPercent}%` }}
-            />
+          <div className="text-2xl font-black text-[#2D6BF7] dark:text-blue-300 mt-1">
+            ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
           </div>
+          <div className="text-[11px] text-[#2D6BF7]/80 dark:text-blue-400/80 font-medium mt-0.5">
+            Total trip budget
+          </div>
+        </div>
+
+        {/* Collected */}
+        <div className="p-3.5 rounded-[18px] bg-[#ECFDF5] dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
+          <div className="text-[11px] font-extrabold text-[#059669] dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Collected</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
+          </div>
+          <div className="text-2xl font-black text-[#059669] dark:text-emerald-300 mt-1">
+            ₹{collectionSummary.totalCollected.toLocaleString("en-IN")}
+          </div>
+          <div className="text-[11px] text-[#059669]/80 dark:text-emerald-400/80 font-medium mt-0.5">
+            Received
+          </div>
+        </div>
+
+        {/* Remaining */}
+        <div className="p-3.5 rounded-[18px] bg-[#FFF7ED] dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
+          <div className="text-[11px] font-extrabold text-[#D97706] dark:text-amber-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Remaining</span>
+            <AlertCircle className="w-3.5 h-3.5 text-[#D97706] dark:text-amber-400" />
+          </div>
+          <div className="text-2xl font-black text-[#D97706] dark:text-amber-300 mt-1">
+            ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")}
+          </div>
+          <div className="text-[11px] text-[#D97706]/80 dark:text-amber-400/80 font-medium mt-0.5">
+            Pending
+          </div>
+        </div>
+      </div>
+
+      {/* SINGLE COMPACT COLLECTION PROGRESS CARD */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-[18px] border border-[#E2E8F0] dark:border-slate-800 shadow-xs space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-extrabold text-[#111827] dark:text-white">Collection Progress</span>
+          <span className="text-xs font-black text-[#2D6BF7] dark:text-indigo-400">{collectionSummary.progressPercent}%</span>
+        </div>
+        <div className="text-xs font-medium text-[#111827] dark:text-slate-300">
+          ₹{collectionSummary.totalCollected.toLocaleString("en-IN")} collected of ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
+        </div>
+        <div className="w-full bg-[#E5E7EB] dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+          <div
+            className="bg-[#2D6BF7] dark:bg-indigo-500 h-full rounded-full transition-all duration-500"
+            style={{ width: `${collectionSummary.progressPercent}%` }}
+          />
+        </div>
+        <div className="text-[11px] font-medium text-[#64748B] dark:text-slate-400">
+          ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")} remaining
         </div>
       </div>
 
       {/* EXPANDABLE REPORTS & ANALYTICS PANEL */}
       {isReportsOpen && (
-        <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800 shadow-xl space-y-4 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-4 sm:p-5 rounded-[18px] border border-slate-200 dark:border-slate-800 shadow-md space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
             <div className="flex items-center gap-2">
-              <PieChart className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-extrabold text-sm sm:text-base text-white">
+              <PieChart className="w-4 h-4 text-[#2D6BF7] dark:text-indigo-400" />
+              <h3 className="font-extrabold text-sm text-[#111827] dark:text-white">
                 Collection Reports & Financial Summary
               </h3>
             </div>
             <button
               type="button"
               onClick={() => setIsReportsOpen(false)}
-              className="text-slate-400 hover:text-white p-1"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {/* Average Contribution */}
-            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
-              <div className="text-[10px] font-bold text-slate-400 uppercase">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase">
                 Avg. Expected / Person
               </div>
-              <div className="text-base font-black text-white mt-1">
+              <div className="text-base font-black text-[#111827] dark:text-white mt-1">
                 ₹
                 {collectionSummary.totalTravellers > 0
                   ? Math.round(
@@ -580,11 +608,11 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             </div>
 
             {/* Average Collected */}
-            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
-              <div className="text-[10px] font-bold text-slate-400 uppercase">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase">
                 Avg. Collected / Person
               </div>
-              <div className="text-base font-black text-emerald-400 mt-1">
+              <div className="text-base font-black text-[#059669] dark:text-emerald-400 mt-1">
                 ₹
                 {collectionSummary.totalTravellers > 0
                   ? Math.round(
@@ -595,11 +623,11 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             </div>
 
             {/* Highest Contributor */}
-            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
-              <div className="text-[10px] font-bold text-slate-400 uppercase truncate">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase truncate">
                 Highest Contributor
               </div>
-              <div className="text-sm font-black text-indigo-300 mt-1 truncate">
+              <div className="text-sm font-black text-[#2D6BF7] dark:text-indigo-300 mt-1 truncate">
                 {collectionSummary.list.length > 0
                   ? [...collectionSummary.list].sort((a, b) => b.stats.paid - a.stats.paid)[0]?.traveller.fullName
                   : "N/A"}
@@ -607,11 +635,11 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             </div>
 
             {/* Lowest / Unpaid Count */}
-            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60">
-              <div className="text-[10px] font-bold text-slate-400 uppercase truncate">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-[#64748B] dark:text-slate-400 uppercase truncate">
                 Pending Members
               </div>
-              <div className="text-sm font-black text-rose-400 mt-1">
+              <div className="text-sm font-black text-rose-600 dark:text-rose-400 mt-1">
                 {collectionSummary.unpaidCount + collectionSummary.partialCount} Members
               </div>
             </div>
@@ -896,7 +924,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                   Expected
                 </div>
                 <div className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">
-                  ₹{activePaymentTraveller.allocatedBudget.toLocaleString("en-IN")}
+                  ₹{getTravellerStats(activePaymentTraveller).budget.toLocaleString("en-IN")}
                 </div>
               </div>
               <div>
@@ -1184,7 +1212,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
               <input
                 type="number"
                 min={0}
-                defaultValue={editingBudgetTraveller.allocatedBudget}
+                defaultValue={getTravellerStats(editingBudgetTraveller).budget}
                 id="editBudgetInput"
                 className="w-full px-3 py-2 text-sm font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
@@ -1265,263 +1293,247 @@ const CollectionDetails: React.FC<CollectionDetailsProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6"
+      className="space-y-3.5 sm:space-y-4 max-w-xl mx-auto"
     >
-      {/* Header with Back Button */}
-      <div className="flex items-center gap-4">
+      {/* 1. Header with Back Button */}
+      <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-500 transition-colors shadow-sm"
+          className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-500 transition-colors shadow-xs shrink-0 cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white">Collection Details</h2>
-          <p className="text-xs text-slate-500 font-medium">Viewing payment status for {traveller.fullName}</p>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white truncate">Collection Details</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Payment status for {traveller.fullName}</p>
         </div>
       </div>
 
-      {/* Traveller Profile Header Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="relative">
+      {/* 2. Compact Traveller Profile Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="relative shrink-0">
             {traveller.profilePhoto ? (
               <img
                 src={traveller.profilePhoto}
                 alt={traveller.fullName}
-                className="w-24 h-24 rounded-[32px] object-cover border-4 border-white dark:border-slate-800 shadow-xl"
+                className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm"
               />
             ) : (
-              <div className="w-24 h-24 rounded-[32px] bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-black text-3xl flex items-center justify-center border-4 border-white dark:border-slate-800 shadow-xl">
+              <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-black text-2xl flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm">
                 {traveller.fullName.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <div className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full border-4 border-white dark:border-slate-900 flex items-center justify-center text-xs shadow-lg ${
+            <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] font-bold shadow-xs ${
               stats.status === "Paid" ? "bg-emerald-500 text-white" :
               stats.status === "Partial" ? "bg-amber-500 text-white" :
               "bg-rose-500 text-white"
             }`}>
-              {stats.status === "Paid" ? <Check className="w-4 h-4" /> : "!"}
+              {stats.status === "Paid" ? <Check className="w-3.5 h-3.5" /> : "!"}
             </div>
           </div>
 
-          <div className="flex-1 text-center sm:text-left">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white">{traveller.fullName}</h1>
-              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight line-clamp-2">
+              {traveller.fullName}
+            </h1>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700">
                 {traveller.role}
               </span>
-              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                stats.status === "Paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" :
-                stats.status === "Partial" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" :
-                "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+              <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider ${
+                stats.status === "Paid" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400" :
+                stats.status === "Partial" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400" :
+                "bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400"
               }`}>
-                {stats.status} Status
+                {stats.status}
               </span>
             </div>
             
-            <div className="flex items-center justify-center sm:justify-start gap-4">
+            <div className="mt-1.5">
               <ContactPhoneButton 
                 phone={traveller.phone} 
                 travellerName={traveller.fullName}
-                className="text-sm font-bold text-emerald-600 dark:text-emerald-400"
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-400"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Summary and Balance */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Payment Summary Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-indigo-500" />
-                Payment Summary
-              </h3>
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Overall Progress</span>
-                <span className="text-lg font-black text-emerald-500">{percentPaid}%</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Total Budget</span>
-                <span className="text-lg font-black text-slate-900 dark:text-white">₹{stats.budget.toLocaleString("en-IN")}</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase block mb-1">Total Paid</span>
-                <span className="text-lg font-black text-emerald-600">₹{stats.paid.toLocaleString("en-IN")}</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30">
-                <span className="text-[10px] font-bold text-rose-500 uppercase block mb-1">Balance</span>
-                <span className={`text-lg font-black ${stats.remaining > 0 ? "text-rose-500" : "text-slate-400"}`}>₹{stats.remaining.toLocaleString("en-IN")}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-4 rounded-full overflow-hidden p-1 border border-slate-200 dark:border-slate-700">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${percentPaid}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className={`h-full rounded-full ${
-                    percentPaid === 100 ? "bg-emerald-500" : "bg-indigo-500"
-                  }`}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] font-bold text-slate-500">
-                <span>START</span>
-                <span>{percentPaid}% COLLECTED</span>
-                <span>TARGET</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment History Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-6">
-              <History className="w-5 h-5 text-indigo-500" />
-              Payment History
-            </h3>
-
-            {stats.history.length > 0 ? (
-              <div className="space-y-4">
-                {stats.history.map((record) => (
-                  <div
-                    key={record.id}
-                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
-                        {getMethodIcon(record.method)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 dark:text-white">₹{record.amount.toLocaleString("en-IN")}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                            {record.method}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </div>
-                        {record.notes && (
-                          <p className="text-[10px] text-slate-400 italic mt-1 max-w-[150px] truncate">{record.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <button
-                        onClick={() => handleDeletePaymentRecord(traveller.id, record.id)}
-                        className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 hover:bg-rose-100 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                <FileText className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
-                <p className="text-sm text-slate-500 font-medium">No payments recorded yet.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Outstanding and Quick Actions */}
-        <div className="space-y-6">
-          {/* Outstanding Balance Highlight */}
+      {/* 3. Quick Actions Card (Placed directly below profile card) */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Quick Actions</h3>
           {stats.remaining > 0 && (
-            <div className="bg-rose-500 rounded-3xl p-6 text-white shadow-xl shadow-rose-500/20">
-              <div className="flex items-center justify-between mb-4">
-                <AlertCircle className="w-6 h-6 text-white/80" />
-                <span className="px-3 py-1 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider border border-white/20">
-                  DUE NOW
-                </span>
-              </div>
-              <span className="text-[10px] font-bold text-white/70 uppercase block">Pending Balance</span>
-              <h2 className="text-3xl font-black mb-4">₹{stats.remaining.toLocaleString("en-IN")}</h2>
-              <button
-                onClick={() => openReceivePayment(traveller)}
-                className="w-full py-3 rounded-2xl bg-white text-rose-600 font-black text-sm shadow-lg hover:bg-rose-50 transition-colors flex items-center justify-center gap-2"
-              >
-                <IndianRupee className="w-4 h-4" />
-                Receive Now
-              </button>
-            </div>
+            <span className="text-[10px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-full border border-rose-200/60 dark:border-rose-900/40">
+              Due: ₹{stats.remaining.toLocaleString("en-IN")}
+            </span>
           )}
+        </div>
 
-          {/* Quick Actions Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <h3 className="font-black text-slate-900 dark:text-white mb-4">Quick Actions</h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => openReceivePayment(traveller)}
-                className="w-full flex items-center justify-between p-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <Plus className="w-5 h-5" />
-                  <span className="font-bold text-sm">Receive Payment</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" />
-              </button>
+        {/* Primary Action Button: Receive Payment */}
+        <button
+          onClick={() => openReceivePayment(traveller)}
+          className="w-full min-h-[46px] flex items-center justify-center gap-2 p-3 rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white font-bold text-sm shadow-sm active:scale-98 transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Receive Payment</span>
+        </button>
 
-              <button
-                onClick={() => handleSendReminder(traveller)}
-                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all border border-slate-100 dark:border-slate-800 group"
-              >
-                <div className="flex items-center gap-3">
-                  <Bell className="w-5 h-5" />
-                  <span className="font-bold text-sm">Send Reminder</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
-              </button>
+        {/* Secondary Actions: Send Reminder & Edit Collection */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => handleSendReminder(traveller)}
+            className="min-h-[44px] flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all active:scale-98 cursor-pointer"
+          >
+            <Bell className="w-4 h-4 text-amber-500 shrink-0" />
+            <span className="truncate">Send Reminder</span>
+          </button>
 
-              <button
-                onClick={() => setEditingBudgetTraveller(traveller)}
-                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all border border-slate-100 dark:border-slate-800 group"
-              >
-                <div className="flex items-center gap-3">
-                  <Edit2 className="w-5 h-5" />
-                  <span className="font-bold text-sm">Edit Collection</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
-              </button>
+          <button
+            onClick={() => setEditingBudgetTraveller(traveller)}
+            className="min-h-[44px] flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all active:scale-98 cursor-pointer"
+          >
+            <Edit2 className="w-4 h-4 text-indigo-500 shrink-0" />
+            <span className="truncate">Edit Collection</span>
+          </button>
+        </div>
 
-              <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-3">Communication</p>
-                <div className="grid grid-cols-2 gap-2">
-                   <button
-                    onClick={() => {
-                        const waUrl = `https://wa.me/${traveller.phone?.replace(/\D/g, "")}`;
-                        window.open(waUrl, "_blank");
-                    }}
-                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 text-emerald-600 hover:bg-emerald-100 transition-all"
-                  >
-                    <MessageCircle className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-black uppercase">WhatsApp</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                        window.location.href = `tel:${traveller.phone}`;
-                    }}
-                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 text-blue-600 hover:bg-blue-100 transition-all"
-                  >
-                    <Phone className="w-5 h-5 mb-1" />
-                    <span className="text-[10px] font-black uppercase">Call</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* Communication Section */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Communication</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                const waUrl = `https://wa.me/${traveller.phone?.replace(/\D/g, "")}`;
+                window.open(waUrl, "_blank");
+              }}
+              className="min-h-[44px] flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs transition-all active:scale-98 cursor-pointer"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>WhatsApp</span>
+            </button>
+            <button
+              onClick={() => {
+                window.location.href = `tel:${traveller.phone}`;
+              }}
+              className="min-h-[44px] flex items-center justify-center gap-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-blue-700 dark:text-blue-400 font-extrabold text-xs transition-all active:scale-98 cursor-pointer"
+            >
+              <Phone className="w-4 h-4" />
+              <span>Call</span>
+            </button>
           </div>
         </div>
+      </div>
+
+      {/* 4. Payment Summary Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-slate-900 dark:text-white text-xs sm:text-sm flex items-center gap-2">
+            <PieChart className="w-4 h-4 text-[#2D6BF7]" />
+            Payment Summary
+          </h3>
+          <div className="text-right flex items-center gap-1.5">
+            <span className="text-[9px] font-bold text-slate-400 uppercase">Progress</span>
+            <span className="text-sm font-black text-emerald-500">{percentPaid}%</span>
+          </div>
+        </div>
+
+        {/* 3 Financial Cards in ONE ROW on mobile */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
+          <div className="p-2 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center min-w-0">
+            <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase block truncate">Total Budget</span>
+            <span className="text-xs sm:text-base font-black text-slate-900 dark:text-white truncate block mt-0.5">
+              ₹{stats.budget.toLocaleString("en-IN")}
+            </span>
+          </div>
+          <div className="p-2 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-center min-w-0">
+            <span className="text-[8px] sm:text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase block truncate">Total Paid</span>
+            <span className="text-xs sm:text-base font-black text-emerald-600 dark:text-emerald-400 truncate block mt-0.5">
+              ₹{stats.paid.toLocaleString("en-IN")}
+            </span>
+          </div>
+          <div className="p-2 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-center min-w-0">
+            <span className="text-[8px] sm:text-[10px] font-bold text-rose-500 uppercase block truncate">Balance</span>
+            <span className={`text-xs sm:text-base font-black truncate block mt-0.5 ${stats.remaining > 0 ? "text-rose-500" : "text-slate-400"}`}>
+              ₹{stats.remaining.toLocaleString("en-IN")}
+            </span>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-1 pt-1">
+          <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60 dark:border-slate-700">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${percentPaid}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className={`h-full rounded-full ${
+                percentPaid === 100 ? "bg-emerald-500" : "bg-[#2D6BF7]"
+              }`}
+            />
+          </div>
+          <div className="flex justify-between text-[9px] font-extrabold text-slate-400 uppercase tracking-tight">
+            <span>0%</span>
+            <span>{percentPaid}% COLLECTED</span>
+            <span>100%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Payment History Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
+        <h3 className="font-black text-slate-900 dark:text-white text-xs sm:text-sm flex items-center gap-2">
+          <History className="w-4 h-4 text-[#2D6BF7]" />
+          Payment History
+        </h3>
+
+        {stats.history.length > 0 ? (
+          <div className="space-y-2">
+            {stats.history.map((record) => (
+              <div
+                key={record.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs shrink-0">
+                    {getMethodIcon(record.method)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                        ₹{record.amount.toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        {record.method}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                      <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>{new Date(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    {record.notes && (
+                      <p className="text-[10px] text-slate-400 italic mt-0.5 truncate max-w-[180px]">{record.notes}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDeletePaymentRecord(traveller.id, record.id)}
+                  className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0 cursor-pointer"
+                  title="Delete payment record"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-5 px-4 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <FileText className="w-7 h-7 text-slate-300 dark:text-slate-600 mx-auto mb-1" />
+            <p className="text-xs text-slate-500 font-medium">No payments recorded yet.</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

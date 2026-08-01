@@ -475,19 +475,6 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
     }
   };
 
-  const handleResetBudget = () => {
-    if (confirm("Are you sure you want to reset the trip budget? This will set it to 0 and clear all traveller allocated budgets.")) {
-      const resetTravellers = trip.travellers.map(t => ({ ...t, allocatedBudget: 0 }));
-      onUpdateTrip({
-        ...trip,
-        totalBudget: 0,
-        remainingBudget: -(trip.totalSpent || 0),
-        travellers: resetTravellers
-      });
-      showToast("Budget has been reset to zero");
-    }
-  };
-
   // Filtered expenses list
   const filteredExpenses =
     selectedCategoryFilter === "All"
@@ -1316,7 +1303,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           }`}
         >
           <Receipt className="w-4 h-4" />
-          <span>Trip Expenses (Shared)</span>
+          <span>Trip Expenses</span>
         </button>
         <button
           onClick={() => {
@@ -1330,7 +1317,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           }`}
         >
           <Lock className="w-4 h-4" />
-          <span>My Personal Expenses (Private)</span>
+          <span>Personal Expenses</span>
         </button>
       </div>
 
@@ -1344,7 +1331,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               <Receipt className="w-4 h-4 sm:w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             )}
             <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
-              {activeSection === "personal" ? "My Personal Expenses" : "Trip Expenses & Transaction History"}
+              {activeSection === "personal" ? "Personal Expenses" : "Trip Expenses & Transaction History"}
             </h2>
           </div>
           <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
@@ -1356,22 +1343,13 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {activeSection === "trip" && isOrganizer && (
-            <>
-              <button
-                onClick={handleAddBudget}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold px-3 py-2 sm:py-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900"
-              >
-                <Wallet className="w-3.5 h-3.5" />
-                <span>Add Budget</span>
-              </button>
-              <button
-                onClick={handleResetBudget}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-[11px] font-bold px-3 py-2 sm:py-2.5 rounded-xl border border-rose-100 dark:border-rose-900"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Budget</span>
-              </button>
-            </>
+            <button
+              onClick={handleAddBudget}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold px-3 py-2 sm:py-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              <span>Add Budget</span>
+            </button>
           )}
           {(activeSection === "personal" || isOrganizer) && (
             <button
