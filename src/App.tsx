@@ -612,7 +612,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         )}
 
         {activeTab === "travellers" && (
-          <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} appRole={userRole} />
+          <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} appRole={userRole} currentUser={user} />
         )}
         
         {activeTab === "planner" && (

@@ -6,6 +6,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Trip, Traveller, TravellerRole, PendingTravellerRegistration, GoogleFormConfig } from "../types";
+import { db } from "../lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import { GoogleFormCollectModal } from "./GoogleFormCollectModal";
 import { EditPendingRegistrationModal } from "./EditPendingRegistrationModal";
 import { ProfilePhotoUpload, getInitials } from "./ProfilePhotoUpload";
@@ -37,12 +39,14 @@ interface TravellersModuleProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
   appRole?: "traveller" | "organizer" | "super_admin";
+  currentUser?: any;
 }
 
 export const TravellersModule: React.FC<TravellersModuleProps> = ({
   trip,
   onUpdateTrip,
   appRole = "traveller",
+  currentUser,
 }) => {
   const isOrganizer = appRole === "organizer" || appRole === "super_admin";
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -209,9 +213,19 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     setIsAddModalOpen(true);
   };
 
-  const handleSaveTraveller = (e: React.FormEvent) => {
+  const handleSaveTraveller = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) return;
+
+    const isEditingSelf = !!(editingTraveller && currentUser && (
+      editingTraveller.id === currentUser.uid ||
+      (editingTraveller.email && editingTraveller.email.toLowerCase() === currentUser.email?.toLowerCase())
+    ));
+
+    if (!isOrganizer && !isEditingSelf) {
+      alert("You do not have permission to modify this profile.");
+      return;
+    }
 
     let updatedList: Traveller[];
 
@@ -235,7 +249,33 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             }
           : t
       );
+
+      try {
+        const userDocId = editingTraveller.id || (isEditingSelf ? currentUser?.uid : null);
+        if (userDocId) {
+          const userDocRef = doc(db, "users", userDocId);
+          await setDoc(userDocRef, {
+            fullName,
+            name: fullName,
+            age,
+            gender,
+            phone,
+            email,
+            emergencyContact,
+            bloodGroup,
+            passportNumber,
+            drivingLicense,
+            profilePhoto,
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.error("Failed to update user Firestore document:", err);
+      }
     } else {
+      if (!isOrganizer) {
+        alert("Only organizers can add new travellers.");
+        return;
+      }
       const newTraveller: Traveller = {
         id: `trv_${Date.now()}`,
         fullName,
@@ -309,6 +349,10 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   });
 
   const selectedTraveller = travellerStats.find((t) => t.id === selectedTravellerId);
+  const isOwnProfile = !!(selectedTraveller && currentUser && (
+    selectedTraveller.id === currentUser.uid ||
+    (selectedTraveller.email && selectedTraveller.email.toLowerCase() === currentUser.email?.toLowerCase())
+  ));
 
   if (selectedTraveller) {
     return (
@@ -549,7 +593,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             )}
           </div>
 
-          {isOrganizer && (
+          {(isOrganizer || isOwnProfile) && (
             <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => handleOpenEdit(selectedTraveller)}
@@ -557,12 +601,14 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               >
                 <Edit className="w-4 h-4" /> Edit Traveller
               </button>
-              <button
-                onClick={() => handleDeleteTraveller(selectedTraveller.id)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
-              >
-                <Trash2 className="w-4 h-4" /> Remove Traveller
-              </button>
+              {isOrganizer && (
+                <button
+                  onClick={() => handleDeleteTraveller(selectedTraveller.id)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove Traveller
+                </button>
+              )}
             </div>
           )}
         </motion.div>
@@ -636,8 +682,9 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                     </label>
                     <select
                       value={formRole}
+                      disabled={!isOrganizer}
                       onChange={(e) => setFormRole(e.target.value as TravellerRole)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <option value="Organizer">Organizer</option>
                       <option value="Traveller">Traveller</option>
@@ -653,9 +700,10 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                     <input
                       type="number"
                       required
+                      disabled={!isOrganizer}
                       value={allocatedBudget}
                       onChange={(e) => setAllocatedBudget(Number(e.target.value))}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -706,9 +754,10 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                     </label>
                     <input
                       type="email"
+                      disabled={!isOrganizer}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -1175,8 +1224,9 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                   </label>
                   <select
                     value={formRole}
+                    disabled={!isOrganizer}
                     onChange={(e) => setFormRole(e.target.value as TravellerRole)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="Organizer">Organizer</option>
                     <option value="Traveller">Traveller</option>
@@ -1192,9 +1242,10 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                   <input
                     type="number"
                     required
+                    disabled={!isOrganizer}
                     value={allocatedBudget}
                     onChange={(e) => setAllocatedBudget(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -1245,9 +1296,10 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                   </label>
                   <input
                     type="email"
+                    disabled={!isOrganizer}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>

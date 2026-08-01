@@ -31,7 +31,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow read: if isAuthenticated();
-      allow update: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isOrganizer() || 
+        isSuperAdmin()
+      );
       allow delete: if isSuperAdmin();
     }
 

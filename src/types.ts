@@ -194,6 +194,11 @@ export interface Expense {
   receiptUrl?: string;
   date: string;
   notes?: string;
+  // Smart amount entry fields
+  enteredAmount?: number;
+  amountMode?: "per_person" | "total";
+  travellerCount?: number;
+  calculatedTotal?: number;
 }
 
 export interface PersonalExpense {

@@ -149,6 +149,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   // Form state
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number | "">("");
+  const [amountMode, setAmountMode] = useState<"per_person" | "total">("total");
   const [category, setCategory] = useState<ExpenseCategory>("Food");
   const [whoPaidId, setWhoPaidId] = useState<string>(trip.travellers[0]?.id || "");
   const [whoUsedIds, setWhoUsedIds] = useState<string[]>(
@@ -183,6 +184,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
     setEditingPersonalExpense(null);
     setDescription("");
     setAmount("");
+    setAmountMode("total");
     setCategory("Food");
     setWhoPaidId(trip.travellers[0]?.id || "");
     setWhoUsedIds(trip.travellers.map((t) => t.id));
@@ -201,6 +203,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
     setEditingExpense(null);
     setDescription(exp.title);
     setAmount(exp.amount);
+    setAmountMode("total");
     setCategory(exp.category as any);
     setNotes(exp.notes || "");
     setDate(exp.date || new Date().toISOString().split("T")[0]);
@@ -211,7 +214,15 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
     setEditingExpense(exp);
     setEditingPersonalExpense(null);
     setDescription(exp.description);
-    setAmount(exp.amount);
+    
+    const mode = exp.amountMode || "total";
+    setAmountMode(mode);
+    if (mode === "per_person" && exp.enteredAmount !== undefined) {
+      setAmount(exp.enteredAmount);
+    } else {
+      setAmount(exp.amount);
+    }
+
     setCategory(exp.category);
     setWhoPaidId(exp.whoPaidId);
     setWhoUsedIds(exp.whoUsedIds || trip.travellers.map((t) => t.id));
@@ -237,7 +248,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   };
 
   const calculateFinalSplits = (): Record<string, number> => {
-    const total = Number(amount) || 0;
+    const total = amountMode === "per_person" ? (Number(amount) || 0) * whoUsedIds.length : (Number(amount) || 0);
     const splitsResult: Record<string, number> = {};
 
     if (splitType === "equal") {
@@ -262,7 +273,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = Number(amount);
+    const totalAmountVal = amountMode === "per_person" ? (Number(amount) || 0) * whoUsedIds.length : Number(amount);
+    const numAmount = activeSection === "personal" ? Number(amount) : totalAmountVal;
     if (!description.trim() || !numAmount || numAmount <= 0) {
       alert("Please enter a valid description and amount.");
       return;
@@ -361,6 +373,10 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
             receiptUrl,
             date,
             notes,
+            enteredAmount: Number(amount) || 0,
+            amountMode: amountMode,
+            travellerCount: whoUsedIds.length,
+            calculatedTotal: numAmount,
           };
 
           const updatedExpenses = trip.expenses.map((e) =>
@@ -393,6 +409,10 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
             receiptUrl,
             date,
             notes,
+            enteredAmount: Number(amount) || 0,
+            amountMode: amountMode,
+            travellerCount: whoUsedIds.length,
+            calculatedTotal: numAmount,
           };
 
           onAddExpense(newExpense, accountUsedId, numAmount);
@@ -993,6 +1013,40 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       }
                       className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
+                    <div className="mt-3">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                        Expense Amount Mode
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAmountMode("total")}
+                          className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                            amountMode === "total"
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                              : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          Total Amount
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAmountMode("per_person")}
+                          className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                            amountMode === "per_person"
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                              : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          Per Person
+                        </button>
+                      </div>
+                      {amountMode === "per_person" && (
+                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-2 rounded-lg">
+                          {trip.currency}{Number(amount) || 0} × {whoUsedIds.length} traveller{whoUsedIds.length !== 1 ? "s" : ""} = {trip.currency}{((Number(amount) || 0) * whoUsedIds.length).toLocaleString()} Total Expense
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1175,8 +1229,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 shadow-md disabled:opacity-50 flex items-center gap-2"
+                    disabled={isSubmitting || whoUsedIds.length === 0}
+                    className="px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {isSubmitting && <Clock className="w-3.5 h-3.5 animate-spin" />}
                     {isSubmitting ? "Saving..." : editingExpense ? "Save Changes" : "Confirm & Split"}
@@ -1568,6 +1622,43 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                 </div>
               </div>
 
+              {activeSection !== "personal" && (
+                <div className="col-span-1 sm:col-span-2 mt-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                    Expense Amount Mode
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAmountMode("total")}
+                      className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                        amountMode === "total"
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                          : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      Total Amount
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAmountMode("per_person")}
+                      className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                        amountMode === "per_person"
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                          : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      Per Person
+                    </button>
+                  </div>
+                  {amountMode === "per_person" && (
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-2 rounded-lg">
+                      {trip.currency}{Number(amount) || 0} × {whoUsedIds.length} traveller{whoUsedIds.length !== 1 ? "s" : ""} = {trip.currency}{((Number(amount) || 0) * whoUsedIds.length).toLocaleString()} Total Expense
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className={activeSection === "personal" ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 sm:grid-cols-2 gap-3"}>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1849,7 +1940,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 shadow-md animate-none"
+                  disabled={isSubmitting || (activeSection !== "personal" && whoUsedIds.length === 0)}
+                  className="px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 shadow-md animate-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {editingPersonalExpense || editingExpense ? "Save Changes" : activeSection === "personal" ? "Save Private Expense" : "Confirm & Split"}
                 </button>
