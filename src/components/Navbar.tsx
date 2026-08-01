@@ -20,6 +20,7 @@ import {
   Clock,
   CloudSun,
   Users,
+  BookOpen,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -61,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const allTabs = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
+    { id: "diary", label: "Travel Diary", icon: BookOpen },
     { id: "collections", label: "Collections", icon: IndianRupee, organizerOnly: true },
     { id: "expenses", label: "Split Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers & Budgets", icon: Users },

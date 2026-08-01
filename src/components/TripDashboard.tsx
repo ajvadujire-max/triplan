@@ -371,6 +371,36 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
         )}
       </div>
 
+      {/* TRAVEL DIARY SHORTCUT CARD */}
+      <div
+        onClick={() => onNavigateTab("diary")}
+        className="group cursor-pointer bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-blue-200/80 dark:border-indigo-900/60 shadow-xs hover:border-[#2D6BF7] transition-all duration-200 active:scale-[0.99] flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#2D6BF7] text-white flex items-center justify-center font-bold text-lg shadow-sm">
+            📖
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-[#2D6BF7] dark:group-hover:text-indigo-400 transition-colors">
+                Travel Diary
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-indigo-950 text-[#2D6BF7] dark:text-indigo-300 border border-blue-200 dark:border-indigo-800">
+                Private
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Capture memories, notes & photo stories from your journey
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs font-bold text-[#2D6BF7] dark:text-indigo-400 shrink-0">
+          <span>Open</span>
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+        </div>
+      </div>
+
       {/* COLLECTIONS & TREASURY WIDGET */}
       <div
         onClick={() => onNavigateTab("collections")}

@@ -34,6 +34,7 @@ import { PlannerModule } from "./components/PlannerModule";
 import { WeatherMapsTimeline } from "./components/WeatherMapsTimeline";
 import { FinanceIntegration } from "./components/FinanceIntegration";
 import { AiInsightsModule } from "./components/AiInsightsModule";
+import { TravelDiaryModule } from "./components/TravelDiaryModule";
 import { initAuth, googleSignIn, logoutGoogle } from "./lib/googleAuth";
 import {
   fetchUserTrips,
@@ -634,6 +635,10 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         
         {activeTab === "planner" && (
           <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
+        )}
+
+        {activeTab === "diary" && (
+          <TravelDiaryModule trip={activeTrip} currentUser={user} />
         )}
 
         {/* Fallbacks for internal navigation if any */}

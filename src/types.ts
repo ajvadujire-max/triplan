@@ -477,3 +477,28 @@ export interface AIInsightsResponse {
   restaurantSuggestions: string[];
   travelInsights: string[];
 }
+
+export type DiaryMood =
+  | "😊 Happy"
+  | "🤩 Amazing"
+  | "😌 Relaxed"
+  | "🥱 Tired"
+  | "🥹 Emotional"
+  | "😮 Surprised"
+  | "❤️ Memorable";
+
+export interface DiaryEntry {
+  id: string;
+  tripId: string;
+  ownerUid: string;
+  travellerName?: string;
+  date: string;
+  title: string;
+  location?: string;
+  content: string;
+  mood?: string;
+  photos: string[];
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}

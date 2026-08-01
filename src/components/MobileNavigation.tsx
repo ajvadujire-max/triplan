@@ -20,7 +20,8 @@ import {
   Sparkle,
   X,
   Bell,
-  Search
+  Search,
+  BookOpen
 } from "lucide-react";
 import { Trip } from "../types";
 
@@ -74,6 +75,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const primaryTabs = primaryTabsAll.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
 
   const moreTabsAll = [
+    { id: "diary", label: "Travel Diary", icon: BookOpen, description: "Personal journey memories & photos" },
     { id: "vault", label: "Vault & Packing", icon: Calendar, description: "Checklists & essential files" },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun, description: "Live climate & route views" },
     { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync", organizerOnly: true },

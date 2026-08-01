@@ -122,6 +122,26 @@
         "createdAt": { "type": "string" }
       },
       "required": ["tripId", "travellerUid", "title", "amount", "category", "date"]
+    },
+    "TravelDiary": {
+      "title": "TravelDiary",
+      "description": "Private personal travel diary entry for a traveller.",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "travellerName": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "content": { "type": "string" },
+        "mood": { "type": "string" },
+        "photos": { "type": "array" },
+        "tags": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["tripId", "ownerUid", "date", "title", "content"]
     }
   },
   "firestore": {
@@ -133,6 +153,7 @@
     "/trips/{tripId}/journey/{segmentId}": { "schema": "JourneySegment", "description": "Trip itinerary segments." },
     "/trips/{tripId}/collections/{collectionId}": { "schema": "Collection", "description": "Group collections." },
     "/trips/{tripId}/registrations/{registrationId}": { "schema": "Registration", "description": "Join requests." },
-    "/personalExpenses/{expenseId}": { "schema": "PersonalExpense", "description": "Private personal expenses." }
+    "/personalExpenses/{expenseId}": { "schema": "PersonalExpense", "description": "Private personal expenses." },
+    "/travelDiaries/{diaryId}": { "schema": "TravelDiary", "description": "Private travel diary entries." }
   }
 }

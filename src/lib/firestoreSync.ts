@@ -10,7 +10,7 @@ import {
   getDocFromServer
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType, firebaseConfig } from "./firebase";
-import { Trip, FinanceAccount, CashbookEntry, PersonalExpense } from "../types";
+import { Trip, FinanceAccount, CashbookEntry, PersonalExpense, DiaryEntry } from "../types";
 import { initialTrips } from "../data/mockData";
 
 function sanitizeForFirestore<T>(obj: T): T {
@@ -333,6 +333,44 @@ export async function deletePersonalExpense(expenseId: string): Promise<void> {
   const path = `personalExpenses/${expenseId}`;
   try {
     await deleteDoc(doc(db, "personalExpenses", expenseId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export async function fetchDiaryEntries(tripId: string, ownerUid: string): Promise<DiaryEntry[]> {
+  const path = "travelDiaries";
+  try {
+    const q = query(
+      collection(db, path),
+      where("tripId", "==", tripId),
+      where("ownerUid", "==", ownerUid)
+    );
+    const snapshot = await getDocs(q);
+    const entries: DiaryEntry[] = [];
+    snapshot.forEach((docSnap) => {
+      entries.push(docSnap.data() as DiaryEntry);
+    });
+    return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return [];
+  }
+}
+
+export async function saveDiaryEntry(entry: DiaryEntry): Promise<void> {
+  const path = `travelDiaries/${entry.id}`;
+  try {
+    await setDoc(doc(db, "travelDiaries", entry.id), sanitizeForFirestore(entry));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteDiaryEntry(diaryId: string): Promise<void> {
+  const path = `travelDiaries/${diaryId}`;
+  try {
+    await deleteDoc(doc(db, "travelDiaries", diaryId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
