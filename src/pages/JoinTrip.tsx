@@ -297,11 +297,11 @@ export default function JoinTrip() {
                 <h1 className="text-2xl font-black text-white">{trip?.name}</h1>
                 <div className="flex items-center gap-3 text-xs text-slate-200">
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-cyan-400" /> {trip?.destination}
+                    <MapPin className="w-3.5 h-3.5 text-#34D399" /> {trip?.destination}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-cyan-400" /> {trip?.startDate} to {trip?.endDate}
+                    <Calendar className="w-3.5 h-3.5 text-#34D399" /> {trip?.startDate} to {trip?.endDate}
                   </span>
                 </div>
               </div>

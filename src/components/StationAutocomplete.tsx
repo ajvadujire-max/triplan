@@ -90,9 +90,9 @@ export const StationAutocomplete: React.FC<StationAutocompleteProps> = ({
           onChange={handleCustomInputChange}
           onClick={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-9 pr-8 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1B3EBF] outline-none"
+          className="w-full pl-9 pr-8 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none"
         />
-        <Train className="w-4 h-4 text-[#1B3EBF] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Train className="w-4 h-4 text-indigo-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
 
         {value ? (
           <button
@@ -130,7 +130,7 @@ export const StationAutocomplete: React.FC<StationAutocompleteProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search station name or code (e.g. KBPR, CAN, YPR)..."
-                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#1B3EBF]"
+                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
               {searchQuery && (
                 <button
@@ -166,12 +166,12 @@ export const StationAutocomplete: React.FC<StationAutocompleteProps> = ({
                     onClick={() => handleSelectStation(st)}
                     className={`w-full text-left p-3 rounded-xl flex items-center justify-between gap-2 transition-all active:scale-[0.99] ${
                       isSelected
-                        ? "bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 border-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF]"
+                        ? "bg-indigo-50 dark:bg-indigo-950/80 border-indigo-200 text-indigo-900 dark:text-indigo-200"
                         : "hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-900 dark:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] font-extrabold text-xs flex items-center justify-center shrink-0 border border-[#1B3EBF]/20 dark:border-[#1B3EBF]/40">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
                         {st.code}
                       </div>
 
@@ -189,7 +189,7 @@ export const StationAutocomplete: React.FC<StationAutocompleteProps> = ({
                     </div>
 
                     {isSelected && (
-                      <Check className="w-4 h-4 text-[#1B3EBF] dark:text-[#5B7FFF] shrink-0" />
+                      <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                     )}
                   </button>
                 );

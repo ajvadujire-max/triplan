@@ -121,7 +121,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            <Compass className="w-5 h-5 text-#1AAB67 dark:text-#34D399" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               {initialTrip ? "Edit Trip Details" : "Create New Trip"}
             </h2>
@@ -148,7 +148,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 placeholder="e.g. Goa Coastal Road Trip"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               />
             </div>
 
@@ -162,7 +162,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 placeholder="e.g. Goa, India or Tokyo, Japan"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               />
             </div>
           </div>
@@ -176,7 +176,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <select
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value as TripPurpose)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               >
                 <option value="Vacation">Vacation</option>
                 <option value="Business">Business</option>
@@ -197,7 +197,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 placeholder="e.g. Group Road Trip, Office Tour"
                 value={travelCategory}
                 onChange={(e) => setTravelCategory(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               />
             </div>
           </div>
@@ -213,7 +213,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               />
             </div>
 
@@ -226,7 +226,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               />
             </div>
           </div>
@@ -241,7 +241,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 type="number"
                 value={totalBudget}
                 onChange={(e) => setTotalBudget(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               />
             </div>
 
@@ -252,7 +252,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               >
                 <option value="₹">₹ INR (Rupee)</option>
                 <option value="$">$ USD (Dollar)</option>
@@ -270,7 +270,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TripStatus)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
               >
                 <option value="Upcoming">Upcoming</option>
                 <option value="Ongoing">Ongoing</option>
@@ -310,7 +310,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               value={coverPhoto}
               onChange={(e) => setCoverPhoto(e.target.value)}
               placeholder="Paste image URL or pick from presets below"
-              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 mb-2"
+              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67 mb-2"
             />
             <div className="flex items-center gap-2 overflow-x-auto py-1">
               {defaultCovers.map((img, idx) => (
@@ -320,7 +320,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                   alt="cover preset"
                   onClick={() => setCoverPhoto(img)}
                   className={`w-16 h-12 object-cover rounded-lg cursor-pointer border-2 transition-all ${
-                    coverPhoto === img ? "border-cyan-500 scale-105" : "border-transparent opacity-70"
+                    coverPhoto === img ? "border-#1AAB67 scale-105" : "border-transparent opacity-70"
                   }`}
                 />
               ))}
@@ -337,7 +337,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Key objectives, hotel references, emergency contacts..."
-              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
             />
           </div>
 
@@ -352,7 +352,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs sm:text-sm font-bold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg shadow-md transition-all"
+              className="px-5 py-2 text-xs sm:text-sm font-bold bg-#1AAB67 hover:bg-#1AAB67 text-white rounded-lg shadow-md transition-all"
             >
               {initialTrip ? "Update Trip" : "Save Trip"}
             </button>

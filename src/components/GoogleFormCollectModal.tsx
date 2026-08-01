@@ -200,7 +200,7 @@ export const GoogleFormCollectModal: React.FC<GoogleFormCollectModalProps> = ({
         {!formConfig ? (
           /* State 1: Form Not Created Yet */
           <div className="text-center py-6 space-y-4">
-            <div className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto border border-indigo-200 dark:border-indigo-800">
+            <div className="w-16 h-16 rounded-full bg-#1AAB67/10 dark:bg-#0C5130/50 text-#1AAB67 dark:text-#34D399 flex items-center justify-center mx-auto border border-#1AAB67/30 dark:border-#159257">
               <Globe className="w-8 h-8" />
             </div>
             <div className="space-y-1">
@@ -269,7 +269,7 @@ export const GoogleFormCollectModal: React.FC<GoogleFormCollectModalProps> = ({
                 />
                 <button
                   onClick={handleCopyLink}
-                  className="flex items-center gap-1.5 bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all shrink-0"
+                  className="flex items-center gap-1.5 bg-slate-900 dark:bg-#1AAB67 hover:bg-slate-800 dark:hover:bg-#1AAB67/100 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all shrink-0"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? "Copied" : "Copy Link"}
@@ -283,7 +283,7 @@ export const GoogleFormCollectModal: React.FC<GoogleFormCollectModalProps> = ({
                 href={formConfig.responderUri}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2.5 rounded-lg transition-all"
+                className="flex items-center justify-center gap-2 bg-#1AAB67 hover:bg-#1AAB67/100 text-white text-xs font-bold px-3 py-2.5 rounded-lg transition-all"
               >
                 <ExternalLink className="w-3.5 h-3.5" /> Open Form
               </a>
@@ -297,7 +297,7 @@ export const GoogleFormCollectModal: React.FC<GoogleFormCollectModalProps> = ({
 
               <button
                 onClick={handleShareEmail}
-                className="flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3 py-2.5 rounded-lg transition-all col-span-2 sm:col-span-1"
+                className="flex items-center justify-center gap-2 bg-#1AAB67 hover:bg-#1AAB67/100 text-white text-xs font-bold px-3 py-2.5 rounded-lg transition-all col-span-2 sm:col-span-1"
               >
                 <Mail className="w-3.5 h-3.5" /> Share via Email
               </button>

@@ -423,7 +423,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-[#2D6BF7] text-white flex items-center justify-center font-bold text-base shadow-sm">
+              <span className="w-8 h-8 rounded-xl bg-[#1AAB67] text-white flex items-center justify-center font-bold text-base shadow-sm">
                 📖
               </span>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -436,14 +436,14 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium pl-1">
               "Capture the moments from your journey."
             </p>
-            <p className="text-xs font-bold text-[#2D6BF7] dark:text-indigo-400 flex items-center gap-1 pt-1">
+            <p className="text-xs font-bold text-[#1AAB67] dark:text-#34D399 flex items-center gap-1 pt-1">
               <MapPin className="w-3.5 h-3.5" /> {trip.name}
             </p>
           </div>
 
           <button
             onClick={handleOpenCreate}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#2D6BF7] hover:bg-blue-600 active:scale-95 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-all cursor-pointer min-h-[44px]"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1AAB67] hover:bg-#159257 active:scale-95 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-all cursor-pointer min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
             <span>+ New Diary Entry</span>
@@ -478,7 +478,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search entries by title, location, story or tags..."
-            className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm rounded-xl pl-9 pr-8 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D6BF7]"
+            className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm rounded-xl pl-9 pr-8 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
           />
           {searchQuery && (
             <button
@@ -542,7 +542,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
       {/* 3. DIARY TIMELINE & ENTRIES LIST */}
       {isLoading ? (
         <div className="bg-white dark:bg-slate-900 p-12 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-[#2D6BF7] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-8 h-8 border-4 border-[#1AAB67] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
             Loading your personal travel memories...
           </p>
@@ -550,7 +550,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
       ) : filteredEntries.length === 0 ? (
         /* EMPTY STATE */
         <div className="bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 text-center space-y-4 shadow-xs">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-50 dark:bg-indigo-950/60 rounded-3xl flex items-center justify-center mx-auto text-2xl sm:text-3xl text-[#2D6BF7]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-#1AAB67/10 dark:bg-#1AAB67/20/60 rounded-3xl flex items-center justify-center mx-auto text-2xl sm:text-3xl text-[#1AAB67]">
             📖
           </div>
           <div className="space-y-1.5 max-w-sm mx-auto">
@@ -563,7 +563,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
           </div>
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 bg-[#2D6BF7] hover:bg-blue-600 text-white text-xs sm:text-sm font-bold px-6 py-3 rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer min-h-[44px]"
+            className="inline-flex items-center gap-2 bg-[#1AAB67] hover:bg-#159257 text-white text-xs sm:text-sm font-bold px-6 py-3 rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
             <span>+ Write First Entry</span>
@@ -576,7 +576,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
             <div key={group.dateLabel} className="space-y-3">
               {/* Timeline Date Header */}
               <div className="flex items-center gap-3">
-                <span className="text-xs font-black tracking-widest text-[#2D6BF7] dark:text-indigo-400 uppercase bg-blue-50 dark:bg-indigo-950/80 px-3 py-1 rounded-lg border border-blue-100 dark:border-indigo-900">
+                <span className="text-xs font-black tracking-widest text-[#1AAB67] dark:text-#34D399 uppercase bg-#1AAB67/10 dark:bg-#1AAB67/20/80 px-3 py-1 rounded-lg border border-#1AAB67/30 dark:border-#1AAB67/40">
                   {group.dateLabel}
                 </span>
                 <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
@@ -590,7 +590,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     layout
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-300 dark:hover:border-indigo-800 transition-all space-y-3 group"
+                    className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-#1AAB67/50 dark:hover:border-#1AAB67/60 transition-all space-y-3 group"
                   >
                     {/* Header Row: Title, Mood & Actions */}
                     <div className="flex items-start justify-between gap-3">
@@ -603,14 +603,14 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                           )}
                           {entry.location && (
                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-[#2D6BF7]" />
+                              <MapPin className="w-3 h-3 text-[#1AAB67]" />
                               {entry.location}
                             </span>
                           )}
                         </div>
                         <h3
                           onClick={() => setViewingEntry(entry)}
-                          className="text-base sm:text-lg font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#2D6BF7] dark:hover:text-indigo-400 transition-colors leading-snug"
+                          className="text-base sm:text-lg font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#1AAB67] dark:hover:text-#34D399 transition-colors leading-snug"
                         >
                           {entry.title}
                         </h3>
@@ -620,7 +620,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                         <button
                           onClick={() => handleOpenEdit(entry)}
                           title="Edit Entry"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-#159257 hover:bg-#1AAB67/10 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -697,7 +697,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
 
                       <button
                         onClick={() => setViewingEntry(entry)}
-                        className="flex items-center gap-1 text-[#2D6BF7] dark:text-indigo-400 font-bold hover:underline cursor-pointer ml-auto text-xs"
+                        className="flex items-center gap-1 text-[#1AAB67] dark:text-#34D399 font-bold hover:underline cursor-pointer ml-auto text-xs"
                       >
                         <span>View Entry</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -725,7 +725,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
               {/* Header */}
               <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-indigo-950/80 text-[#2D6BF7] flex items-center justify-center font-bold">
+                  <span className="w-8 h-8 rounded-xl bg-#1AAB67/10 dark:bg-#1AAB67/20/80 text-[#1AAB67] flex items-center justify-center font-bold">
                     📖
                   </span>
                   <div>
@@ -766,7 +766,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     placeholder="e.g. First Day exploring Charminar"
-                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D6BF7]"
+                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
                   />
                 </div>
 
@@ -781,7 +781,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                       required
                       value={formDate}
                       onChange={(e) => setFormDate(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D6BF7]"
+                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
                     />
                   </div>
 
@@ -794,7 +794,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                       value={formLocation}
                       onChange={(e) => setFormLocation(e.target.value)}
                       placeholder="e.g. Charminar, Hyderabad"
-                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D6BF7]"
+                      className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
                     />
                   </div>
                 </div>
@@ -813,7 +813,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                         onClick={() => setFormMood(m)}
                         className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
                           formMood === m
-                            ? "bg-[#2D6BF7] text-white border-[#2D6BF7] shadow-xs"
+                            ? "bg-[#1AAB67] text-white border-[#1AAB67] shadow-xs"
                             : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
                         }`}
                       >
@@ -834,7 +834,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     value={formContent}
                     onChange={(e) => setFormContent(e.target.value)}
                     placeholder="Write about your day, memories, experiences, atmosphere, food, conversations..."
-                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm rounded-xl p-3.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2D6BF7] resize-none"
+                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm rounded-xl p-3.5 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1AAB67] resize-none"
                   />
                 </div>
 
@@ -847,7 +847,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs font-bold text-[#2D6BF7] dark:text-indigo-400 flex items-center gap-1 hover:underline cursor-pointer"
+                      className="text-xs font-bold text-[#1AAB67] dark:text-#34D399 flex items-center gap-1 hover:underline cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" /> + Add Photos
                     </button>
@@ -887,7 +887,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                   ) : (
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                      className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-center cursor-pointer hover:border-#1AAB67/70 transition-colors"
                     >
                       <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
                       <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
@@ -917,7 +917,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                           onClick={() => handleToggleTag(t)}
                           className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-indigo-50 dark:bg-indigo-950 text-[#2D6BF7] dark:text-indigo-300 border-[#2D6BF7] dark:border-indigo-800"
+                              ? "bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 text-[#1AAB67] dark:text-[#34D399] border-[#1AAB67]/30 dark:border-[#1AAB67]/40"
                               : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
                           }`}
                         >
@@ -964,7 +964,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="flex-1 py-3 rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="flex-1 py-3 rounded-xl bg-[#1AAB67] hover:bg-#159257 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     {isSaving ? (
                       <>
@@ -996,7 +996,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
               <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-black tracking-widest text-[#2D6BF7] dark:text-indigo-400 uppercase bg-blue-50 dark:bg-indigo-950/80 px-2.5 py-0.5 rounded-lg border border-blue-100 dark:border-indigo-900">
+                    <span className="text-xs font-black tracking-widest text-[#1AAB67] dark:text-#34D399 uppercase bg-#1AAB67/10 dark:bg-#1AAB67/20/80 px-2.5 py-0.5 rounded-lg border border-#1AAB67/30 dark:border-#1AAB67/40">
                       {viewingEntry.date}
                     </span>
                     {viewingEntry.mood && (
@@ -1010,7 +1010,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                   </h2>
                   {viewingEntry.location && (
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-[#2D6BF7]" />
+                      <MapPin className="w-3.5 h-3.5 text-[#1AAB67]" />
                       {viewingEntry.location}
                     </p>
                   )}
@@ -1090,7 +1090,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleOpenEdit(viewingEntry)}
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white text-xs font-bold shadow-sm cursor-pointer"
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1AAB67] hover:bg-#159257 text-white text-xs font-bold shadow-sm cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>Edit Entry</span>
@@ -1203,7 +1203,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     onClick={() => setLightboxIndex(i)}
                     className={`w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 cursor-pointer ${
                       i === lightboxIndex
-                        ? "border-[#2D6BF7]"
+                        ? "border-[#1AAB67]"
                         : "border-transparent opacity-50"
                     }`}
                   >

@@ -71,27 +71,27 @@ Provide a concise, professional 3-bullet financial audit & smart budget warning.
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-indigo-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden space-y-4">
+      <div className="bg-#0C5130 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden space-y-4">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-indigo-200 animate-pulse" />
+              <Sparkles className="w-6 h-6 text-#A3E0C3 animate-pulse" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-#74D0A5 uppercase tracking-widest">
                 AI Travel & Treasury Copilot
               </p>
               <h3 className="text-xl font-bold tracking-tight">Gemini AI Travel & Finance Insights</h3>
             </div>
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-200 self-start md:self-auto">
+          <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 border border-white/20 text-#A3E0C3 self-start md:self-auto">
             Powered by Gemini
           </span>
         </div>
 
         {/* AI Insight Card Sample Banner */}
         <div className="relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
-          <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">
+          <p className="text-[10px] font-bold text-#74D0A5 uppercase tracking-widest mb-1">
             Featured AI Recommendation
           </p>
           <p className="text-xs font-medium leading-relaxed">
@@ -104,7 +104,7 @@ Provide a concise, professional 3-bullet financial audit & smart budget warning.
           <button
             onClick={() => handleFetchAiInsights("budget")}
             disabled={loading}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-#1AAB67 hover:bg-#1AAB67 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all disabled:opacity-50"
           >
             <AlertTriangle className="w-4 h-4 text-amber-300" />
             Analyze Budget & Burn Rate
@@ -115,7 +115,7 @@ Provide a concise, professional 3-bullet financial audit & smart budget warning.
             disabled={loading}
             className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all disabled:opacity-50"
           >
-            <Compass className="w-4 h-4 text-cyan-300" />
+            <Compass className="w-4 h-4 text-#74D0A5" />
             Generate Smart Itinerary
           </button>
 
@@ -129,14 +129,14 @@ Provide a concise, professional 3-bullet financial audit & smart budget warning.
           </button>
         </div>
 
-        <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl" />
+        <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-#1AAB67/20 rounded-full blur-2xl" />
       </div>
 
       {/* AI Response Box */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm min-h-[220px] flex flex-col justify-center">
         {loading ? (
           <div className="text-center space-y-3 py-8">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+            <Loader2 className="w-8 h-8 text-#1AAB67 animate-spin mx-auto" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
               Consulting Gemini AI Model...
             </p>
@@ -146,7 +146,7 @@ Provide a concise, professional 3-bullet financial audit & smart budget warning.
           </div>
         ) : aiResponse ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-bold text-#1AAB67 dark:text-#34D399 uppercase tracking-wider">
               <Brain className="w-4 h-4" /> AI Analysis Result
             </div>
 

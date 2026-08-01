@@ -95,7 +95,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
     { id: "hotel", title: "Hotel", query: "Hotel Resort Stays", icon: Hotel, color: "text-teal-500 bg-teal-500/10" },
     { id: "food", title: "Food", query: "Restaurant Cafe Dining", icon: Utensils, color: "text-emerald-500 bg-emerald-500/10" },
     { id: "mosque", title: "Mosque", query: "Mosque Prayer Place Masjid", icon: Compass, color: "text-purple-500 bg-purple-500/10" },
-    { id: "supermarket", title: "Supermarket", query: "Supermarket Grocery Store", icon: ShoppingBag, color: "text-indigo-500 bg-indigo-500/10" },
+    { id: "supermarket", title: "Supermarket", query: "Supermarket Grocery Store", icon: ShoppingBag, color: "text-#1AAB67/100 bg-#1AAB67/100/10" },
     { id: "toilet", title: "Public Toilet", query: "Public Toilet Restroom Washroom", icon: Droplets, color: "text-cyan-500 bg-cyan-500/10" },
     { id: "pharmacy", title: "Pharmacy", query: "Pharmacy Medical Shop Drugstore", icon: Pill, color: "text-sky-500 bg-sky-500/10" },
     { id: "police", title: "Police", query: "Police Station Helpdesk", icon: Shield, color: "text-red-500 bg-red-500/10" },
@@ -140,7 +140,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
       </div>
 
       {/* 2. Weather Hero Card - Reduced height by 35-40% */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 text-white shadow-md space-y-3">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-sky-600 via-blue-600 to-#159257 text-white shadow-md space-y-3">
         {/* Top: Location, Current Weather, Last Updated */}
         <div className="flex items-center justify-between text-[11px] font-semibold text-sky-100">
           <div className="flex items-center gap-1.5 truncate">
@@ -218,7 +218,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
             <button
               key={idx}
               onClick={() => handleOpenGoogleMaps(chip.query)}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:border-indigo-500 font-bold whitespace-nowrap shrink-0 transition-colors active:scale-95 cursor-pointer"
+              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:border-#1AAB67/100 font-bold whitespace-nowrap shrink-0 transition-colors active:scale-95 cursor-pointer"
             >
               {chip.label}
             </button>
@@ -297,7 +297,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
       <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
         <div>
           <h2 className="text-[18px] font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-            <Navigation className="w-4 h-4 text-indigo-500" />
+            <Navigation className="w-4 h-4 text-#1AAB67/100" />
             Route Calculator
           </h2>
           <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
@@ -312,7 +312,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
               type="text"
               value={calcFrom}
               onChange={(e) => setCalcFrom(e.target.value)}
-              className="w-full px-2.5 py-1.5 text-[13px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+              className="w-full px-2.5 py-1.5 text-[13px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-#1AAB67/100"
             />
           </div>
 
@@ -322,14 +322,14 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
               type="text"
               value={calcTo}
               onChange={(e) => setCalcTo(e.target.value)}
-              className="w-full px-2.5 py-1.5 text-[13px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+              className="w-full px-2.5 py-1.5 text-[13px] rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-#1AAB67/100"
             />
           </div>
 
           <div className="flex items-end">
             <button
               type="submit"
-              className="w-full h-[34px] bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-[13px] rounded-xl shadow-xs transition-all cursor-pointer"
+              className="w-full h-[34px] bg-#1AAB67 hover:bg-#1AAB67/100 active:scale-95 text-white font-bold text-[13px] rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Calculate Route
             </button>
@@ -337,17 +337,17 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
         </form>
 
         {calcDistance !== null && (
-          <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-[13px]">
+          <div className="p-3 rounded-xl bg-#1AAB67/10/80 dark:bg-#0C5130/40 border border-#1AAB67/30/80 dark:border-#159257/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-[13px]">
             <div className="space-y-0.5 min-w-0">
-              <div className="flex items-center gap-1.5 font-extrabold text-indigo-950 dark:text-indigo-100 text-[13px] truncate">
+              <div className="flex items-center gap-1.5 font-extrabold text-#0C5130 dark:text-#1AAB67/20 text-[13px] truncate">
                 <span>{calcFrom}</span>
                 <span>→</span>
                 <span>{calcTo}</span>
               </div>
-              <div className="flex items-center gap-3 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-                <span>Distance: <b className="text-indigo-950 dark:text-white">{calcDistance} km</b></span>
-                <span>Time: <b className="text-indigo-950 dark:text-white">{calcTimeMins} mins</b></span>
-                <span className="px-1.5 py-0.5 rounded bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200">
+              <div className="flex items-center gap-3 text-[11px] font-bold text-#159257 dark:text-#34D399">
+                <span>Distance: <b className="text-#0C5130 dark:text-white">{calcDistance} km</b></span>
+                <span>Time: <b className="text-#0C5130 dark:text-white">{calcTimeMins} mins</b></span>
+                <span className="px-1.5 py-0.5 rounded bg-#1AAB67/30/60 dark:bg-#107043/60 text-#107043 dark:text-#1AAB67/30">
                   {calcTraffic}
                 </span>
               </div>
@@ -362,7 +362,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
                   "_blank"
                 )
               }
-              className="w-full sm:w-auto h-9 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-xl shadow-xs flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer active:scale-95"
+              className="w-full sm:w-auto h-9 px-3 bg-#1AAB67 hover:bg-#1AAB67/100 text-white font-bold text-[11px] rounded-xl shadow-xs flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer active:scale-95"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Navigate in Google Maps</span>

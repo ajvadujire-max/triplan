@@ -123,7 +123,7 @@ export const AdminPortal: React.FC = () => {
   if (isCheckingSetup) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
+        <Loader2 className="w-10 h-10 animate-spin text-#1AAB67/100 mb-4" />
         <p className="text-slate-400 font-medium">Verifying system configuration...</p>
       </div>
     );
@@ -163,7 +163,7 @@ export const AdminPortal: React.FC = () => {
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="w-full bg-indigo-600 text-white hover:bg-indigo-500 font-bold py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
+              className="w-full bg-#1AAB67 text-white hover:bg-#1AAB67/100 font-bold py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
             >
               I have enabled it, Refresh
             </button>
@@ -176,12 +176,12 @@ export const AdminPortal: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Decorative background elements */}
-      <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-indigo-500/20 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-#1AAB67/100/20 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-rose-500/10 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className="bg-slate-800/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-700 shadow-2xl w-full max-w-md relative z-10">
         <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 transform rotate-12">
+          <div className="w-16 h-16 bg-gradient-to-tr from-#1AAB67 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-#1AAB67/100/30 transform rotate-12">
             <div className="transform -rotate-12">
               <Shield className="w-8 h-8 text-white" />
             </div>
@@ -209,7 +209,7 @@ export const AdminPortal: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3.5 text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-slate-600"
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3.5 text-white font-medium focus:outline-none focus:ring-2 focus:ring-#1AAB67/100/50 focus:border-#1AAB67/100 transition-all placeholder:text-slate-600"
               placeholder="admin@example.com"
               required
             />
@@ -223,7 +223,7 @@ export const AdminPortal: React.FC = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3.5 text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-slate-600"
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3.5 text-white font-medium focus:outline-none focus:ring-2 focus:ring-#1AAB67/100/50 focus:border-#1AAB67/100 transition-all placeholder:text-slate-600"
               placeholder="••••••••"
               required
             />
@@ -232,7 +232,7 @@ export const AdminPortal: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-gradient-to-r from-#1AAB67 to-violet-600 hover:from-#1AAB67/100 hover:to-violet-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-#1AAB67/20 disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />

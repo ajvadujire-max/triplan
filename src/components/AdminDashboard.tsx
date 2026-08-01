@@ -174,34 +174,34 @@ export const AdminDashboard: React.FC = () => {
       <div className="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
         <div className="p-6">
           <h2 className="text-white font-black text-xl tracking-tight">TripPro Admin</h2>
-          <p className="text-xs font-bold text-indigo-400 mt-1 uppercase tracking-widest">{adminData.role}</p>
+          <p className="text-xs font-bold text-#34D399 mt-1 uppercase tracking-widest">{adminData.role}</p>
         </div>
         
         <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto pb-4">
           <button 
             onClick={() => setActiveTab("overview")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "overview" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "overview" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
           >
             <Activity className="w-5 h-5" /> Dashboard
           </button>
           
           <button 
             onClick={() => setActiveTab("trips")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "trips" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "trips" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
           >
             <Activity className="w-5 h-5" /> Trips
           </button>
 
           <button 
             onClick={() => setActiveTab("travellers")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "travellers" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "travellers" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
           >
             <Users className="w-5 h-5" /> Travellers
           </button>
 
           <button 
             onClick={() => setActiveTab("expenses")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "expenses" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "expenses" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
           >
             <Activity className="w-5 h-5" /> Expenses & Budgets
           </button>
@@ -213,14 +213,14 @@ export const AdminDashboard: React.FC = () => {
               </div>
               <button 
                 onClick={() => setActiveTab("organizations")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "organizations" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "organizations" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
               >
                 <Building2 className="w-5 h-5" /> Organizations
               </button>
               
               <button 
                 onClick={() => setActiveTab("admins")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "admins" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "admins" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
               >
                 <Users className="w-5 h-5" /> Admin Management
               </button>
@@ -232,7 +232,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <button 
             onClick={() => setActiveTab("settings")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "settings" ? "bg-indigo-600 text-white" : "hover:bg-slate-800"}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === "settings" ? "bg-#1AAB67 text-white" : "hover:bg-slate-800"}`}
           >
             <Settings className="w-5 h-5" /> System Settings
           </button>
@@ -261,7 +261,7 @@ export const AdminDashboard: React.FC = () => {
             {activeTab === "admins" && isSuperAdmin && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                className="bg-#1AAB67 hover:bg-#1AAB67/100 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-#1AAB67/100/20"
               >
                 <Plus className="w-4 h-4" /> Add Admin
               </button>
@@ -313,7 +313,7 @@ export const AdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4">{org.createdBy}</td>
                         <td className="px-6 py-4 text-right">
-                          <button className="text-indigo-500 hover:text-indigo-400 font-bold">Edit</button>
+                          <button className="text-#1AAB67/100 hover:text-#34D399 font-bold">Edit</button>
                         </td>
                       </tr>
                     ))}
@@ -419,27 +419,27 @@ export const AdminDashboard: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Admin Name</label>
-                  <input type="text" required value={newAdmin.name} onChange={e => setNewAdmin({...newAdmin, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
+                  <input type="text" required value={newAdmin.name} onChange={e => setNewAdmin({...newAdmin, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-#1AAB67/100" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Phone</label>
-                  <input type="tel" required value={newAdmin.phone} onChange={e => setNewAdmin({...newAdmin, phone: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
+                  <input type="tel" required value={newAdmin.phone} onChange={e => setNewAdmin({...newAdmin, phone: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-#1AAB67/100" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Email Address</label>
-                <input type="email" required value={newAdmin.email} onChange={e => setNewAdmin({...newAdmin, email: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
+                <input type="email" required value={newAdmin.email} onChange={e => setNewAdmin({...newAdmin, email: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-#1AAB67/100" />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Temporary Password</label>
-                <input type="password" required minLength={6} value={newAdmin.password} onChange={e => setNewAdmin({...newAdmin, password: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" />
+                <input type="password" required minLength={6} value={newAdmin.password} onChange={e => setNewAdmin({...newAdmin, password: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-#1AAB67/100" />
               </div>
 
               <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Organization Name</label>
-                <input type="text" required value={newAdmin.organizationName} onChange={e => setNewAdmin({...newAdmin, organizationName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500" placeholder="e.g. Fidians Tours" />
+                <input type="text" required value={newAdmin.organizationName} onChange={e => setNewAdmin({...newAdmin, organizationName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-#1AAB67/100" placeholder="e.g. Fidians Tours" />
               </div>
 
               <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -454,7 +454,7 @@ export const AdminDashboard: React.FC = () => {
                           ...newAdmin, 
                           permissions: { ...newAdmin.permissions, [key]: e.target.checked }
                         })}
-                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700" 
+                        className="w-4 h-4 rounded text-#1AAB67 focus:ring-#1AAB67/100 bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700" 
                       />
                       {key}
                     </label>
@@ -466,7 +466,7 @@ export const AdminDashboard: React.FC = () => {
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
                   Cancel
                 </button>
-                <button type="submit" disabled={isCreating} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2">
+                <button type="submit" disabled={isCreating} className="px-5 py-2.5 bg-#1AAB67 hover:bg-#1AAB67/100 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-#1AAB67/20 disabled:opacity-50 flex items-center gap-2">
                   {isCreating && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isCreating ? "Creating..." : "Create Admin & Organization"}
                 </button>

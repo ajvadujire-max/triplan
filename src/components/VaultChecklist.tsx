@@ -179,7 +179,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     } else if (t.includes("visa")) {
       return <FileText className="w-5 h-5 text-indigo-500" />;
     } else if (t.includes("insurance")) {
-      return <Lock className="w-5 h-5 text-cyan-500" />;
+      return <Lock className="w-5 h-5 text-#1AAB67" />;
     }
     return <File className="w-5 h-5 text-slate-500" />;
   };

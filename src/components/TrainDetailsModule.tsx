@@ -138,7 +138,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
   if (unifiedTrains.length === 0) {
     return (
       <div className="p-6 sm:p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 max-w-md mx-auto my-4">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 flex items-center justify-center text-[#1B3EBF] dark:text-[#5B7FFF]">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
           <Train className="w-7 h-7" />
         </div>
         <div>
@@ -149,7 +149,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
         </div>
         <button
           onClick={onOpenAddSegment}
-          className="inline-flex items-center gap-2 bg-[#1B3EBF] hover:bg-[#1633a1] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md transition-all"
+          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md transition-all"
         >
           <Plus className="w-4 h-4" />
           Add Train Journey
@@ -163,7 +163,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#1B3EBF] text-white flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
             <Train className="w-5 h-5" />
           </div>
           <div>
@@ -178,7 +178,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
 
         <button
           onClick={onOpenAddSegment}
-          className="flex items-center justify-center gap-1.5 bg-[#1B3EBF] hover:bg-[#1633a1] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all shrink-0"
+          className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all shrink-0"
         >
           <Plus className="w-4 h-4" />
           + Add Train Segment
@@ -195,7 +195,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
           return (
             <div
               key={item.segmentId}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-all hover:border-[#1B3EBF]/30 dark:hover:border-[#1B3EBF]/40"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-all hover:border-indigo-300 dark:hover:border-indigo-800"
             >
               {/* COLLAPSED JOURNEY ROUTE CARD (Master View ~120-140px) */}
               <button
@@ -206,10 +206,10 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                 {/* Header Line: Train Icon, Number, Name, Status Badge, Chevron */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600/10 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <Train className="w-4 h-4" />
                     </div>
-                    <span className="text-xs font-black px-2 py-0.5 rounded-md bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] font-mono shrink-0">
+                    <span className="text-xs font-black px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono shrink-0">
                       #{item.trainNumber}
                     </span>
                     <h4 className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm truncate">
@@ -223,7 +223,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                     </span>
                     <div
                       className={`w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 transition-transform duration-300 ${
-                        isExpanded ? "rotate-180 bg-[#1B3EBF]/10 text-[#1B3EBF] dark:bg-[#1B3EBF]/20 dark:text-[#5B7FFF]" : ""
+                        isExpanded ? "rotate-180 bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400" : ""
                       }`}
                     >
                       <ChevronDown className="w-4 h-4" />
@@ -242,7 +242,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                   </div>
 
                   <div className="flex flex-col items-center justify-center px-2 shrink-0">
-                    <span className="text-[9px] font-bold text-[#1B3EBF] dark:text-[#5B7FFF] bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 px-2 py-0.5 rounded-full mb-0.5">
+                    <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/80 px-2 py-0.5 rounded-full mb-0.5">
                       {item.segment.duration || "Direct"}
                     </span>
                     <span className="text-[11px] text-slate-400 font-bold">→</span>
@@ -276,7 +276,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                       <button
                         type="button"
                         onClick={() => onEditSegment(item.segment)}
-                        className="flex items-center gap-1 text-xs font-bold text-[#1B3EBF] dark:text-[#5B7FFF] hover:bg-[#1B3EBF]/10 dark:hover:bg-[#1B3EBF]/20 px-2.5 py-1 rounded-lg transition-all"
+                        className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2.5 py-1 rounded-lg transition-all"
                       >
                         <Edit className="w-3.5 h-3.5" />
                         <span>Edit Segment</span>
@@ -302,7 +302,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                           <div className="col-span-2 flex items-center justify-between bg-slate-50 dark:bg-slate-900/90 p-2 rounded-lg border border-slate-200/60 dark:border-slate-700">
                             <div>
                               <span className="text-[9px] text-slate-400 uppercase font-bold block">PNR Number</span>
-                              <span className="font-mono font-bold text-[#1B3EBF] dark:text-[#5B7FFF] text-xs">
+                              <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">
                                 {item.pnr || "Not Entered"}
                               </span>
                             </div>
@@ -310,7 +310,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleCopyPnr(item.pnr)}
-                                className="p-1 text-slate-400 hover:text-[#1B3EBF] dark:hover:text-[#5B7FFF] rounded transition-all"
+                                className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-all"
                                 title="Copy PNR"
                               >
                                 {copiedPnr === item.pnr ? (
@@ -463,7 +463,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                     {item.ticketUrl && (
                       <div className="bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-[#1B3EBF]/10 dark:bg-[#1B3EBF]/20 text-[#1B3EBF] dark:text-[#5B7FFF] flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                             <FileText className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
@@ -481,7 +481,7 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
                             href={item.ticketUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 bg-[#1B3EBF] hover:bg-[#1633a1] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                            className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-all"
                           >
                             <Eye className="w-3 h-3" />
                             <span>View Ticket</span>

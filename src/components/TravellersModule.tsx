@@ -495,7 +495,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1">
-                    <Award className="w-3.5 h-3.5 text-cyan-500" /> Driving License
+                    <Award className="w-3.5 h-3.5 text-#1AAB67" /> Driving License
                   </p>
                   <p className="font-bold text-slate-900 dark:text-white text-sm">
                     {selectedTraveller.drivingLicense || "Not provided"}
@@ -978,7 +978,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                     </span>
                   )}
                   {t.role === "Driver" && (
-                    <span className="text-[8px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 shrink-0">
+                    <span className="text-[8px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full bg-#1AAB67/20 dark:bg-#1AAB67/20 text-#159257 dark:text-#74D0A5 shrink-0">
                       Driver
                     </span>
                   )}

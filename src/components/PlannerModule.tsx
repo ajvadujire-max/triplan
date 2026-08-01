@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { Trip } from "../types";
 import { JourneyBuilder } from "./JourneyBuilder";
 import { ActivityTimeline } from "./ActivityTimeline";
-import { PresentationModal } from "./PresentationModal";
 import { 
   Navigation, 
   CalendarDays, 
@@ -18,8 +17,7 @@ import {
   CheckCircle2,
   TrendingUp,
   Clock,
-  Navigation2,
-  Presentation
+  Navigation2
 } from "lucide-react";
 
 interface PlannerModuleProps {
@@ -34,7 +32,6 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
   role
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"journey" | "activities" | "combined">("journey");
-  const [isPresentationModalOpen, setIsPresentationModalOpen] = useState(false);
 
   const tabs = [
     { id: "journey", label: "Journey", icon: Navigation },
@@ -49,7 +46,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <div className="p-2 bg-[#1B3EBF] rounded-xl shadow-lg shadow-[#1B3EBF]/25">
+              <div className="p-2 bg-[#1AAB67] rounded-xl shadow-lg shadow-[#1AAB67]/20">
                 <Navigation2 className="w-5 h-5 text-white" />
               </div>
               Trip Planner
@@ -59,43 +56,24 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Generate PPT Action */}
-            <button
-              onClick={() => setIsPresentationModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold rounded-xl bg-[#1B3EBF] hover:bg-[#1633a1] text-white shadow-md shadow-[#1B3EBF]/20 transition-all active:scale-95 whitespace-nowrap cursor-pointer"
-              title="Generate downloadable PowerPoint presentation"
-            >
-              <Presentation className="w-4 h-4 text-white" />
-              <span>Generate PPT</span>
-            </button>
-
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-x-auto no-scrollbar">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSubTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all duration-300 ${
-                    activeSubTab === tab.id
-                      ? "bg-[#1B3EBF] text-white shadow-sm"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-                  }`}
-                >
-                  <tab.icon className={`w-3.5 h-3.5 ${activeSubTab === tab.id ? "animate-pulse" : ""}`} />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-x-auto no-scrollbar">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all duration-300 ${
+                  activeSubTab === tab.id
+                    ? "bg-white dark:bg-slate-700 text-[#1AAB67] dark:text-[#1AAB67] shadow-sm"
+                    : "text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                <tab.icon className={`w-3.5 h-3.5 ${activeSubTab === tab.id ? "animate-pulse" : ""}`} />
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Presentation Generator Modal */}
-      <PresentationModal
-        isOpen={isPresentationModalOpen}
-        onClose={() => setIsPresentationModalOpen(false)}
-        trip={trip}
-      />
 
       {/* Tab Content */}
       <div className="relative">
@@ -108,12 +86,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <JourneyBuilder 
-                trip={trip} 
-                onUpdateTrip={onUpdateTrip} 
-                role={role} 
-                onOpenPresentation={() => setIsPresentationModalOpen(true)}
-              />
+              <JourneyBuilder trip={trip} onUpdateTrip={onUpdateTrip} role={role} />
             </motion.div>
           )}
 
@@ -125,12 +98,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <ActivityTimeline 
-                trip={trip} 
-                onUpdateTrip={onUpdateTrip} 
-                hideSegments={true} 
-                onOpenPresentation={() => setIsPresentationModalOpen(true)}
-              />
+              <ActivityTimeline trip={trip} onUpdateTrip={onUpdateTrip} hideSegments={true} />
             </motion.div>
           )}
 
@@ -146,7 +114,8 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
                 trip={trip} 
                 onUpdateTrip={onUpdateTrip} 
                 hideSegments={false} 
-                onOpenPresentation={() => setIsPresentationModalOpen(true)}
+                // We could force it to vertical timeline mode if we want, 
+                // or just let it be since it defaults to 'timeline' view
               />
             </motion.div>
           )}

@@ -3,6 +3,18 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --color-planner-50: #E8F7F0;
+  --color-planner-100: #D1EFE1;
+  --color-planner-200: #A3E0C3;
+  --color-planner-300: #74D0A5;
+  --color-planner-400: #34D399;
+  --color-planner-500: #1AAB67;
+  --color-planner-600: #1AAB67;
+  --color-planner-700: #159257;
+  --color-planner-800: #107043;
+  --color-planner-900: #0C5130;
+  --color-planner-950: #062B1A;
+
   --color-indigo-50: #EEF4FF;
   --color-indigo-100: #DBE8FF;
   --color-indigo-200: #B8D0FF;
