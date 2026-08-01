@@ -48,11 +48,11 @@ service cloud.firestore {
       allow read: if true; // Publicly fetchable by invite code
       
       // Full update/delete restricted to Trip Organizer or Super Admin
-      // Travellers can update expenses, travellers array, pendingRegistrations, or memberUids when joining/adding expenses
+      // Travellers can update expenses, travellers array, pendingRegistrations, memberUids, members, or updatedAt when joining/adding expenses or editing profile
       allow delete: if isTripOrganizer(resource.data);
       allow update: if isAuthenticated() && (
         isTripOrganizer(resource.data) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expenses', 'travellers', 'pendingRegistrations', 'memberUids', 'updatedAt'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expenses', 'travellers', 'pendingRegistrations', 'memberUids', 'members', 'updatedAt'])
       );
 
       // Subcollections

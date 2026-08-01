@@ -120,7 +120,12 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const savedTheme = localStorage.getItem("trippro_theme");
+    if (savedTheme === "dark") return true;
+    if (savedTheme === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   useEffect(() => {
     if (darkMode) {
@@ -129,6 +134,12 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
       document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
+
+  const handleToggleDarkMode = () => {
+    const nextVal = !darkMode;
+    setDarkMode(nextVal);
+    localStorage.setItem("trippro_theme", nextVal ? "dark" : "light");
+  };
 
   useEffect(() => {
     localStorage.setItem("trippro_trips", JSON.stringify(trips));
@@ -558,7 +569,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           setIsCreateModalOpen(true);
         }}
         darkMode={darkMode}
-        onToggleDarkMode={() => setDarkMode(!darkMode)}
+        onToggleDarkMode={handleToggleDarkMode}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab as any)}
         user={user}
@@ -578,7 +589,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           setIsCreateModalOpen(true);
         }}
         darkMode={darkMode}
-        onToggleDarkMode={() => setDarkMode(!darkMode)}
+        onToggleDarkMode={handleToggleDarkMode}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab as any)}
         user={user}

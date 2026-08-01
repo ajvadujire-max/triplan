@@ -56,6 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRoleChange,
 }) => {
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
+  const isOrganizerCreator = !!(user && activeTrip && activeTrip.organizerId === user.uid);
 
   const allTabs = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
@@ -127,28 +128,30 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Quick Role Toggle (useful for previewing both modes) */}
-          <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 select-none">
-            <button
-              onClick={() => onRoleChange?.("traveller")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                role === "traveller"
-                  ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              Traveller View
-            </button>
-            <button
-              onClick={() => onRoleChange?.("organizer")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                role === "organizer"
-                  ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              Organizer View
-            </button>
-          </div>
+          {isOrganizerCreator && (
+            <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 select-none">
+              <button
+                onClick={() => onRoleChange?.("traveller")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  role === "traveller"
+                    ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                Traveller View
+              </button>
+              <button
+                onClick={() => onRoleChange?.("organizer")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  role === "organizer"
+                    ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                Organizer View
+              </button>
+            </div>
+          )}
 
           <button
             onClick={onToggleDarkMode}
