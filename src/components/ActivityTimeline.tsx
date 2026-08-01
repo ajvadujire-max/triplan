@@ -193,9 +193,9 @@ const ALL_CATEGORIES = [
 export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   trip,
   onUpdateTrip,
-  hideSegments = false,
-  role
+  role = "traveller",
 }) => {
+  const isOrganizer = role === "organizer" || role === "super_admin";
   // Navigation View Modes
   const [viewMode, setViewMode] = useState<"timeline" | "daily" | "weekly" | "agenda">("timeline");
 
@@ -220,6 +220,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<TimelineActivity | null>(null);
+  const [hideSegments, setHideSegments] = useState(false);
 
   // Form Fields
   const [formTime, setFormTime] = useState("09:00 AM");
@@ -753,7 +754,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
             </button>
           </div>
 
-          {role !== "traveller" && (
+          {isOrganizer && (
             <button
               onClick={handleOpenAdd}
               className="flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] sm:text-sm font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl shadow-md transition-all active:scale-95"
@@ -917,14 +918,12 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
               No scheduled activities match your filter. Add your first itinerary item or clear your search filters.
             </p>
           </div>
-          {role !== "traveller" && (
-            <button
-              onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md transition-all"
-            >
-              <Plus className="w-4 h-4" /> Add First Activity
-            </button>
-          )}
+          <button
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add First Activity
+          </button>
         </div>
       ) : viewMode === "timeline" ? (
         /* ---------------- VIEW 1: VERTICAL TIMELINE VIEW ---------------- */
@@ -1058,7 +1057,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                 </div>
 
                                 {/* Card Quick Actions */}
-                                {role !== "traveller" && (
+                                {isOrganizer && (
                                   <div className="flex items-center gap-1 self-end sm:self-auto">
                                     {/* Time shift buttons */}
                                     <button
@@ -1075,7 +1074,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                     >
                                       +15m
                                     </button>
-  
+
                                     {/* Move Up / Down */}
                                     <button
                                       onClick={() => handleMoveOrder(act.id, "up")}
@@ -1091,7 +1090,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                     >
                                       <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                     </button>
-  
+
                                     {/* Duplicate */}
                                     <button
                                       onClick={() => handleDuplicate(act)}
@@ -1100,7 +1099,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                     >
                                       <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                     </button>
-  
+
                                     {/* Edit */}
                                     <button
                                       onClick={() => handleOpenEdit(act)}
@@ -1109,7 +1108,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                     >
                                       <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                     </button>
-  
+
                                     {/* Delete */}
                                     <button
                                       onClick={() => handleDelete(act.id)}
@@ -1382,7 +1381,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                           <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Map
                         </button>
                       )}
-                      {role !== "traveller" && (
+                      {isOrganizer && (
                         <button
                           onClick={() => handleOpenEdit(act)}
                           className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200"
@@ -1543,7 +1542,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                             </span>
                           </td>
                           <td className="p-3.5 whitespace-nowrap text-right">
-                            {role !== "traveller" && (
+                            {isOrganizer && (
                               <>
                                 <button
                                   onClick={() => handleOpenEdit(act)}

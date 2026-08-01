@@ -73,8 +73,9 @@ const transportTypesList: { type: TransportType; iconName: string; color: string
 export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
   trip,
   onUpdateTrip,
-  role,
+  role = "traveller",
 }) => {
+  const isOrganizer = role === "organizer" || role === "super_admin";
   const [activeSubTab, setActiveSubTab] = useState<
     "route" | "vehicles" | "fuel" | "flights" | "trains" | "buses" | "hotels"
   >("route");
@@ -660,7 +661,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 </p>
               </div>
 
-              {role !== "traveller" && (
+              {isOrganizer && (
                 <button
                   onClick={handleOpenAddSegment}
                   className="flex items-center gap-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] sm:text-xs font-bold h-8 sm:h-10 px-2.5 sm:px-4 rounded-lg sm:rounded-xl shadow-sm transition-all shrink-0 animate-fadeIn"
@@ -678,7 +679,11 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400">
                 <Luggage className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p className="text-sm font-medium">No transport segments added yet.</p>
-                <p className="text-xs mt-1">Click '+ Add Segment' to start building your route.</p>
+                {isOrganizer ? (
+                  <p className="text-xs mt-1">Click '+ Add Segment' to start building your route.</p>
+                ) : (
+                  <p className="text-xs mt-1">The trip organizer will add travel segments here.</p>
+                )}
               </div>
             ) : (
               trip.segments.map((seg, idx) => (
@@ -999,15 +1004,15 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <p className="text-xs text-slate-500">Track fuel refill receipts, cost per litre, and km mileage.</p>
             </div>
 
-          {role !== "traveller" && (
-            <button
-              onClick={() => setIsFuelModalOpen(true)}
-              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              + Log Fuel Refill
-            </button>
-          )}
+            {isOrganizer && (
+              <button
+                onClick={() => setIsFuelModalOpen(true)}
+                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                + Log Fuel Refill
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1180,15 +1185,15 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               <p className="text-xs text-slate-500">Check-in times, room numbers, and booking vouchers.</p>
             </div>
 
-          {role !== "traveller" && (
-            <button
-              onClick={() => setIsHotelModalOpen(true)}
-              className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              + Add Hotel Booking
-            </button>
-          )}
+            {isOrganizer && (
+              <button
+                onClick={() => setIsHotelModalOpen(true)}
+                className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                + Add Hotel Booking
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

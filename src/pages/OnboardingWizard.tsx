@@ -12,7 +12,7 @@ import { auth, googleSignIn } from "../lib/googleAuth";
 import { saveUserTrip } from "../lib/firestoreSync";
 import { Trip } from "../types";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, User as FirebaseUser } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
@@ -149,25 +149,7 @@ export default function OnboardingWizard() {
 
     try {
       setIsLoading(true);
-      let cred;
-      try {
-        cred = await createUserWithEmailAndPassword(auth, formData.email, password);
-      } catch (err: any) {
-        if (err.code === "auth/email-already-in-use") {
-          try {
-            cred = await signInWithEmailAndPassword(auth, formData.email, password);
-          } catch (signInErr: any) {
-            if (signInErr.code === "auth/invalid-credential" || signInErr.code === "auth/wrong-password") {
-              setAuthError("This email is already registered. Please enter the correct password to continue.");
-              setIsLoading(false);
-              return;
-            }
-            throw signInErr;
-          }
-        } else {
-          throw err;
-        }
-      }
+      const cred = await createUserWithEmailAndPassword(auth, formData.email, password);
       setCurrentUser(cred.user);
     } catch (err: any) {
       console.error("Sign up failed:", err);

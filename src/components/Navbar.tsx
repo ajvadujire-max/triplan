@@ -36,6 +36,7 @@ interface NavbarProps {
   onSignOut: () => void;
   isAuthLoading?: boolean;
   role?: "traveller" | "organizer" | "super_admin";
+  onRoleChange?: (role: "traveller" | "organizer" | "super_admin") => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -52,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSignOut,
   isAuthLoading = false,
   role = "traveller",
+  onRoleChange,
 }) => {
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
 
@@ -123,6 +125,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Plus className="w-4 h-4" />
             <span>New Trip</span>
           </button>
+
+          {/* Quick Role Toggle (useful for previewing both modes) */}
+          <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 select-none">
+            <button
+              onClick={() => onRoleChange?.("traveller")}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                role === "traveller"
+                  ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              Traveller View
+            </button>
+            <button
+              onClick={() => onRoleChange?.("organizer")}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                role === "organizer"
+                  ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              Organizer View
+            </button>
+          </div>
 
           <button
             onClick={onToggleDarkMode}

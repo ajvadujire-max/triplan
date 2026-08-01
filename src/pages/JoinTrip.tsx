@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 import { Trip, Traveller } from "../types";
 import { auth, db } from "../lib/firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function JoinTrip() {
@@ -102,25 +102,7 @@ export default function JoinTrip() {
             userEmail = `${formData.mobileNumber.replace(/\D/g, "")}@trippro.app`;
           }
           
-          let cred;
-          try {
-            cred = await createUserWithEmailAndPassword(auth, userEmail, password);
-          } catch (err: any) {
-            if (err.code === "auth/email-already-in-use") {
-              try {
-                cred = await signInWithEmailAndPassword(auth, userEmail, password);
-              } catch (signInErr: any) {
-                if (signInErr.code === "auth/invalid-credential" || signInErr.code === "auth/wrong-password") {
-                  setErrorMsg("This email is already registered. Please enter the correct password to join.");
-                  setIsLoading(false);
-                  return;
-                }
-                throw signInErr;
-              }
-            } else {
-              throw err;
-            }
-          }
+          const cred = await createUserWithEmailAndPassword(auth, userEmail, password);
           activeUid = cred.user.uid;
 
           // Create user profile in /users/{uid}

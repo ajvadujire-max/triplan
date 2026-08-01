@@ -38,6 +38,7 @@ interface MobileNavigationProps {
   onSignOut: () => void;
   isAuthLoading?: boolean;
   role?: "traveller" | "organizer" | "super_admin";
+  onRoleChange?: (role: "traveller" | "organizer" | "super_admin") => void;
 }
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({
@@ -54,6 +55,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   onSignOut,
   isAuthLoading = false,
   role = "traveller",
+  onRoleChange,
 }) => {
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
   const [isTripSelectorOpen, setIsTripSelectorOpen] = useState(false);
@@ -354,6 +356,41 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                     )}
                   </button>
                 )}
+              </div>
+
+              {/* Dynamic View Role Toggle (useful for previewing both modes) */}
+              <div className="px-5 py-2 space-y-2 select-none">
+                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                  Active View Role
+                </span>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/50 dark:border-slate-800">
+                  <button
+                    onClick={() => {
+                      onRoleChange?.("traveller");
+                      setIsMoreDrawerOpen(false);
+                    }}
+                    className={`py-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+                      role === "traveller"
+                        ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    Traveller Mode
+                  </button>
+                  <button
+                    onClick={() => {
+                      onRoleChange?.("organizer");
+                      setIsMoreDrawerOpen(false);
+                    }}
+                    className={`py-2 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+                      role === "organizer"
+                        ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-400 shadow-xs border border-indigo-100 dark:border-indigo-900/60"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    Organizer Mode
+                  </button>
+                </div>
               </div>
 
               {/* Grid of secondary tabs */}

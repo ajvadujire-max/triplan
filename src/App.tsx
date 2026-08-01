@@ -160,8 +160,10 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             if (userData.role) {
-              role = userData.role;
-              setUserRole(userData.role);
+              const lowerRole = userData.role.toLowerCase();
+              const normalizedRole = lowerRole === "organizer" ? "organizer" : lowerRole === "super_admin" ? "super_admin" : "traveller";
+              role = normalizedRole;
+              setUserRole(normalizedRole);
             }
           }
 
@@ -564,6 +566,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         onSignOut={handleSignOut}
         isAuthLoading={isAuthLoading}
         role={userRole}
+        onRoleChange={(newRole) => setUserRole(newRole)}
       />
 
       <MobileNavigation
@@ -583,6 +586,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         onSignOut={handleSignOut}
         isAuthLoading={isAuthLoading}
         role={userRole}
+        onRoleChange={(newRole) => setUserRole(newRole)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 space-y-6">
@@ -703,6 +707,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route path="/join" element={<JoinTripByCode />} />
+        <Route path="/join/:tripCode" element={<JoinTrip />} />
         <Route path="/t/:tripCode" element={<JoinTrip />} />
         
         {/* Auth Routes */}

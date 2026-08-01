@@ -98,7 +98,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <ActivityTimeline trip={trip} onUpdateTrip={onUpdateTrip} hideSegments={true} role={role} />
+              <ActivityTimeline trip={trip} onUpdateTrip={onUpdateTrip} hideSegments={true} />
             </motion.div>
           )}
 
@@ -114,7 +114,6 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
                 trip={trip} 
                 onUpdateTrip={onUpdateTrip} 
                 hideSegments={false} 
-                role={role}
                 // We could force it to vertical timeline mode if we want, 
                 // or just let it be since it defaults to 'timeline' view
               />
