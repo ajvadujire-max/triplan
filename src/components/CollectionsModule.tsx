@@ -430,12 +430,12 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-3 sm:space-y-4 pb-16">
       {/* Toast Notification */}
       {reminderToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[110] bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl border border-indigo-500 flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{reminderToast}</span>
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[110] bg-slate-900 text-white text-xs font-bold px-3.5 py-2 rounded-full shadow-2xl border border-indigo-500 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-3 max-w-[90vw] truncate">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className="truncate">{reminderToast}</span>
         </div>
       )}
 
@@ -455,122 +455,122 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
         />
       ) : (
         <>
-          {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#EDF4FF] dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-[22px] border border-[#D8E6FF] dark:border-slate-800 text-slate-900 dark:text-white shadow-xs">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-[#2D6BF7]/10 dark:bg-indigo-500/20 text-[#2D6BF7] dark:text-indigo-400 border border-[#2D6BF7]/20 dark:border-indigo-500/30">
-              <IndianRupee className="w-5 h-5 text-[#2D6BF7] dark:text-indigo-400" />
-            </span>
-            <h1 className="text-lg sm:text-xl font-black tracking-tight text-[#111827] dark:text-white">
-              Trip Treasury & Collections
-            </h1>
-          </div>
-          <p className="text-xs text-[#64748B] dark:text-slate-400 font-medium mt-1">
-            Track member budgets, payments and collection status for{" "}
-            <span className="text-[#2D6BF7] dark:text-indigo-400 font-bold">{trip.name}</span>
-          </p>
-        </div>
+          {/* Header Banner - Compact Mobile First */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-[#EDF4FF] dark:bg-slate-900 p-3.5 sm:p-4 rounded-[16px] sm:rounded-[20px] border border-[#D8E6FF] dark:border-slate-800 text-slate-900 dark:text-white shadow-xs">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2D6BF7]/10 dark:bg-indigo-500/20 text-[#2D6BF7] dark:text-indigo-400 border border-[#2D6BF7]/20 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
+                  <IndianRupee className="w-4 h-4 text-[#2D6BF7] dark:text-indigo-400" />
+                </span>
+                <h1 className="text-base sm:text-lg font-black tracking-tight text-[#111827] dark:text-white truncate">
+                  Trip Treasury & Collections
+                </h1>
+              </div>
+              <p className="text-[11px] sm:text-xs text-[#64748B] dark:text-slate-400 font-medium leading-snug mt-1 truncate">
+                Track member budgets, payments & status for{" "}
+                <span className="text-[#2D6BF7] dark:text-indigo-400 font-bold">{trip.name}</span>
+              </p>
+            </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsReportsOpen(!isReportsOpen)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-blue-100/80 hover:bg-blue-200/80 dark:bg-indigo-950/60 text-[#2D6BF7] dark:text-indigo-300 transition-all border border-blue-200/60 dark:border-indigo-800/50"
-          >
-            <PieChart className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-indigo-300" />
-            <span>{isReportsOpen ? "Hide Analytics" : "Reports"}</span>
-          </button>
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto pt-0.5 sm:pt-0">
+              <button
+                type="button"
+                onClick={() => setIsReportsOpen(!isReportsOpen)}
+                className="flex items-center gap-1.5 px-2.5 h-8 text-[11px] font-extrabold rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-indigo-950/60 text-[#2D6BF7] dark:text-indigo-300 transition-all border border-blue-200/60 dark:border-indigo-800/50"
+              >
+                <PieChart className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-indigo-300" />
+                <span>{isReportsOpen ? "Hide" : "Reports"}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white shadow-xs transition-all"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-        </div>
-      </div>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 px-3 h-8 text-[11px] font-extrabold rounded-lg bg-[#2D6BF7] hover:bg-blue-600 text-white shadow-xs transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
 
-      {/* 1. TOP COMPACT SUMMARY CARDS (2x2 Grid) */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-        {/* Total Travellers */}
-        <div className="p-3.5 rounded-[18px] bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800">
-          <div className="text-[11px] font-extrabold text-[#111827] dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Total Travellers</span>
-            <Users className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="text-2xl font-black text-[#111827] dark:text-white mt-1">
-            {collectionSummary.totalTravellers}
-          </div>
-          <div className="text-[11px] text-[#64748B] dark:text-slate-400 font-medium mt-0.5">
-            Active members
-          </div>
-        </div>
+          {/* 1. TOP COMPACT SUMMARY CARDS (2x2 Grid) */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            {/* Total Travellers */}
+            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
+              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#111827] dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Total Travellers</span>
+                <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </div>
+              <div className="text-[clamp(20px,5.5vw,26px)] font-black text-[#111827] dark:text-white tabular-nums leading-none my-0.5">
+                {collectionSummary.totalTravellers}
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-[#64748B] dark:text-slate-400 font-medium truncate">
+                Active members
+              </div>
+            </div>
 
-        {/* Expected */}
-        <div className="p-3.5 rounded-[18px] bg-[#EFF6FF] dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
-          <div className="text-[11px] font-extrabold text-[#2D6BF7] dark:text-blue-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Expected</span>
-            <IndianRupee className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-blue-400" />
-          </div>
-          <div className="text-2xl font-black text-[#2D6BF7] dark:text-blue-300 mt-1">
-            ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[11px] text-[#2D6BF7]/80 dark:text-blue-400/80 font-medium mt-0.5">
-            Total trip budget
-          </div>
-        </div>
+            {/* Expected */}
+            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#EFF6FF] dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
+              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#2D6BF7] dark:text-blue-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Expected</span>
+                <IndianRupee className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-blue-400 shrink-0" />
+              </div>
+              <div className="text-[clamp(18px,5vw,24px)] font-black text-[#2D6BF7] dark:text-blue-300 tabular-nums whitespace-nowrap tracking-tight overflow-hidden text-ellipsis leading-none my-0.5">
+                ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-[#2D6BF7]/80 dark:text-blue-400/80 font-medium truncate">
+                Total trip budget
+              </div>
+            </div>
 
-        {/* Collected */}
-        <div className="p-3.5 rounded-[18px] bg-[#ECFDF5] dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
-          <div className="text-[11px] font-extrabold text-[#059669] dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Collected</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
-          </div>
-          <div className="text-2xl font-black text-[#059669] dark:text-emerald-300 mt-1">
-            ₹{collectionSummary.totalCollected.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[11px] text-[#059669]/80 dark:text-emerald-400/80 font-medium mt-0.5">
-            Received
-          </div>
-        </div>
+            {/* Collected */}
+            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#ECFDF5] dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
+              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#059669] dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Collected</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400 shrink-0" />
+              </div>
+              <div className="text-[clamp(18px,5vw,24px)] font-black text-[#059669] dark:text-emerald-300 tabular-nums whitespace-nowrap tracking-tight overflow-hidden text-ellipsis leading-none my-0.5">
+                ₹{collectionSummary.totalCollected.toLocaleString("en-IN")}
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-[#059669]/80 dark:text-emerald-400/80 font-medium truncate">
+                Received
+              </div>
+            </div>
 
-        {/* Remaining */}
-        <div className="p-3.5 rounded-[18px] bg-[#FFF7ED] dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
-          <div className="text-[11px] font-extrabold text-[#D97706] dark:text-amber-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Remaining</span>
-            <AlertCircle className="w-3.5 h-3.5 text-[#D97706] dark:text-amber-400" />
+            {/* Remaining */}
+            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#FFF7ED] dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
+              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#D97706] dark:text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Remaining</span>
+                <AlertCircle className="w-3.5 h-3.5 text-[#D97706] dark:text-amber-400 shrink-0" />
+              </div>
+              <div className="text-[clamp(18px,5vw,24px)] font-black text-[#D97706] dark:text-amber-300 tabular-nums whitespace-nowrap tracking-tight overflow-hidden text-ellipsis leading-none my-0.5">
+                ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")}
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-[#D97706]/80 dark:text-amber-400/80 font-medium truncate">
+                Pending
+              </div>
+            </div>
           </div>
-          <div className="text-2xl font-black text-[#D97706] dark:text-amber-300 mt-1">
-            ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[11px] text-[#D97706]/80 dark:text-amber-400/80 font-medium mt-0.5">
-            Pending
-          </div>
-        </div>
-      </div>
 
-      {/* SINGLE COMPACT COLLECTION PROGRESS CARD */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-[18px] border border-[#E2E8F0] dark:border-slate-800 shadow-xs space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-extrabold text-[#111827] dark:text-white">Collection Progress</span>
-          <span className="text-xs font-black text-[#2D6BF7] dark:text-indigo-400">{collectionSummary.progressPercent}%</span>
-        </div>
-        <div className="text-xs font-medium text-[#111827] dark:text-slate-300">
-          ₹{collectionSummary.totalCollected.toLocaleString("en-IN")} collected of ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
-        </div>
-        <div className="w-full bg-[#E5E7EB] dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-          <div
-            className="bg-[#2D6BF7] dark:bg-indigo-500 h-full rounded-full transition-all duration-500"
-            style={{ width: `${collectionSummary.progressPercent}%` }}
-          />
-        </div>
-        <div className="text-[11px] font-medium text-[#64748B] dark:text-slate-400">
-          ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")} remaining
-        </div>
-      </div>
+          {/* SINGLE COMPACT COLLECTION PROGRESS CARD */}
+          <div className="bg-white dark:bg-slate-900 p-3 sm:p-3.5 rounded-[16px] border border-[#E2E8F0] dark:border-slate-800 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold text-[#111827] dark:text-white">Collection Progress</span>
+              <span className="text-xs font-black text-[#2D6BF7] dark:text-indigo-400">{collectionSummary.progressPercent}%</span>
+            </div>
+            <div className="text-[11px] font-medium text-[#111827] dark:text-slate-300">
+              ₹{collectionSummary.totalCollected.toLocaleString("en-IN")} collected of ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
+            </div>
+            <div className="w-full bg-[#E5E7EB] dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-[#2D6BF7] dark:bg-indigo-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${collectionSummary.progressPercent}%` }}
+              />
+            </div>
+            <div className="text-[10px] sm:text-[11px] font-medium text-[#64748B] dark:text-slate-400">
+              ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")} remaining
+            </div>
+          </div>
 
       {/* EXPANDABLE REPORTS & ANALYTICS PANEL */}
       {isReportsOpen && (

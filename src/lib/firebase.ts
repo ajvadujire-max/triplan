@@ -7,7 +7,16 @@ import firebaseConfig from "../../firebase-applet-config.json";
 export { firebaseConfig };
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+let dbInstance;
+try {
+  dbInstance = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+  }, firebaseConfig.firestoreDatabaseId || "(default)");
+} catch {
+  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+export const db = dbInstance;
 
 console.log("[TripPro Firebase] Connected Project ID:", firebaseConfig.projectId);
 console.log("[TripPro Firebase] Firestore Database ID:", firebaseConfig.firestoreDatabaseId || "(default)");
@@ -19,9 +28,11 @@ if (typeof window !== "undefined") {
     if (
       msg.includes("Pending promise was never set") ||
       msg.includes("INTERNAL ASSERTION FAILED") ||
-      msg.includes("auth/argument-error")
+      msg.includes("auth/argument-error") ||
+      msg.includes("Could not reach Cloud Firestore backend") ||
+      msg.includes("backend didn't respond within")
     ) {
-      console.warn("Suppressed Firebase Auth internal assertion notice:", ...args);
+      console.warn("Suppressed Firebase notice:", ...args);
       return;
     }
     originalConsoleError.apply(console, args);

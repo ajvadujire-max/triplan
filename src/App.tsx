@@ -246,6 +246,8 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             if (fetchedAccs.length > 0) {
               setAccounts(fetchedAccs);
             }
+          }, (err) => {
+            console.warn("Accounts real-time subscription notice:", err?.message || err);
           });
 
           // Real-time cashbook listener
@@ -258,6 +260,8 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             if (fetchedCb.length > 0) {
               setCashbook(fetchedCb);
             }
+          }, (err) => {
+            console.warn("Cashbook real-time subscription notice:", err?.message || err);
           });
 
         } catch (err) {
@@ -345,6 +349,8 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
               return t;
             })
           );
+        }, (err) => {
+          console.warn("Registrations real-time subscription notice:", err?.message || err);
         });
       });
     }

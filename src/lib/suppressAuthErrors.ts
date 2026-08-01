@@ -7,7 +7,9 @@ if (typeof window !== "undefined") {
       lower.includes("pending promise was never set") ||
       lower.includes("internal assertion failed") ||
       lower.includes("auth/argument-error") ||
-      lower.includes("auth/internal-error")
+      lower.includes("auth/internal-error") ||
+      lower.includes("could not reach cloud firestore backend") ||
+      lower.includes("backend didn't respond within")
     );
   };
 
