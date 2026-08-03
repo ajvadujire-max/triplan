@@ -405,6 +405,83 @@ export async function saveChecklistItem(item: ChecklistItem): Promise<void> {
   }
 }
 
+export async function fetchUserTripsByUid(uid: string): Promise<Trip[]> {
+  const path = `trips`;
+  try {
+    const qMember = query(collection(db, path), where("memberUids", "array-contains", uid));
+    const snapshotMember = await getDocs(qMember);
+    const tripsMap = new Map<string, Trip>();
+
+    snapshotMember.forEach((docSnap) => {
+      tripsMap.set(docSnap.id, docSnap.data() as Trip);
+    });
+
+    // Also check organizerUid
+    const qOrg = query(collection(db, path), where("organizerUid", "==", uid));
+    const snapshotOrg = await getDocs(qOrg);
+    snapshotOrg.forEach((docSnap) => {
+      tripsMap.set(docSnap.id, docSnap.data() as Trip);
+    });
+
+    return Array.from(tripsMap.values());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return [];
+  }
+}
+
+export async function verifyTripMembership(uid: string, tripId: string): Promise<{ isValid: boolean; trip: Trip | null }> {
+  try {
+    const tripSnap = await getDoc(doc(db, "trips", tripId));
+    if (!tripSnap.exists()) {
+      return { isValid: false, trip: null };
+    }
+    const tripData = tripSnap.data() as Trip;
+    const isOrganizer = tripData.organizerUid === uid || tripData.organizerId === uid;
+    const isMemberUid = Array.isArray(tripData.memberUids) && tripData.memberUids.includes(uid);
+    const isTraveller = Array.isArray(tripData.travellers) && tripData.travellers.some(t => t.id === uid && t.status !== "left" && t.status !== "removed");
+
+    const isValid = isOrganizer || isMemberUid || isTraveller;
+    return { isValid, trip: isValid ? tripData : null };
+  } catch (error) {
+    console.error("Error verifying trip membership:", error);
+    return { isValid: false, trip: null };
+  }
+}
+
+export async function leaveTrip(uid: string, tripId: string): Promise<void> {
+  try {
+    const tripRef = doc(db, "trips", tripId);
+    const tripSnap = await getDoc(tripRef);
+    if (!tripSnap.exists()) return;
+
+    const tripData = tripSnap.data() as Trip;
+    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== uid);
+    const updatedTravellers = (tripData.travellers || []).map(t => {
+      if (t.id === uid) {
+        return { ...t, status: "left" as const };
+      }
+      return t;
+    });
+
+    await setDoc(tripRef, {
+      memberUids: updatedMemberUids,
+      travellers: updatedTravellers,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    // Remove user subcollection membership doc if present
+    try {
+      await deleteDoc(doc(db, "users", uid, "memberships", tripId));
+    } catch {
+      // ignore
+    }
+  } catch (error) {
+    console.error("Error leaving trip:", error);
+    throw error;
+  }
+}
+
 export async function deleteChecklistItem(itemId: string): Promise<void> {
   const path = `checklistItems/${itemId}`;
   try {

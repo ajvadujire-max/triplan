@@ -28,6 +28,7 @@ interface NavbarProps {
   activeTripId: string;
   onSelectTrip: (id: string) => void;
   onOpenCreateTrip: () => void;
+  onOpenSwitchTrip?: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
   activeTab: string;
@@ -45,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTripId,
   onSelectTrip,
   onOpenCreateTrip,
+  onOpenSwitchTrip,
   darkMode,
   onToggleDarkMode,
   activeTab,
@@ -106,22 +108,37 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Multi-Trip Selector & Quick Action */}
         <div className="flex items-center gap-2 sm:gap-3">
           {trips.length > 0 && (
-            <div className="relative">
-              <select
-                value={activeTripId}
-                onChange={(e) => onSelectTrip(e.target.value)}
-                aria-label="Select active trip"
-                className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold py-2 pl-3 pr-8 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                {trips.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    📍 {trip.name} ({trip.destination})
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500 dark:text-slate-400">
-                ▼
-              </div>
+            <div className="flex items-center gap-1.5">
+              {onOpenSwitchTrip ? (
+                <button
+                  onClick={onOpenSwitchTrip}
+                  className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-900 dark:text-indigo-200 text-xs sm:text-sm font-bold py-2 px-3 rounded-xl border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span className="truncate max-w-[140px] sm:max-w-[200px]">{activeTrip?.name}</span>
+                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 rounded">
+                    Switch ({trips.length})
+                  </span>
+                </button>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={activeTripId}
+                    onChange={(e) => onSelectTrip(e.target.value)}
+                    aria-label="Select active trip"
+                    className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold py-2 pl-3 pr-8 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    {trips.map((trip) => (
+                      <option key={trip.id} value={trip.id}>
+                        📍 {trip.name} ({trip.destination})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500 dark:text-slate-400">
+                    ▼
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -31,6 +31,7 @@ interface MobileNavigationProps {
   activeTripId: string;
   onSelectTrip: (id: string) => void;
   onOpenCreateTrip: () => void;
+  onOpenSwitchTrip?: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
   activeTab: string;
@@ -48,6 +49,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   activeTripId,
   onSelectTrip,
   onOpenCreateTrip,
+  onOpenSwitchTrip,
   darkMode,
   onToggleDarkMode,
   activeTab,
@@ -93,18 +95,32 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   return (
     <div className="block md:hidden select-none">
       {/* 1. Mobile Compact Sticky Header */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800/80 transition-colors pt-safe px-4 flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]">
-        <div className="flex items-center gap-[12px]">
-          <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-white shadow-sm border border-slate-100">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800/80 transition-colors pt-safe px-3 sm:px-4 flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 sm:w-[40px] sm:h-[40px] rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-white shadow-xs border border-slate-100">
             <img 
               src="/triplan_logo.png" 
               alt="Triplan Logo" 
               className="w-full h-full object-contain" 
             />
           </div>
-          <span className="font-['Poppins'] font-semibold text-[22px] text-[#1B3EBF] tracking-tight leading-none mt-0.5">
-            Triplan
-          </span>
+          
+          {onOpenSwitchTrip && activeTrip ? (
+            <button
+              onClick={onOpenSwitchTrip}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/80 text-left active:scale-95 transition-transform cursor-pointer max-w-[150px] sm:max-w-[200px]"
+            >
+              <Compass className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                {activeTrip.name}
+              </span>
+              <ChevronDown className="w-3 h-3 text-indigo-500 shrink-0" />
+            </button>
+          ) : (
+            <span className="font-['Poppins'] font-semibold text-[20px] text-[#1B3EBF] tracking-tight leading-none mt-0.5">
+              Triplan
+            </span>
+          )}
         </div>
 
         {/* Quick actions (Sync indicator / dark mode / profile) */}
@@ -313,16 +329,30 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 </div>
 
                 {user ? (
-                  <button
-                    onClick={() => {
-                      onSignOut();
-                      setIsMoreDrawerOpen(false);
-                    }}
-                    className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-red-50 dark:bg-red-950/50 border border-red-100 dark:border-red-900/60 text-red-600 dark:text-red-400 text-[10px] font-extrabold uppercase active:scale-95"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onOpenSwitchTrip && (
+                      <button
+                        onClick={() => {
+                          setIsMoreDrawerOpen(false);
+                          onOpenSwitchTrip();
+                        }}
+                        className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-extrabold uppercase active:scale-95"
+                      >
+                        <Compass className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>Switch Trip ({trips.length})</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        onSignOut();
+                        setIsMoreDrawerOpen(false);
+                      }}
+                      className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-red-50 dark:bg-red-950/50 border border-red-100 dark:border-red-900/60 text-red-600 dark:text-red-400 text-[10px] font-extrabold uppercase active:scale-95"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => {

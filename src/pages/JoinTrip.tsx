@@ -33,8 +33,35 @@ export default function JoinTrip() {
   });
 
   useEffect(() => {
-    return auth.onAuthStateChanged(user => {
+    return auth.onAuthStateChanged(async (user) => {
       setCurrentUser(user);
+      if (user) {
+        try {
+          const userSnap = await getDoc(doc(db, "users", user.uid));
+          if (userSnap.exists()) {
+            const uData = userSnap.data();
+            setFormData(prev => ({
+              ...prev,
+              fullName: uData.fullName || uData.name || user.displayName || prev.fullName,
+              mobileNumber: uData.phone || user.phoneNumber || prev.mobileNumber,
+              email: uData.email || user.email || prev.email,
+              age: uData.age ? String(uData.age) : prev.age,
+              gender: uData.gender || prev.gender,
+              emergencyContact: uData.emergencyContact || prev.emergencyContact,
+              profilePhoto: uData.profilePhoto || user.photoURL || prev.profilePhoto,
+            }));
+          } else {
+            setFormData(prev => ({
+              ...prev,
+              fullName: user.displayName || prev.fullName,
+              email: user.email || prev.email,
+              mobileNumber: user.phoneNumber || prev.mobileNumber,
+            }));
+          }
+        } catch (e) {
+          console.error("Error fetching user profile for prefill:", e);
+        }
+      }
     });
   }, []);
 
@@ -71,6 +98,14 @@ export default function JoinTrip() {
     const org = trip.travellers?.find(t => t.role === "Organizer" || t.role === "organizer");
     return org?.fullName || "Primary Organizer";
   }, [trip]);
+
+  const isAlreadyMember = React.useMemo(() => {
+    if (!currentUser || !trip) return false;
+    const isOrganizer = trip.organizerUid === currentUser.uid || trip.organizerId === currentUser.uid;
+    const isMemberUid = Array.isArray(trip.memberUids) && trip.memberUids.includes(currentUser.uid);
+    const isTraveller = Array.isArray(trip.travellers) && trip.travellers.some(t => t.id === currentUser.uid && t.status !== "left");
+    return isOrganizer || isMemberUid || isTraveller;
+  }, [currentUser, trip]);
 
   const coverImage = trip?.coverPhoto || trip?.coverImage || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80";
 
@@ -114,6 +149,7 @@ export default function JoinTrip() {
             phone: formData.mobileNumber,
             role: "traveller",
             tripId: trip.id,
+            lastActiveTripId: trip.id,
             tripCode: trip.inviteCode || tripCode,
             status: "active",
             createdAt: new Date().toISOString()
@@ -124,6 +160,7 @@ export default function JoinTrip() {
             uid: activeUid,
             role: "traveller",
             tripId: trip.id,
+            lastActiveTripId: trip.id,
             tripCode: trip.inviteCode || tripCode,
             status: "active"
           }, { merge: true });
@@ -131,6 +168,16 @@ export default function JoinTrip() {
             userEmail = currentUser.email;
           }
         }
+
+        // Save membership subcollection for user
+        await setDoc(doc(db, "users", activeUid, "memberships", trip.id), {
+          tripId: trip.id,
+          tripName: trip.name,
+          tripCode: trip.inviteCode || trip.tripCode || tripCode,
+          role: "traveller",
+          joinedAt: new Date().toISOString(),
+          status: "active"
+        }, { merge: true });
 
         // Prepare new traveller record
         const newTraveller: Traveller = {
@@ -246,6 +293,38 @@ export default function JoinTrip() {
             Try Another Code
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (isAlreadyMember) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100 space-y-4"
+        >
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+            <UserCheck className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900">Already Joined!</h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            You are already a member of <strong>{trip?.name}</strong>. Your traveller session is active.
+          </p>
+          <button
+            onClick={() => {
+              if (trip) {
+                localStorage.setItem("trippro_active_trip_id", trip.id);
+                window.dispatchEvent(new Event("trip_changed"));
+              }
+              navigate("/dashboard");
+            }}
+            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg cursor-pointer"
+          >
+            Open Trip Dashboard
+          </button>
+        </motion.div>
       </div>
     );
   }

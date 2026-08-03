@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { User } from "firebase/auth";
-import { getDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { getDoc, setDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "./lib/firebase";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
@@ -35,9 +35,12 @@ import { PlannerModule } from "./components/PlannerModule";
 import { WeatherMapsTimeline } from "./components/WeatherMapsTimeline";
 import { FinanceIntegration } from "./components/FinanceIntegration";
 import { TravelDiaryModule } from "./components/TravelDiaryModule";
+import { SplashScreen } from "./components/SplashScreen";
+import { SwitchTripModal } from "./components/SwitchTripModal";
 import { initAuth, googleSignIn, logoutGoogle } from "./lib/googleAuth";
 import {
   fetchUserTrips,
+  fetchUserTripsByUid,
   fetchUserAccounts,
   fetchUserCashbook,
   saveUserTrip,
@@ -47,6 +50,8 @@ import {
   deleteUserCashbookEntry,
   migrateLocalDataToFirestore,
   fetchTripById,
+  leaveTrip,
+  verifyTripMembership,
 } from "./lib/firestoreSync";
 
 function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
@@ -144,6 +149,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSwitchTripModalOpen, setIsSwitchTripModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const savedTheme = localStorage.getItem("trippro_theme");
