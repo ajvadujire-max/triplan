@@ -17,7 +17,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 const STEPS = [
-  { id: 1, name: "Trip Details", icon: MapPin },
+  { id: 1, name: "Trip", icon: MapPin },
   { id: 2, name: "Organizer", icon: User },
   { id: 3, name: "Setup", icon: Wallet },
   { id: 4, name: "Account", icon: Lock },
@@ -308,28 +308,28 @@ export default function OnboardingWizard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-slate-50 py-4 sm:py-10 px-3 sm:px-6">
+      <div className="max-w-xl mx-auto">
         {/* Progress Stepper */}
-        <div className="flex justify-between items-center mb-12">
+        <div className="flex justify-between items-center mb-5 sm:mb-10 px-1 relative">
           {STEPS.map((step) => (
-            <div key={step.id} className="flex flex-col items-center gap-2 flex-1 relative">
+            <div key={step.id} className="flex flex-col items-center flex-1 relative z-10">
               <div 
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 z-10",
-                  currentStep >= step.id ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-white text-slate-400 border-2 border-slate-200"
+                  "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 z-10",
+                  currentStep >= step.id ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-white text-slate-400 border border-slate-200"
                 )}
               >
-                <step.icon className="w-5 h-5" />
+                <step.icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <span className={cn(
-                "text-[10px] font-bold uppercase tracking-widest",
+                "text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1 text-center truncate w-full",
                 currentStep >= step.id ? "text-indigo-600" : "text-slate-400"
               )}>
                 {step.name}
               </span>
               {step.id < STEPS.length && (
-                <div className="absolute top-5 left-1/2 w-full h-[2px] bg-slate-200 -z-0">
+                <div className="absolute top-4 sm:top-5 left-1/2 w-full h-[2px] bg-slate-200 -z-0">
                   <motion.div 
                     initial={false}
                     animate={{ width: currentStep > step.id ? "100%" : "0%" }}
@@ -343,48 +343,49 @@ export default function OnboardingWizard() {
 
         <motion.div 
           key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: 15 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-8 border border-slate-100"
+          exit={{ opacity: 0, x: -15 }}
+          className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/50 p-4 sm:p-8 border border-slate-100 h-auto min-h-0"
         >
           {currentStep === 1 && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Trip Details</h2>
-                <p className="text-slate-500 text-sm">Let's start with the basics of your journey.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Trip Details</h2>
+                <p className="text-slate-500 text-xs sm:text-sm">Let's start with the basics of your journey.</p>
               </div>
 
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Trip Name *</label>
+              <div className="space-y-3.5 sm:space-y-5">
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Trip Name *</label>
                   <input 
                     type="text" 
                     value={formData.tripName}
                     onChange={(e) => updateFormData({ tripName: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                    className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                     placeholder="e.g. Goa Trip 2026"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Destination *</label>
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Destination *</label>
                   <input 
                     type="text" 
                     value={formData.destination}
                     onChange={(e) => updateFormData({ destination: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                    className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                     placeholder="Where are you going?"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Trip Type</label>
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Trip Type</label>
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {TRIP_TYPES.map(type => (
                       <button
                         key={type}
+                        type="button"
                         onClick={() => updateFormData({ tripType: type })}
                         className={cn(
-                          "px-4 py-2 rounded-full text-sm font-medium border transition-all",
+                          "px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium border transition-all h-9 sm:h-10 flex items-center justify-center",
                           formData.tripType === type ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-indigo-600"
                         )}
                       >
@@ -393,23 +394,23 @@ export default function OnboardingWizard() {
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Start Date</label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700">Start Date</label>
                     <input 
                       type="date" 
                       value={formData.startDate}
                       onChange={(e) => updateFormData({ startDate: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 px-2.5 sm:px-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">End Date</label>
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700">End Date</label>
                     <input 
                       type="date" 
                       value={formData.endDate}
                       onChange={(e) => updateFormData({ endDate: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 px-2.5 sm:px-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                     />
                   </div>
                 </div>
@@ -418,72 +419,72 @@ export default function OnboardingWizard() {
           )}
 
           {currentStep === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Organizer Details</h2>
-                <p className="text-slate-500 text-sm">Tell us who is leading this adventure.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Organizer Details</h2>
+                <p className="text-slate-500 text-xs sm:text-sm">Tell us who is leading this adventure.</p>
               </div>
 
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Full Name *</label>
+              <div className="space-y-3.5 sm:space-y-5">
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Full Name *</label>
                   <div className="relative">
-                    <User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                       type="text" 
                       value={formData.fullName}
                       onChange={(e) => updateFormData({ fullName: e.target.value })}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 pl-10 pr-3.5 sm:pl-11 sm:pr-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       placeholder="Enter your name"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Mobile Number *</label>
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Mobile Number *</label>
                   <div className="relative">
-                    <Phone className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                       type="tel" 
                       value={formData.mobileNumber}
                       onChange={(e) => updateFormData({ mobileNumber: e.target.value })}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 pl-10 pr-3.5 sm:pl-11 sm:pr-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       placeholder="+91 00000 00000"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Email Address *</label>
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Email Address *</label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                       type="email" 
                       value={formData.email}
                       onChange={(e) => updateFormData({ email: e.target.value })}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 pl-10 pr-3.5 sm:pl-11 sm:pr-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       placeholder="you@example.com"
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">City</label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700">City</label>
                     <input 
                       type="text" 
                       value={formData.city}
                       onChange={(e) => updateFormData({ city: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       placeholder="e.g. Mumbai"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Country</label>
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700">Country</label>
                     <div className="relative">
-                      <Globe className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                      <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input 
                         type="text" 
                         value={formData.country}
                         onChange={(e) => updateFormData({ country: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                        className="w-full h-11 sm:h-12 pl-10 pr-3.5 sm:pl-11 sm:pr-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                         placeholder="India"
                       />
                     </div>
@@ -494,32 +495,32 @@ export default function OnboardingWizard() {
           )}
 
           {currentStep === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Trip Setup</h2>
-                <p className="text-slate-500 text-sm">Configure the trip economics and rules.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Trip Setup</h2>
+                <p className="text-slate-500 text-xs sm:text-sm">Configure the trip economics and rules.</p>
               </div>
 
-              <div className="grid gap-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Expected Travellers</label>
+              <div className="space-y-3.5 sm:space-y-5">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700">Expected Travellers</label>
                     <div className="relative">
-                      <Users className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                      <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input 
                         type="number" 
                         value={formData.expectedTravellers}
                         onChange={(e) => updateFormData({ expectedTravellers: parseInt(e.target.value) || 0 })}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                        className="w-full h-11 sm:h-12 pl-10 pr-3.5 sm:pl-11 sm:pr-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Currency</label>
+                  <div className="space-y-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700">Currency</label>
                     <select 
                       value={formData.currency}
                       onChange={(e) => updateFormData({ currency: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all bg-white"
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm bg-white"
                     >
                       <option value="INR">INR (₹)</option>
                       <option value="USD">USD ($)</option>
@@ -527,28 +528,29 @@ export default function OnboardingWizard() {
                     </select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Expected Budget</label>
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Expected Budget</label>
                   <div className="relative">
-                    <Wallet className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                    <Wallet className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                       type="number" 
                       value={formData.expectedBudget}
                       onChange={(e) => updateFormData({ expectedBudget: parseInt(e.target.value) || 0 })}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all"
+                      className="w-full h-11 sm:h-12 pl-10 pr-3.5 sm:pl-11 sm:pr-4 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       placeholder="0.00"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Default Expense Split</label>
+                <div className="space-y-1">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700">Default Expense Split</label>
                   <div className="grid grid-cols-3 gap-2">
                     {SPLIT_OPTIONS.map(opt => (
                       <button
                         key={opt}
+                        type="button"
                         onClick={() => updateFormData({ defaultExpenseSplit: opt as any })}
                         className={cn(
-                          "py-3 rounded-xl text-sm font-bold border transition-all",
+                          "h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-bold border transition-all flex items-center justify-center px-1",
                           formData.defaultExpenseSplit === opt ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-indigo-600"
                         )}
                       >
@@ -557,19 +559,20 @@ export default function OnboardingWizard() {
                     ))}
                   </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-bold text-indigo-900">Organizer Approval</div>
-                    <div className="text-xs text-indigo-700">Require approval for new joiners</div>
+                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-between">
+                  <div className="space-y-0.5 pr-2">
+                    <div className="text-xs sm:text-sm font-bold text-indigo-900">Organizer Approval</div>
+                    <div className="text-[11px] sm:text-xs text-indigo-700">Require approval for new joiners</div>
                   </div>
                   <button 
+                    type="button"
                     onClick={() => updateFormData({ approvalRequired: !formData.approvalRequired })}
                     className={cn(
-                      "w-12 h-6 rounded-full p-1 transition-all duration-300",
+                      "w-11 h-6 rounded-full p-0.5 transition-all duration-300 shrink-0",
                       formData.approvalRequired ? "bg-indigo-600" : "bg-slate-300"
                     )}
                   >
-                    <div className={cn("w-4 h-4 bg-white rounded-full transition-all duration-300 transform", formData.approvalRequired ? "translate-x-6" : "translate-x-0")} />
+                    <div className={cn("w-5 h-5 bg-white rounded-full transition-all duration-300 transform", formData.approvalRequired ? "translate-x-5" : "translate-x-0")} />
                   </button>
                 </div>
               </div>
@@ -577,35 +580,35 @@ export default function OnboardingWizard() {
           )}
 
           {currentStep === 4 && (
-            <div className="space-y-8 text-center py-4">
+            <div className="space-y-4 sm:space-y-6 text-center">
               <div>
-                <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Lock className="w-8 h-8 text-indigo-600" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                  <Lock className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Secure Your Account</h2>
-                <p className="text-slate-500 text-sm">Sign in to save your trip and access your professional dashboard.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Secure Your Account</h2>
+                <p className="text-slate-500 text-xs sm:text-sm">Sign in to save your trip and access your professional dashboard.</p>
               </div>
 
               {currentUser ? (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 flex items-center gap-4 text-left">
-                  <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-left">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold shrink-0 text-sm sm:text-base">
                     {currentUser.displayName?.[0] || currentUser.email?.[0]?.toUpperCase() || "U"}
                   </div>
-                  <div>
-                    <div className="text-sm font-bold text-emerald-900">Signed in as {currentUser.displayName || currentUser.email}</div>
-                    <div className="text-xs text-emerald-700">Your trip will be securely saved to this account as Organizer.</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs sm:text-sm font-bold text-emerald-900 truncate">Signed in as {currentUser.displayName || currentUser.email}</div>
+                    <div className="text-[11px] sm:text-xs text-emerald-700">✓ Trip will be saved to this account as Organizer</div>
                   </div>
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 ml-auto" />
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 shrink-0 ml-auto" />
                 </div>
               ) : (
-                <div className="space-y-6 text-left">
+                <div className="space-y-4 text-left">
                   {authError && (
-                    <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl text-center">
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl text-center">
                       {authError}
                     </div>
                   )}
 
-                  <form onSubmit={handleEmailSignUp} className="space-y-4">
+                  <form onSubmit={handleEmailSignUp} className="space-y-3">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700">Organizer Email *</label>
                       <input 
@@ -614,11 +617,11 @@ export default function OnboardingWizard() {
                         value={formData.email}
                         onChange={(e) => updateFormData({ email: e.target.value })}
                         placeholder="organizer@example.com"
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                        className="w-full h-11 px-3.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700">Password *</label>
                         <input 
@@ -627,7 +630,7 @@ export default function OnboardingWizard() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Min 6 characters"
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                          className="w-full h-11 px-3.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                         />
                       </div>
                       <div className="space-y-1">
@@ -638,7 +641,7 @@ export default function OnboardingWizard() {
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="Repeat password"
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                          className="w-full h-11 px-3.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-xs sm:text-sm"
                         />
                       </div>
                     </div>
@@ -646,17 +649,17 @@ export default function OnboardingWizard() {
                     <button 
                       type="submit"
                       disabled={isLoading}
-                      className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg cursor-pointer"
+                      className="w-full bg-indigo-600 text-white h-11 rounded-xl font-bold text-xs sm:text-sm hover:bg-indigo-700 transition-all shadow-md cursor-pointer flex items-center justify-center"
                     >
                       {isLoading ? "Creating Account..." : "Create Organizer Account & Continue"}
                     </button>
                   </form>
 
-                  <div className="relative my-4">
+                  <div className="relative my-3">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-slate-200" />
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
+                    <div className="relative flex justify-center text-[10px] uppercase">
                       <span className="bg-white px-2 text-slate-400 font-bold">Or</span>
                     </div>
                   </div>
@@ -664,9 +667,9 @@ export default function OnboardingWizard() {
                   <button 
                     type="button"
                     onClick={handleGoogleSignIn}
-                    className="w-full flex items-center justify-center gap-3 py-3.5 border-2 border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer text-sm"
+                    className="w-full flex items-center justify-center gap-2.5 h-11 border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer text-xs sm:text-sm"
                   >
-                    <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
+                    <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
                     Continue with Google
                   </button>
                 </div>
@@ -675,66 +678,54 @@ export default function OnboardingWizard() {
           )}
 
           {currentStep === 5 && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Final Review</h2>
-                <p className="text-slate-500 text-sm">Double check everything before we launch.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Final Review</h2>
+                <p className="text-slate-500 text-xs sm:text-sm">Double check everything before we launch.</p>
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4">
-                <div className="grid grid-cols-2 gap-y-4 text-sm">
-                  <div className="text-slate-500">Trip Name</div>
-                  <div className="font-bold text-right">{formData.tripName}</div>
-                  
-                  <div className="text-slate-500">Destination</div>
-                  <div className="font-bold text-right">{formData.destination}</div>
-                  
-                  <div className="text-slate-500">Dates</div>
-                  <div className="font-bold text-right">{formData.startDate} - {formData.endDate}</div>
-                  
-                  <div className="text-slate-500">Budget</div>
-                  <div className="font-bold text-right text-indigo-600">{formData.currency} {formData.expectedBudget}</div>
-                  
-                  <div className="text-slate-500">Organizer</div>
-                  <div className="font-bold text-right">{formData.fullName}</div>
-                  
-                  <div className="text-slate-500">Travellers</div>
-                  <div className="font-bold text-right">{formData.expectedTravellers} People</div>
+              <div className="bg-slate-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-100">
+                <div className="divide-y divide-slate-200/60 text-xs sm:text-sm">
+                  <div className="flex justify-between items-center py-2"><span className="text-slate-500">Trip Name</span><span className="font-bold text-slate-900">{formData.tripName}</span></div>
+                  <div className="flex justify-between items-center py-2"><span className="text-slate-500">Destination</span><span className="font-bold text-slate-900">{formData.destination}</span></div>
+                  <div className="flex justify-between items-center py-2"><span className="text-slate-500">Dates</span><span className="font-bold text-slate-900">{formData.startDate} – {formData.endDate}</span></div>
+                  <div className="flex justify-between items-center py-2"><span className="text-slate-500">Budget</span><span className="font-bold text-indigo-600">{formData.currency} {formData.expectedBudget}</span></div>
+                  <div className="flex justify-between items-center py-2"><span className="text-slate-500">Organizer</span><span className="font-bold text-slate-900">{formData.fullName}</span></div>
+                  <div className="flex justify-between items-center py-2"><span className="text-slate-500">Travellers</span><span className="font-bold text-slate-900">{formData.expectedTravellers} People</span></div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-100">
-                <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  By clicking "Create Trip", you agree to our terms of service. We'll set up your organization and unique trip ID instantly.
-                </p>
-              </div>
+              <p className="text-xs text-slate-500 text-center mt-2">
+                By creating this trip, you agree to our <span className="text-indigo-600 font-semibold cursor-pointer">Terms of Service</span>.
+              </p>
             </div>
           )}
 
-          <div className="flex items-center justify-between mt-10">
+          <div className="flex items-center justify-between mt-5 sm:mt-8 pt-2">
             {currentStep > 1 ? (
               <button 
+                type="button"
                 onClick={prevStep}
-                className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition-colors"
+                className="flex items-center gap-1 text-slate-500 font-bold hover:text-slate-900 transition-colors text-xs sm:text-sm min-h-[44px] px-2"
               >
-                <ChevronLeft className="w-5 h-5" /> Back
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" /> Back
               </button>
             ) : (
               <div />
             )}
 
             <button 
+              type="button"
               onClick={currentStep === 5 ? handleSubmit : nextStep}
               disabled={isLoading}
-              className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-indigo-600 text-white h-11 sm:h-12 px-6 sm:px-8 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : currentStep === 5 ? (
                 "Create Trip"
               ) : (
-                <>Next <ChevronRight className="w-5 h-5" /></>
+                <>Next <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" /></>
               )}
             </button>
           </div>

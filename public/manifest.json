@@ -1,0 +1,17 @@
+{
+  "name": "Triplan",
+  "short_name": "Triplan",
+  "description": "Travel Planner & Expense Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1AAB67",
+  "icons": [
+    {
+      "src": "/triplan_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

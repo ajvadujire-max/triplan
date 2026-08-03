@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Trip,
   Traveller,
@@ -67,14 +68,48 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     "Name" | "Remaining Amount" | "Paid Amount" | "Recently Updated" | "Highest Due" | "Lowest Due"
   >("Highest Due");
 
-  // Selection for bulk actions - REMOVED per user request
-  // const [selectedTravellerIds, setSelectedTravellerIds] = useState<string[]>([]);
-  const [selectedTravellerId, setSelectedTravellerId] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Modals / Bottom Sheets state
-  const [activePaymentTraveller, setActivePaymentTraveller] = useState<Traveller | null>(null);
-  const [activeHistoryTraveller, setActiveHistoryTraveller] = useState<Traveller | null>(null);
-  const [editingBudgetTraveller, setEditingBudgetTraveller] = useState<Traveller | null>(null);
+  let basePath = "/dashboard";
+  if (location.pathname.startsWith("/admin/dashboard")) {
+    basePath = "/admin/dashboard";
+  } else if (location.pathname.startsWith("/app")) {
+    basePath = "/app";
+  }
+
+  const relativePath = location.pathname.substring(basePath.length);
+  const segments = relativePath.split("/").filter(Boolean); // ["collections", "trv_123", "receive-payment"]
+
+  const selectedTravellerId = segments[0] === "collections" && segments[1] ? segments[1] : null;
+  const currentAction = segments[0] === "collections" ? segments[2] : null;
+
+  const selectedTraveller = useMemo(() => {
+    if (!selectedTravellerId) return null;
+    return trip.travellers.find((t) => t.id === selectedTravellerId) || null;
+  }, [selectedTravellerId, trip.travellers]);
+
+  const activePaymentTraveller = useMemo(() => {
+    if (currentAction === "receive-payment" && selectedTraveller) {
+      return selectedTraveller;
+    }
+    return null;
+  }, [currentAction, selectedTraveller]);
+
+  const activeHistoryTraveller = useMemo(() => {
+    if (currentAction === "history" && selectedTraveller) {
+      return selectedTraveller;
+    }
+    return null;
+  }, [currentAction, selectedTraveller]);
+
+  const editingBudgetTraveller = useMemo(() => {
+    if (currentAction === "edit-budget" && selectedTraveller) {
+      return selectedTraveller;
+    }
+    return null;
+  }, [currentAction, selectedTraveller]);
+
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [reminderToast, setReminderToast] = useState<string | null>(null);
 
@@ -278,21 +313,77 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     });
 
     // Reset Form
-    setActivePaymentTraveller(null);
     setEditingPaymentRecord(null);
     setPaymentAmount("");
     setPaymentNotes("");
+
+    if (selectedTravellerId) {
+      navigate(`${basePath}/collections/${selectedTravellerId}`, { replace: true });
+    } else {
+      navigate(`${basePath}/collections`, { replace: true });
+    }
+  };
+
+  const handleSelectTraveller = (id: string) => {
+    navigate(`${basePath}/collections/${id}`);
+  };
+
+  const handleBackToCollections = () => {
+    if (window.history.length > 1 && location.key !== "default") {
+      navigate(-1);
+    } else {
+      navigate(`${basePath}/collections`);
+    }
   };
 
   // Open Receive Payment Modal for Traveller
   const openReceivePayment = (traveller: Traveller, prefillAmount?: number) => {
-    setActivePaymentTraveller(traveller);
     const stats = getTravellerStats(traveller);
     setPaymentAmount(prefillAmount !== undefined ? prefillAmount : (stats.remaining > 0 ? stats.remaining : ""));
     setPaymentMethod("UPI");
     setPaymentDate(new Date().toISOString().split("T")[0]);
     setPaymentNotes("");
     setEditingPaymentRecord(null);
+
+    navigate(`${basePath}/collections/${traveller.id}/receive-payment`);
+  };
+
+  const handleCloseReceivePayment = () => {
+    if (window.history.length > 1 && location.key !== "default") {
+      navigate(-1);
+    } else if (selectedTravellerId) {
+      navigate(`${basePath}/collections/${selectedTravellerId}`);
+    } else {
+      navigate(`${basePath}/collections`);
+    }
+  };
+
+  const openHistory = (traveller: Traveller) => {
+    navigate(`${basePath}/collections/${traveller.id}/history`);
+  };
+
+  const handleCloseHistory = () => {
+    if (window.history.length > 1 && location.key !== "default") {
+      navigate(-1);
+    } else if (selectedTravellerId) {
+      navigate(`${basePath}/collections/${selectedTravellerId}`);
+    } else {
+      navigate(`${basePath}/collections`);
+    }
+  };
+
+  const openEditBudget = (traveller: Traveller) => {
+    navigate(`${basePath}/collections/${traveller.id}/edit-budget`);
+  };
+
+  const handleCloseEditBudget = () => {
+    if (window.history.length > 1 && location.key !== "default") {
+      navigate(-1);
+    } else if (selectedTravellerId) {
+      navigate(`${basePath}/collections/${selectedTravellerId}`);
+    } else {
+      navigate(`${basePath}/collections`);
+    }
   };
 
   // Delete Payment History Item
@@ -320,7 +411,9 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     // Update active history traveller modal reference
     if (activeHistoryTraveller && activeHistoryTraveller.id === travellerId) {
       const updatedTrv = updatedTravellers.find((t) => t.id === travellerId);
-      setActiveHistoryTraveller(updatedTrv || null);
+      if (!updatedTrv) {
+        handleCloseHistory();
+      }
     }
   };
 
@@ -345,7 +438,11 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
       expectedBudget: updatedTotalBudget,
       travellers: updatedTravellers,
     });
-    setEditingBudgetTraveller(null);
+    if (selectedTravellerId) {
+      navigate(`${basePath}/collections/${selectedTravellerId}`, { replace: true });
+    } else {
+      navigate(`${basePath}/collections`, { replace: true });
+    }
   };
 
   const handleSendReminder = (traveller: Traveller) => {
@@ -408,11 +505,6 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     window.print();
   };
 
-  const selectedTraveller = useMemo(() => {
-    if (!selectedTravellerId) return null;
-    return trip.travellers.find(t => t.id === selectedTravellerId) || null;
-  }, [selectedTravellerId, trip.travellers]);
-
   // Get Method Icon helper
   const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
@@ -444,12 +536,12 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
           traveller={selectedTraveller}
           trip={trip}
           stats={getTravellerStats(selectedTraveller)}
-          onBack={() => setSelectedTravellerId(null)}
+          onBack={handleBackToCollections}
           onUpdateTrip={onUpdateTrip}
           openReceivePayment={openReceivePayment}
           handleSendReminder={handleSendReminder}
-          setEditingBudgetTraveller={setEditingBudgetTraveller}
-          setActiveHistoryTraveller={setActiveHistoryTraveller}
+          setEditingBudgetTraveller={openEditBudget}
+          setActiveHistoryTraveller={openHistory}
           handleDeletePaymentRecord={handleDeletePaymentRecord}
           getMethodIcon={getMethodIcon}
         />
@@ -648,69 +740,67 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
       )}
 
       {/* 2. PAYMENT STATUS QUICK FILTER CHIPS */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center gap-2">
-          {/* Filter Status Badge buttons */}
-          <button
-            type="button"
-            onClick={() => setStatusFilter("All")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shrink-0 flex items-center gap-1.5 ${
-              statusFilter === "All"
-                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md"
-                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            <span>All Members</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-[10px]">
-              {collectionSummary.totalTravellers}
-            </span>
-          </button>
+      <div className="grid grid-cols-4 gap-1 sm:gap-2 w-full">
+        {/* Filter Status Badge buttons */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter("All")}
+          className={`w-full flex items-center justify-center p-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-full text-[8px] min-[360px]:text-[9px] sm:text-xs font-extrabold transition-all gap-1 ${
+            statusFilter === "All"
+              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md"
+              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          <span className="whitespace-nowrap tracking-tight">All Members</span>
+          <span className="px-1 py-0.5 rounded-md sm:rounded-full bg-slate-200 dark:bg-slate-700 text-[8px] sm:text-[10px]">
+            {collectionSummary.totalTravellers}
+          </span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setStatusFilter("Paid")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shrink-0 flex items-center gap-1.5 ${
-              statusFilter === "Paid"
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
-                : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-            }`}
-          >
-            <span>🟢 Paid</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-emerald-200/60 dark:bg-emerald-900 text-[10px]">
-              ({collectionSummary.paidCount})
-            </span>
-          </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("Paid")}
+          className={`w-full flex items-center justify-center p-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-full text-[8px] min-[360px]:text-[9px] sm:text-xs font-extrabold transition-all gap-1 ${
+            statusFilter === "Paid"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+              : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+          }`}
+        >
+          <span className="whitespace-nowrap tracking-tight">🟢 Paid</span>
+          <span className="px-1 py-0.5 rounded-md sm:rounded-full bg-emerald-200/60 dark:bg-emerald-900 text-[8px] sm:text-[10px]">
+            {collectionSummary.paidCount}
+          </span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setStatusFilter("Partial")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shrink-0 flex items-center gap-1.5 ${
-              statusFilter === "Partial"
-                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
-                : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100"
-            }`}
-          >
-            <span>🟡 Partial</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-amber-200/60 dark:bg-amber-900 text-[10px]">
-              ({collectionSummary.partialCount})
-            </span>
-          </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("Partial")}
+          className={`w-full flex items-center justify-center p-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-full text-[8px] min-[360px]:text-[9px] sm:text-xs font-extrabold transition-all gap-1 ${
+            statusFilter === "Partial"
+              ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+              : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100"
+          }`}
+        >
+          <span className="whitespace-nowrap tracking-tight">🟡 Partial</span>
+          <span className="px-1 py-0.5 rounded-md sm:rounded-full bg-amber-200/60 dark:bg-amber-900 text-[8px] sm:text-[10px]">
+            {collectionSummary.partialCount}
+          </span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setStatusFilter("Unpaid")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shrink-0 flex items-center gap-1.5 ${
-              statusFilter === "Unpaid"
-                ? "bg-rose-600 text-white shadow-md shadow-rose-500/20"
-                : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100"
-            }`}
-          >
-            <span>🔴 Unpaid</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-rose-200/60 dark:bg-rose-900 text-[10px]">
-              ({collectionSummary.unpaidCount})
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("Unpaid")}
+          className={`w-full flex items-center justify-center p-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-full text-[8px] min-[360px]:text-[9px] sm:text-xs font-extrabold transition-all gap-1 ${
+            statusFilter === "Unpaid"
+              ? "bg-rose-600 text-white shadow-md shadow-rose-500/20"
+              : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100"
+          }`}
+        >
+          <span className="whitespace-nowrap tracking-tight">🔴 Unpaid</span>
+          <span className="px-1 py-0.5 rounded-md sm:rounded-full bg-rose-200/60 dark:bg-rose-900 text-[8px] sm:text-[10px]">
+            {collectionSummary.unpaidCount}
+          </span>
+        </button>
       </div>
 
       {/* SEARCH BAR & SORT CONTROLS */}
@@ -782,7 +872,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             return (
               <div
                 key={traveller.id}
-                onClick={() => setSelectedTravellerId(traveller.id)}
+                onClick={() => handleSelectTraveller(traveller.id)}
                 className="group relative bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between gap-4">
@@ -907,10 +997,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
               <button
                 type="button"
-                onClick={() => {
-                  setActivePaymentTraveller(null);
-                  setEditingPaymentRecord(null);
-                }}
+                onClick={handleCloseReceivePayment}
                 className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl"
               >
                 <X className="w-5 h-5" />
@@ -1032,10 +1119,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => {
-                    setActivePaymentTraveller(null);
-                    setEditingPaymentRecord(null);
-                  }}
+                  onClick={handleCloseReceivePayment}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Cancel
@@ -1081,7 +1165,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
               <button
                 type="button"
-                onClick={() => setActiveHistoryTraveller(null)}
+                onClick={handleCloseHistory}
                 className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl"
               >
                 <X className="w-5 h-5" />
@@ -1134,8 +1218,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                             travellerId: activeHistoryTraveller.id,
                             record: rec,
                           });
-                          setActivePaymentTraveller(activeHistoryTraveller);
-                          setPaymentAmount(rec.amount);
+                          openReceivePayment(activeHistoryTraveller, rec.amount);
                           setPaymentMethod(rec.method);
                           setPaymentDate(rec.date);
                           setPaymentNotes(rec.notes || "");
@@ -1175,7 +1258,6 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                 type="button"
                 onClick={() => {
                   const trv = activeHistoryTraveller;
-                  setActiveHistoryTraveller(null);
                   openReceivePayment(trv);
                 }}
                 className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
@@ -1198,7 +1280,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
               </h3>
               <button
                 type="button"
-                onClick={() => setEditingBudgetTraveller(null)}
+                onClick={handleCloseEditBudget}
                 className="p-1 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
@@ -1221,7 +1303,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setEditingBudgetTraveller(null)}
+                onClick={handleCloseEditBudget}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
               >
                 Cancel

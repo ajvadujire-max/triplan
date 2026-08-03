@@ -80,8 +80,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand & App Title */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
-            T
+          <div className="w-[44px] h-[44px] rounded-xl overflow-hidden shrink-0">
+            <img
+              src="/triplan_logo.png"
+              alt="Triplan Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">

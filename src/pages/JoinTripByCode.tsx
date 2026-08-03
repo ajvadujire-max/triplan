@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Ticket, AlertCircle } from "lucide-react";
+import { ArrowRight, Ticket, AlertCircle, ArrowLeft } from "lucide-react";
 import { motion } from "motion/react";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 
@@ -48,80 +48,107 @@ export default function JoinTripByCode() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start p-4 sm:p-6 overflow-y-auto overflow-x-hidden">
+      {/* Top Navigation */}
+      <div className="w-full max-w-[430px] pt-1 sm:pt-2 mb-3 sm:mb-4">
+        <button 
+          onClick={() => navigate("/")} 
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Home
+        </button>
+      </div>
+
+      {/* Main Card */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-slate-100"
+        transition={{ duration: 0.25 }}
+        className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-[20px] shadow-xl shadow-slate-200/50 dark:shadow-none p-6 border border-slate-100 dark:border-slate-800"
       >
-        <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <Ticket className="w-8 h-8 text-indigo-600" />
+        {/* Ticket Icon Container */}
+        <div className="w-[64px] h-[64px] bg-blue-50 dark:bg-blue-950/40 rounded-[16px] flex items-center justify-center mx-auto mb-[clamp(10px,1.5vh,16px)]">
+          <Ticket className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <h2 className="text-2xl font-extrabold text-slate-900 text-center mb-2">Join a Trip</h2>
-        <p className="text-slate-500 text-center mb-8">Enter the trip code shared by your organizer.</p>
+
+        {/* Heading & Description */}
+        <h2 className="text-[28px] sm:text-[30px] font-bold text-slate-900 dark:text-white text-center leading-[1.15] mb-[clamp(4px,0.8vh,8px)]">
+          Join a Trip
+        </h2>
+        <p className="text-[15px] sm:text-[16px] text-slate-500 dark:text-slate-400 text-center leading-[1.5] mb-[clamp(16px,2.2vh,24px)]">
+          Enter the trip code shared by your organizer.
+        </p>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleJoin} className="space-y-6">
+        {/* Form */}
+        <form onSubmit={handleJoin} className="space-y-[clamp(12px,1.8vh,16px)]">
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Trip Code *</label>
+            <label className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Trip Code *
+            </label>
             <input 
               type="text"
               required
               value={code}
               onChange={(e) => {
-                setCode(e.target.value.toUpperCase());
+                setCode(e.target.value.toUpperCase().trim());
                 setError(null);
               }}
-              placeholder="e.g. GOA8F3A"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-center text-lg font-mono font-bold tracking-widest uppercase"
+              placeholder="GOA8F3A"
+              className="w-full h-[56px] px-4 rounded-[14px] border border-slate-200 dark:border-slate-700 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition-all text-center text-[18px] font-mono font-bold tracking-[0.15em] uppercase bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white"
             />
           </div>
 
           <button 
             type="submit"
             disabled={!code.trim() || isLoading}
-            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none cursor-pointer"
+            className="w-full h-[52px] sm:h-[54px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] font-bold text-sm sm:text-base transition-all shadow-lg shadow-indigo-200/50 dark:shadow-none flex items-center justify-center gap-2 disabled:bg-indigo-200 dark:disabled:bg-indigo-950/60 disabled:text-indigo-400 dark:disabled:text-indigo-500/50 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                Continue <ArrowRight className="w-5 h-5" />
+                Continue <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </>
             )}
           </button>
         </form>
         
-        <div className="mt-6">
-          <div className="relative mb-6">
+        {/* Divider */}
+        <div className="my-[clamp(14px,2vh,20px)]">
+          <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
+              <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-slate-500">Or</span>
+            <div className="relative flex justify-center text-[11px] uppercase">
+              <span className="px-3 bg-white dark:bg-slate-900 text-slate-400 font-bold tracking-wider">
+                OR
+              </span>
             </div>
           </div>
-          
-          <button 
-            onClick={() => navigate("/admin/login")}
-            className="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-bold text-lg hover:bg-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            Organizer Login
-          </button>
         </div>
 
-        <div className="mt-8 text-center">
-          <button onClick={() => navigate("/")} className="text-slate-500 hover:text-slate-700 font-medium text-sm transition-colors cursor-pointer">
-            Back to Home
+        {/* Organizer Section */}
+        <div className="text-center">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">
+            Organizer?
+          </p>
+          <button 
+            onClick={() => navigate("/admin/login")}
+            className="w-full h-[50px] sm:h-[52px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-[14px] font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-750 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            Sign in as Organizer
           </button>
         </div>
       </motion.div>
     </div>
   );
 }
+
+

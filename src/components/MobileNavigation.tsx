@@ -59,7 +59,6 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   onRoleChange,
 }) => {
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
-  const [isTripSelectorOpen, setIsTripSelectorOpen] = useState(false);
 
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
   const isOrganizerCreator = !!(user && activeTrip && activeTrip.organizerId === user.uid);
@@ -89,33 +88,22 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
     setIsMoreDrawerOpen(false);
   };
 
-  const handleCreateTripClick = () => {
-    onOpenCreateTrip();
-    setIsTripSelectorOpen(false);
-  };
-
   return (
     <div className="block md:hidden select-none">
       {/* 1. Mobile Compact Sticky Header */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800/80 transition-colors h-14 px-4 flex items-center justify-between">
-        {/* Trip Selector Trigger (Airbnb style) */}
-        <button
-          onClick={() => setIsTripSelectorOpen(true)}
-          className="flex items-center gap-1.5 py-1 px-2 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-800 text-left active:scale-95 transition-transform"
-        >
-          <div className="w-5 h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">
-            📍
+        <div className="flex items-center gap-[12px]">
+          <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-white shadow-sm border border-slate-100">
+            <img 
+              src="/triplan_logo.png" 
+              alt="Triplan Logo" 
+              className="w-full h-full object-contain" 
+            />
           </div>
-          <div className="leading-none pr-1">
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">
-              Current Trip
-            </span>
-            <span className="text-[12px] font-extrabold text-slate-800 dark:text-slate-200 block truncate max-w-[130px]">
-              {activeTrip?.name || "Select Trip"}
-            </span>
-          </div>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-        </button>
+          <span className="font-['Poppins'] font-semibold text-[22px] text-[#1B3EBF] tracking-tight leading-none mt-0.5">
+            Triplan
+          </span>
+        </div>
 
         {/* Quick actions (Sync indicator / dark mode / profile) */}
         <div className="flex items-center gap-2">
@@ -442,100 +430,6 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                     );
                   })}
                 </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* 4. Airbnb-style Trip Selector Bottom Sheet */}
-      <AnimatePresence>
-        {isTripSelectorOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsTripSelectorOpen(false)}
-              className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs"
-            />
-
-            {/* Bottom Sheet for Trip Selector */}
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-3xl bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-2xl pb-10 transition-colors"
-            >
-              {/* Drawer Pull Handle Indicator */}
-              <div className="w-12 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3" />
-
-              <div className="px-5 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-                <div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
-                    Select active Trip
-                  </h3>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                    Change destination workspace
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsTripSelectorOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 active:scale-90"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* List of Trips */}
-              <div className="p-4 space-y-2">
-                {trips.map((t) => {
-                  const isCurrent = t.id === activeTripId;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        onSelectTrip(t.id);
-                        setIsTripSelectorOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
-                        isCurrent
-                          ? "bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900/80"
-                          : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/85 active:bg-slate-50 dark:active:bg-slate-850"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-sm shrink-0">
-                          📍
-                        </div>
-                        <div>
-                          <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-200 leading-tight">
-                            {t.name}
-                          </h4>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
-                            {t.destination} • {t.startDate} - {t.endDate}
-                          </p>
-                        </div>
-                      </div>
-                      {isCurrent && (
-                        <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/50 dark:border-indigo-900/50 py-1 px-2.5 rounded-xl uppercase tracking-wider">
-                          Active
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-
-                {/* Create Trip Quick Trigger */}
-                <button
-                  onClick={handleCreateTripClick}
-                  className="w-full flex items-center justify-center gap-2 p-3.5 mt-2 rounded-2xl border border-dashed border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 text-xs font-bold transition-all active:scale-98"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create a New Trip</span>
-                </button>
               </div>
             </motion.div>
           </>

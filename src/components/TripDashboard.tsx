@@ -416,9 +416,6 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
                 <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-200 transition-colors">
                   Collections & Treasury
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
-                  {collectionPercent}% Collected
-                </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-indigo-200/80 font-medium mt-0.5">
                 Trip Treasurer Dashboard • Tap to open Collections module
@@ -426,10 +423,6 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-300 group-hover:text-indigo-800 dark:group-hover:text-white transition-colors">
-            <span>Open Module</span>
-            <ChevronRight className="w-4 h-4 text-indigo-500 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
-          </div>
         </div>
 
         {/* Financial Progress & Breakdown Row */}

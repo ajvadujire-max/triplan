@@ -241,6 +241,7 @@ export interface ChecklistItem {
   category: string;
   isPacked: boolean;
   assignedTravellerId?: string;
+  ownerUid?: string;
 }
 
 export type ActivityCategory =
@@ -460,6 +461,7 @@ export interface Trip {
   expenses: Expense[];
   documents: DocumentItem[];
   checklist: ChecklistItem[];
+  customCategories?: string[];
   timeline: TimelineActivity[];
   
   organizerUid?: string;

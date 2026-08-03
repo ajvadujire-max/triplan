@@ -10,14 +10,18 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 h-14 md:h-16 flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                <Plane className="text-white w-6 h-6" />
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl overflow-hidden shadow-md md:shadow-lg shadow-indigo-100">
+                <img
+                  src="/triplan_logo.png"
+                  alt="TripPro Logo"
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <span className="text-xl font-bold tracking-tight">TripPro</span>
+              <span className="text-lg md:text-xl font-bold tracking-tight">TripPro</span>
             </div>
 
             <div className="hidden md:flex items-center gap-8">
@@ -31,7 +35,7 @@ export default function LandingPage() {
             </div>
 
             <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X /> : <Menu />}
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
@@ -55,50 +59,47 @@ export default function LandingPage() {
       </motion.div>
 
       {/* Hero Section */}
-      <section className="pt-24 pb-8 md:pt-32 md:pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
+      <section className="pt-24 md:pt-32 pb-8 md:pb-20 px-4 sm:px-6">
+        <div className="flex flex-col items-center text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center w-full"
           >
-            <span className="px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-sm font-semibold mb-6 inline-block">
-              New: AI-Powered Travel Insights
-            </span>
-            <h1 className="text-4xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 md:mb-8">
-              Plan Trips Like <span className="text-indigo-600 underline decoration-indigo-200 underline-offset-8">Professionals</span>
+            <h1 className="text-[clamp(34px,9vw,42px)] font-extrabold text-slate-900 tracking-tight mb-4" style={{lineHeight: 1.02}}>
+              Plan Trips Like <span className="text-indigo-600">Professionals</span>
             </h1>
-            <p className="text-base md:text-xl text-slate-600 w-[90%] md:w-full max-w-2xl mx-auto mb-8 md:mb-10 leading-relaxed text-center">
-              The ultimate group trip management platform. Track expenses, coordinate schedules, and manage documents all in one place.
+            <p className="text-[14px] md:text-xl text-slate-600 max-w-[360px] md:max-w-2xl mx-auto mb-6 leading-[1.45]">
+              Plan together, track expenses, organize schedules, and keep everything in one place.
             </p>
-            <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4 w-full max-w-sm mx-auto md:max-w-none">
-              <Link to="/onboarding" className="w-full md:w-auto bg-indigo-600 text-white px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center justify-center gap-2">
-                Create New Trip <ChevronRight className="w-5 h-5" />
+            <div className="flex flex-col gap-2 w-full max-w-[360px] mx-auto">
+              <Link to="/onboarding" className="w-full bg-indigo-600 text-white h-[50px] rounded-[16px] text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center">
+                Create New Trip
               </Link>
-              <Link to="/join" className="w-full md:w-auto bg-white text-slate-900 border border-slate-200 px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2">
+              <Link to="/join" className="w-full bg-white text-slate-900 border border-slate-200 h-[50px] rounded-[16px] text-sm font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center">
                 Join Existing Trip
               </Link>
             </div>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="mt-12 md:mt-20 relative"
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 to-transparent z-10 h-24 md:h-32 bottom-0" />
-            <img
-              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
-              alt="App Dashboard Preview"
-              className="rounded-3xl shadow-2xl border border-slate-200 w-full h-[240px] md:h-auto object-cover"
-            />
-          </motion.div>
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="w-full mt-[22px] max-w-[360px] mx-auto"
+        >
+          <img
+            src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
+            alt="App Dashboard Preview"
+            className="rounded-[20px] shadow-xl border border-slate-200 w-full h-[190px] object-cover"
+          />
+        </motion.div>
       </section>
 
       {/* Features */}
-      <section id="features" className="py-12 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
+      <section id="features" className="hidden md:block py-12 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Travel Smarter</h2>
@@ -126,7 +127,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-12 md:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      <section id="pricing" className="hidden md:block py-12 md:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
@@ -173,7 +174,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-12 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
+      <section id="faq" className="hidden md:block py-12 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-16">Frequently Asked Questions</h2>
           <div className="space-y-4 md:space-y-6">
@@ -192,7 +193,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-950 text-slate-400 py-12 md:py-16 px-4 sm:px-6 lg:px-8 text-center md:text-left">
+      <footer className="hidden md:block bg-slate-950 text-slate-400 py-12 md:py-16 px-4 sm:px-6 lg:px-8 text-center md:text-left">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-12">
             <div className="col-span-1 md:col-span-2 flex flex-col items-center md:items-start">

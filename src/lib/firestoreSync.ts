@@ -10,7 +10,7 @@ import {
   getDocFromServer
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType, firebaseConfig } from "./firebase";
-import { Trip, FinanceAccount, CashbookEntry, PersonalExpense, DiaryEntry } from "../types";
+import { Trip, FinanceAccount, CashbookEntry, PersonalExpense, DiaryEntry, ChecklistItem } from "../types";
 import { initialTrips } from "../data/mockData";
 
 function sanitizeForFirestore<T>(obj: T): T {
@@ -371,6 +371,44 @@ export async function deleteDiaryEntry(diaryId: string): Promise<void> {
   const path = `travelDiaries/${diaryId}`;
   try {
     await deleteDoc(doc(db, "travelDiaries", diaryId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export async function fetchChecklistItems(tripId: string, ownerUid: string): Promise<ChecklistItem[]> {
+  const path = "checklistItems";
+  try {
+    const q = query(
+      collection(db, path),
+      where("tripId", "==", tripId),
+      where("ownerUid", "==", ownerUid)
+    );
+    const snapshot = await getDocs(q);
+    const items: ChecklistItem[] = [];
+    snapshot.forEach((docSnap) => {
+      items.push(docSnap.data() as ChecklistItem);
+    });
+    return items;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return [];
+  }
+}
+
+export async function saveChecklistItem(item: ChecklistItem): Promise<void> {
+  const path = `checklistItems/${item.id}`;
+  try {
+    await setDoc(doc(db, "checklistItems", item.id), sanitizeForFirestore(item));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteChecklistItem(itemId: string): Promise<void> {
+  const path = `checklistItems/${itemId}`;
+  try {
+    await deleteDoc(doc(db, "checklistItems", itemId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }

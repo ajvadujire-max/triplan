@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { User as FirebaseUser } from "firebase/auth";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
+import { useAppNavigation } from "../hooks/useAppNavigation";
 import { Trip, DocumentItem, ChecklistItem } from "../types";
+import { fetchChecklistItems, saveChecklistItem, deleteChecklistItem } from "../lib/firestoreSync";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
+import { AddItemModal } from "./AddItemModal";
 import {
   Folder,
   CheckSquare,
@@ -48,24 +52,88 @@ import {
 interface VaultChecklistProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  currentUser: FirebaseUser | null;
 }
 
 export const VaultChecklist: React.FC<VaultChecklistProps> = ({
   trip,
   onUpdateTrip,
+  currentUser,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"vault" | "checklist">("vault");
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
+
+  useEffect(() => {
+    if (trip?.id && currentUser?.uid) {
+      setIsLoadingChecklist(true);
+      fetchChecklistItems(trip.id, currentUser.uid)
+        .then((items) => {
+          if (items.length === 0) {
+            // If empty, initialize with defaults
+            const defaults = getRichDefaultChecklist(trip.id).map(item => ({...item, ownerUid: currentUser.uid}));
+            Promise.all(defaults.map(item => saveChecklistItem(item))).then(() => {
+                setChecklistItems(defaults);
+            });
+          } else {
+            // Deduplicate items based on title and category
+            const uniqueItems = items.reduce((acc, current) => {
+              const x = acc.find(item => item.title === current.title && item.category === current.category);
+              if (!x) {
+                return acc.concat([current]);
+              } else {
+                return acc;
+              }
+            }, [] as ChecklistItem[]);
+            setChecklistItems(uniqueItems);
+          }
+        })
+        .finally(() => setIsLoadingChecklist(false));
+    }
+  }, [trip.id, currentUser?.uid]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "packed" | "unpacked">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  // Document Vault Modals
-  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
-  const [docModalMode, setDocModalMode] = useState<"add" | "edit">("add");
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
+  // Navigation & Route states
+  const { basePath, relativePath, navigate, goBack } = useAppNavigation();
+  const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
+
+  // Route paths:
+  // /vault -> ["vault"]
+  // /vault/add-doc -> ["vault", "add-doc"]
+  // /vault/add-item -> ["vault", "add-item"]
+  // /vault/doc/:id -> ["vault", "doc", ":id"]
+  // /vault/doc/:id/edit -> ["vault", "doc", ":id", "edit"]
+
+  const selectedDocId = useMemo(() => {
+    if (pathSegments[1] === "doc" && pathSegments[2]) {
+      return pathSegments[2];
+    }
+    return null;
+  }, [pathSegments]);
+
+  const previewDocUrl = useMemo(() => {
+    if (selectedDocId && pathSegments[3] !== "edit") {
+      const doc = trip.documents.find((d) => d.id === selectedDocId);
+      return doc?.fileUrl || null;
+    }
+    return null;
+  }, [selectedDocId, pathSegments, trip.documents]);
+
+  const isDocModalOpen = useMemo(() => {
+    return pathSegments[1] === "add-doc" || (!!selectedDocId && pathSegments[3] === "edit");
+  }, [pathSegments, selectedDocId]);
+
+  const docModalMode = useMemo<"add" | "edit">( () => {
+    return pathSegments[3] === "edit" ? "edit" : "add";
+  }, [pathSegments]);
+
+  const isAddModalOpen = useMemo(() => {
+    return pathSegments[1] === "add-item";
+  }, [pathSegments]);
 
   // New/Edit Document State
   const [docTitle, setDocTitle] = useState("");
@@ -80,9 +148,20 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
   const [newCheckCategory, setNewCheckCategory] = useState<string>("Travel Essentials");
 
   // Custom added categories state
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
+  const [customCategories, setCustomCategories] = useState<string[]>(trip.customCategories || []);
+
+  const handleAddCategory = (category: string) => {
+    const trimmed = category.trim();
+    if (!trimmed) return;
+    if (allCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+        showToast("Category already exists", "error");
+        return;
+    }
+    const updatedCustomCategories = [...customCategories, trimmed];
+    setCustomCategories(updatedCustomCategories);
+    onUpdateTrip({ ...trip, customCategories: updatedCustomCategories });
+    showToast(`Category "${trimmed}" created`);
+  };
 
   // Edit Checklist Item State
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -126,18 +205,8 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
   }, []);
 
   // Ensure checklist exists in trip
-  const currentChecklist = trip.checklist || [];
+  const currentChecklist = checklistItems;
   const currentDocuments = trip.documents || [];
-
-  // Initialize with rich defaults if checklist is empty
-  useEffect(() => {
-    if (currentChecklist.length === 0) {
-      onUpdateTrip({
-        ...trip,
-        checklist: getRichDefaultChecklist(trip.id),
-      });
-    }
-  }, [trip.id]);
 
   // Scan all existing categories
   const categoriesInTrip = Array.from(new Set(currentChecklist.map((c) => c.category)));
@@ -186,27 +255,34 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
   // --- DOCUMENT CRUD ACTIONS ---
 
+  // Sync form state when editing document or opening add doc
+  useEffect(() => {
+    if (selectedDocId && pathSegments[3] === "edit") {
+      const doc = trip.documents.find((d) => d.id === selectedDocId);
+      if (doc) {
+        setDocTitle(doc.title);
+        setDocType(doc.docType);
+        setDocFileUrl(doc.fileUrl);
+        setDocNotes(doc.notes || "");
+        setDocFileName(doc.notes?.includes("File:") ? doc.notes.split("File:")[1].trim() : "");
+        setDocFileSize(doc.fileSize || "");
+      }
+    } else if (pathSegments[1] === "add-doc") {
+      setDocTitle("");
+      setDocType("Passport / ID");
+      setDocFileUrl("");
+      setDocNotes("");
+      setDocFileName("");
+      setDocFileSize("");
+    }
+  }, [selectedDocId, pathSegments, trip.documents]);
+
   const handleOpenAddDoc = () => {
-    setDocTitle("");
-    setDocType("Passport / ID");
-    setDocFileUrl("");
-    setDocNotes("");
-    setDocFileName("");
-    setDocFileSize("");
-    setDocModalMode("add");
-    setIsDocModalOpen(true);
+    navigate(`${basePath}/vault/add-doc`);
   };
 
   const handleOpenEditDoc = (doc: DocumentItem) => {
-    setSelectedDocId(doc.id);
-    setDocTitle(doc.title);
-    setDocType(doc.docType);
-    setDocFileUrl(doc.fileUrl);
-    setDocNotes(doc.notes || "");
-    setDocFileName(doc.notes?.includes("File:") ? doc.notes.split("File:")[1].trim() : "");
-    setDocFileSize(doc.fileSize || "");
-    setDocModalMode("edit");
-    setIsDocModalOpen(true);
+    navigate(`${basePath}/vault/doc/${doc.id}/edit`);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,8 +356,8 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
       });
     }
 
-    setIsDocModalOpen(false);
     showToast(docModalMode === "add" ? "Document added to vault" : "Document updated successfully");
+    goBack();
   };
 
   const handleDeleteDoc = (id: string) => {
@@ -302,38 +378,32 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
   // --- CHECKLIST CRUD ACTIONS ---
 
-  const handleAddChecklistItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCheckItemTitle.trim()) return;
-
+  const handleAddItem = (title: string, category: string, note?: string) => {
     const newItem: ChecklistItem = {
       id: `chk_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       tripId: trip.id,
-      title: newCheckItemTitle.trim(),
-      category: newCheckCategory,
+      title: title.trim(),
+      category: category,
       isPacked: false,
+      ownerUid: currentUser!.uid,
     };
 
-    onUpdateTrip({
-      ...trip,
-      checklist: [newItem, ...currentChecklist],
-    });
-
-    setNewCheckItemTitle("");
+    saveChecklistItem(newItem);
+    setChecklistItems([newItem, ...checklistItems]);
   };
 
   const handleToggleChecklist = (id: string) => {
     const updated = currentChecklist.map((c) =>
       c.id === id ? { ...c, isPacked: !c.isPacked } : c
     );
-    onUpdateTrip({ ...trip, checklist: updated });
+    const item = updated.find(c => c.id === id);
+    if (item) saveChecklistItem(item);
+    setChecklistItems(updated);
   };
 
   const handleDeleteChecklistItem = (id: string) => {
-    onUpdateTrip({
-      ...trip,
-      checklist: currentChecklist.filter((c) => c.id !== id),
-    });
+    setChecklistItems(currentChecklist.filter((c) => c.id !== id));
+    deleteChecklistItem(id);
     // Remove from selection if deleted
     if (selectedItemIds.has(id)) {
       const nextSelection = new Set(selectedItemIds);
@@ -348,11 +418,10 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
       id: `chk_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       title: `${item.title} (Copy)`,
       isPacked: false,
+      ownerUid: currentUser!.uid,
     };
-    onUpdateTrip({
-      ...trip,
-      checklist: [...currentChecklist, newItem],
-    });
+    saveChecklistItem(newItem);
+    setChecklistItems([...currentChecklist, newItem]);
   };
 
   // Inline edit checklist item
@@ -369,10 +438,9 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
         ? { ...item, title: editItemTitle.trim(), category: editItemCategory }
         : item
     );
-    onUpdateTrip({
-      ...trip,
-      checklist: updated,
-    });
+    const item = updated.find(c => c.id === id);
+    if (item) saveChecklistItem(item);
+    setChecklistItems(updated);
     setEditingItemId(null);
   };
 
@@ -380,36 +448,42 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
   const handleMarkAllPacked = () => {
     const updated = currentChecklist.map((item) => ({ ...item, isPacked: true }));
-    onUpdateTrip({ ...trip, checklist: updated });
+    updated.forEach(item => saveChecklistItem(item));
+    setChecklistItems(updated);
   };
 
   const handleUncheckAll = () => {
     const updated = currentChecklist.map((item) => ({ ...item, isPacked: false }));
-    onUpdateTrip({ ...trip, checklist: updated });
+    updated.forEach(item => saveChecklistItem(item));
+    setChecklistItems(updated);
   };
 
   const handleResetChecklist = () => {
     if (window.confirm("Are you sure you want to reset the checklist? This will replace current items with the 50 default packing items.")) {
-      onUpdateTrip({
-        ...trip,
-        checklist: getRichDefaultChecklist(trip.id),
-      });
+      // Delete old items
+      currentChecklist.forEach(item => deleteChecklistItem(item.id));
+      // Create new defaults
+      const defaults = getRichDefaultChecklist(trip.id).map(item => ({...item, ownerUid: currentUser!.uid}));
+      defaults.forEach(item => saveChecklistItem(item));
+      setChecklistItems(defaults);
       setCustomCategories([]);
+    }
+  };
+
+  const handleDeleteCategory = (category: string) => {
+    if (window.confirm(`Are you sure you want to delete the section "${category}" and all its items?`)) {
+        const toDelete = checklistItems.filter(item => item.category === category);
+        toDelete.forEach(item => deleteChecklistItem(item.id));
+        const updatedCustomCategories = customCategories.filter(c => c !== category);
+        setChecklistItems(prev => prev.filter(item => item.category !== category));
+        setCustomCategories(updatedCustomCategories);
+        onUpdateTrip({ ...trip, customCategories: updatedCustomCategories });
     }
   };
 
   const handleSortAlphabetically = () => {
     const sorted = [...currentChecklist].sort((a, b) => a.title.localeCompare(b.title));
-    onUpdateTrip({ ...trip, checklist: sorted });
-  };
-
-  const handleAddCustomCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) return;
-    setCustomCategories((prev) => [...prev, newCategoryName.trim()]);
-    setNewCheckCategory(newCategoryName.trim());
-    setNewCategoryName("");
-    setIsAddingCategory(false);
+    setChecklistItems(sorted);
   };
 
   // --- MULTI-SELECT & BULK ACTIONS (Requirement 9) ---
@@ -442,8 +516,10 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
   const handleBulkDelete = () => {
     if (window.confirm(`Delete ${selectedItemIds.size} selected items?`)) {
-      const updated = currentChecklist.filter((item) => !selectedItemIds.has(item.id));
-      onUpdateTrip({ ...trip, checklist: updated });
+      const remaining = currentChecklist.filter((item) => !selectedItemIds.has(item.id));
+      const toDelete = currentChecklist.filter((item) => selectedItemIds.has(item.id));
+      toDelete.forEach(item => deleteChecklistItem(item.id));
+      setChecklistItems(remaining);
       setSelectedItemIds(new Set());
       setIsMultiSelectMode(false);
     }
@@ -453,7 +529,10 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     const updated = currentChecklist.map((item) =>
       selectedItemIds.has(item.id) ? { ...item, isPacked: packed } : item
     );
-    onUpdateTrip({ ...trip, checklist: updated });
+    updated.forEach(item => {
+        if (selectedItemIds.has(item.id)) saveChecklistItem(item);
+    });
+    setChecklistItems(updated);
     setSelectedItemIds(new Set());
     setIsMultiSelectMode(false);
   };
@@ -462,18 +541,18 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     const duplicated: ChecklistItem[] = [];
     currentChecklist.forEach((item) => {
       if (selectedItemIds.has(item.id)) {
-        duplicated.push({
+        const newItem = {
           ...item,
           id: `chk_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           title: `${item.title} (Copy)`,
           isPacked: false,
-        });
+          ownerUid: currentUser!.uid,
+        };
+        saveChecklistItem(newItem);
+        duplicated.push(newItem);
       }
     });
-    onUpdateTrip({
-      ...trip,
-      checklist: [...currentChecklist, ...duplicated],
-    });
+    setChecklistItems([...currentChecklist, ...duplicated]);
     setSelectedItemIds(new Set());
     setIsMultiSelectMode(false);
   };
@@ -482,7 +561,10 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     const updated = currentChecklist.map((item) =>
       selectedItemIds.has(item.id) ? { ...item, category } : item
     );
-    onUpdateTrip({ ...trip, checklist: updated });
+    updated.forEach(item => {
+        if (selectedItemIds.has(item.id)) saveChecklistItem(item);
+    });
+    setChecklistItems(updated);
     setSelectedItemIds(new Set());
     setIsMultiSelectMode(false);
   };
@@ -509,10 +591,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     const [draggedItem] = originalList.splice(draggedIdx, 1);
     originalList.splice(targetIdx, 0, draggedItem);
 
-    onUpdateTrip({
-      ...trip,
-      checklist: originalList,
-    });
+    setChecklistItems(originalList);
 
     setDraggedItemId(null);
   };
@@ -529,10 +608,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
     originalList[idx] = originalList[targetIdx];
     originalList[targetIdx] = temp;
 
-    onUpdateTrip({
-      ...trip,
-      checklist: originalList,
-    });
+    setChecklistItems(originalList);
   };
 
   // --- THREE-DOT FLOATING PORTAL MENU HANDLERS (Requirement 4 & 5) ---
@@ -626,7 +702,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
               </div>
 
               <button
-                onClick={handleOpenAddDoc}
+                onClick={() => navigate(`${basePath}/vault/add-doc`)}
                 className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold h-9 px-3 rounded-lg transition-all shadow-xs shrink-0"
               >
                 <Upload className="w-3.5 h-3.5" />
@@ -680,7 +756,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                     className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 shadow-xs flex items-center justify-between gap-3 hover:border-indigo-500 dark:hover:border-indigo-500/50 transition-all"
                   >
                     <div
-                      onClick={() => setPreviewDocUrl(doc.fileUrl)}
+                      onClick={() => navigate(`${basePath}/vault/doc/${doc.id}`)}
                       className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                     >
                       <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800/80 rounded-lg flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-750">
@@ -729,189 +805,58 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
       {/* --- SUB-TAB 2: PACKING CHECKLIST --- */}
       {activeSubTab === "checklist" && (
-        <div className="space-y-3 max-w-md mx-auto px-1">
-          {/* Main Completion Progress Card */}
-          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-indigo-600" />
-                  Trip Packing Checklist ({packedPercent}%)
-                </h3>
-                <p className="text-[10px] text-slate-500 font-medium">
-                  {packedCount} of {currentChecklist.length} essential items packed.
-                </p>
+        <div className="space-y-4 max-w-md mx-auto px-1">
+          {/* Compact Summary Header */}
+          <div className="px-1 pt-2 pb-1 flex items-end justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Packing Checklist</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-xs text-slate-500 font-medium">{packedCount} of {currentChecklist.length} packed ({packedPercent}%)</p>
               </div>
-
-              {/* Toggle bulk selection mode */}
-              <button
-                onClick={() => {
-                  setIsMultiSelectMode(!isMultiSelectMode);
-                  setSelectedItemIds(new Set());
-                }}
-                className={`text-[10px] px-2 py-1 h-7 font-bold rounded-lg border transition-all ${
-                  isMultiSelectMode
-                    ? "bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300"
-                    : "bg-white border-slate-200 text-slate-600 dark:bg-slate-850 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {isMultiSelectMode ? "Cancel Select" : "Multi-Select"}
-              </button>
             </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                style={{ width: `${packedPercent}%` }}
-              />
-            </div>
-
-            {/* Quick Actions Toolbar (Requirement 8) */}
-            <div className="flex items-center justify-between flex-wrap gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-              <button
-                onClick={handleMarkAllPacked}
-                className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-1 rounded hover:opacity-85"
-              >
-                Mark All Packed
-              </button>
-              <button
-                onClick={handleUncheckAll}
-                className="text-[9px] font-extrabold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded hover:opacity-85"
-              >
-                Uncheck All
-              </button>
-              <button
-                onClick={handleSortAlphabetically}
-                className="text-[9px] font-extrabold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded hover:opacity-85 flex items-center gap-0.5"
-              >
-                <ArrowUpDown className="w-2.5 h-2.5" /> Sort A-Z
-              </button>
-              <button
-                onClick={() => setIsAddingCategory(true)}
-                className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded hover:opacity-85"
-              >
-                + Category
-              </button>
-              <button
-                onClick={handleResetChecklist}
-                className="text-[9px] font-extrabold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-1 rounded hover:opacity-85 flex items-center gap-0.5 ml-auto"
-              >
-                <RotateCcw className="w-2.5 h-2.5" /> Reset
-              </button>
-            </div>
+            <div className="text-xs font-bold text-indigo-600">{packedPercent}%</div>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+              style={{ width: `${packedPercent}%` }}
+            />
           </div>
 
-          {/* Add Category Form (Inline) */}
-          {isAddingCategory && (
-            <form
-              onSubmit={handleAddCustomCategory}
-              className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900 flex items-center gap-2"
-            >
-              <input
-                type="text"
-                required
-                autoFocus
-                placeholder="Enter custom category name..."
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="flex-1 px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-slate-900 dark:text-white"
-              />
-              <button
-                type="submit"
-                className="px-3 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-lg"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAddingCategory(false)}
-                className="p-1.5 text-slate-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </form>
-          )}
-
-          {/* Quick Item Addition Bar */}
-          <form
-            onSubmit={handleAddChecklistItem}
-            className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-1.5"
-          >
-            <input
-              type="text"
-              required
-              placeholder="Add item (e.g. Swimming Goggles)..."
-              value={newCheckItemTitle}
-              onChange={(e) => setNewCheckItemTitle(e.target.value)}
-              className="flex-1 px-2.5 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-750 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-
-            <select
-              value={newCheckCategory}
-              onChange={(e) => setNewCheckCategory(e.target.value)}
-              className="max-w-[120px] text-[10px] font-bold px-1.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-750 text-slate-700 dark:text-slate-300 focus:outline-none"
-            >
-              {allCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-
+          {/* Action Row */}
+          <div className="flex items-center gap-2">
             <button
-              type="submit"
-              className="flex items-center justify-center bg-indigo-600 text-white w-8 h-8 rounded-lg hover:bg-indigo-500 shrink-0 shadow-xs"
+              onClick={() => navigate(`${basePath}/vault/add-item`)}
+              className="flex-[7] bg-indigo-600 hover:bg-indigo-500 text-white text-[12px] font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" /> Add Item
             </button>
-          </form>
+            <button
+              onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
+              className="flex-[3] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold py-2.5 rounded-xl hover:bg-slate-200 transition-all"
+            >
+              Manage
+            </button>
+          </div>
 
-          {/* Filters Bar */}
-          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800/80">
+          {/* Search and Filter */}
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search checklist..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-7 pr-2 py-1.2 text-[11px] rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-750 text-slate-900 dark:text-white focus:outline-none"
+                className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-indigo-500 text-slate-900 dark:text-white transition-all focus:outline-none"
               />
             </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setStatusFilter("all")}
-                className={`text-[10px] px-2 py-1 font-extrabold rounded-md ${
-                  statusFilter === "all"
-                    ? "bg-slate-200 dark:bg-slate-800 text-slate-950 dark:text-white"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setStatusFilter("packed")}
-                className={`text-[10px] px-2 py-1 font-extrabold rounded-md ${
-                  statusFilter === "packed"
-                    ? "bg-slate-200 dark:bg-slate-800 text-slate-950 dark:text-white"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                Packed
-              </button>
-              <button
-                onClick={() => setStatusFilter("unpacked")}
-                className={`text-[10px] px-2 py-1 font-extrabold rounded-md ${
-                  statusFilter === "unpacked"
-                    ? "bg-slate-200 dark:bg-slate-800 text-slate-950 dark:text-white"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                Unpacked
-              </button>
-            </div>
+            <button
+              onClick={() => { /* Implement Filter Logic */ }}
+              className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" /> Filter
+            </button>
           </div>
 
           {/* Collapsible Categories Checklist Stack (Requirement 10) */}
@@ -949,6 +894,16 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategory(category);
+                        }}
+                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg relative z-20"
+                        title="Delete category"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <span className="text-[10px] font-extrabold text-slate-500 bg-white dark:bg-slate-850 px-1.5 py-0.5 rounded-full border border-slate-200/50 dark:border-slate-750">
                         {catPacked}/{categoryItems.length} packed
                       </span>
@@ -971,41 +926,12 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                             {/* Sliding/Swipe Container with Framer Motion (Requirement 7) */}
                             <motion.div
                               layout
-                              className="relative overflow-hidden rounded-xl border border-slate-150 dark:border-slate-850"
+                              className={`relative p-2.5 flex items-center justify-between gap-2.5 transition-all select-none rounded-xl border border-slate-150 dark:border-slate-850 ${
+                                item.isPacked
+                                  ? "bg-slate-50 dark:bg-slate-900/60 opacity-65"
+                                  : "bg-white dark:bg-slate-900 shadow-xs"
+                              }`}
                             >
-                              {/* Background swipe indicators */}
-                              <div className="absolute inset-0 flex items-center justify-between px-3 bg-slate-100 dark:bg-slate-850 pointer-events-none">
-                                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px]">
-                                  <Edit2 className="w-3.5 h-3.5" /> Slide Right to Edit
-                                </div>
-                                <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-extrabold text-[10px]">
-                                  Delete <Trash2 className="w-3.5 h-3.5" />
-                                </div>
-                              </div>
-
-                              {/* Foreground Interactive Card */}
-                              <motion.div
-                                drag={!isMultiSelectMode ? "x" : false}
-                                dragDirectionLock
-                                dragConstraints={{ left: -120, right: 120 }}
-                                dragElastic={{ left: 0.15, right: 0.15 }}
-                                onDragEnd={(_, info) => {
-                                  if (info.offset.x > 75) {
-                                    handleStartEdit(item);
-                                  } else if (info.offset.x < -75) {
-                                    handleDeleteChecklistItem(item.id);
-                                  }
-                                }}
-                                onTouchStart={() => handleStartLongPress(item.id)}
-                                onTouchEnd={handleCancelLongPress}
-                                onMouseDown={() => handleStartLongPress(item.id)}
-                                onMouseUp={handleCancelLongPress}
-                                className={`relative p-2.5 flex items-center justify-between gap-2.5 transition-all select-none ${
-                                  item.isPacked
-                                    ? "bg-slate-50 dark:bg-slate-900/60 opacity-65"
-                                    : "bg-white dark:bg-slate-900 shadow-xs"
-                                }`}
-                              >
                                 {/* Left Side: Checkbox / Selector */}
                                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                   {isMultiSelectMode ? (
@@ -1023,17 +949,20 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => handleToggleChecklist(item.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleChecklist(item.id);
+                                      }}
                                       className="shrink-0 focus:outline-none"
                                     >
                                       <div
-                                        className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${
+                                        className={`w-5 h-5 rounded-md flex items-center justify-center transition-all border-2 ${
                                           item.isPacked
-                                            ? "bg-indigo-600 border-indigo-600 text-white"
+                                            ? "bg-emerald-500 border-emerald-500 text-white"
                                             : "border-slate-300 dark:border-slate-600 bg-transparent"
                                         }`}
                                       >
-                                        {item.isPacked && <Check className="w-3 h-3 stroke-[3]" />}
+                                        {item.isPacked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                       </div>
                                     </button>
                                   )}
@@ -1062,10 +991,10 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                                     </div>
                                   ) : (
                                     <span
-                                      className={`text-xs font-bold leading-normal truncate ${
+                                      className={`text-sm font-medium leading-tight truncate ${
                                         item.isPacked
-                                          ? "line-through text-slate-400 dark:text-slate-500"
-                                          : "text-slate-850 dark:text-slate-200"
+                                          ? "text-slate-400 dark:text-slate-500"
+                                          : "text-slate-900 dark:text-slate-100"
                                       }`}
                                     >
                                       {item.title}
@@ -1104,8 +1033,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                                   </button>
                                 </div>
                               </motion.div>
-                            </motion.div>
-                          </div>
+                            </div>
                         ))}
                       </AnimatePresence>
                     </div>
@@ -1186,6 +1114,14 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
         </div>
       )}
 
+      <AddItemModal
+        isOpen={isAddModalOpen}
+        onClose={() => goBack()}
+        onAdd={handleAddItem}
+        onAddCategory={handleAddCategory}
+        categories={allCategories}
+      />
+
       {/* --- THREE-DOT FLOATING PORTAL MENU RENDERING (Requirement 4 & 5) --- */}
       {activeMenu &&
         createPortal(
@@ -1209,7 +1145,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                 <>
                   <button
                     onClick={() => {
-                      setPreviewDocUrl(doc.fileUrl);
+                      navigate(`${basePath}/vault/doc/${doc.id}`);
                       setActiveMenu(null);
                     }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
@@ -1317,7 +1253,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
               <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-500">
                 {docModalMode === "add" ? "Store Travel Document" : "Replace Travel Document"}
               </h3>
-              <button onClick={() => setIsDocModalOpen(false)}>
+              <button onClick={() => goBack()}>
                 <X className="w-4 h-4 text-slate-400" />
               </button>
             </div>
@@ -1426,7 +1362,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsDocModalOpen(false)}
+                  onClick={() => goBack()}
                   className="px-3.5 py-2 text-xs font-bold text-slate-500"
                 >
                   Cancel
@@ -1452,7 +1388,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
             className="relative max-w-xl w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl p-2 border border-slate-800"
           >
             <button
-              onClick={() => setPreviewDocUrl(null)}
+              onClick={() => goBack()}
               className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black/80 text-white rounded-full z-10"
             >
               <X className="w-4 h-4" />

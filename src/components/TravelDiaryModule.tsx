@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { User } from "firebase/auth";
 import { motion, AnimatePresence } from "motion/react";
+import { useAppNavigation } from "../hooks/useAppNavigation";
 import {
   BookOpen,
   Plus,
@@ -63,21 +64,49 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
   trip,
   currentUser,
 }) => {
+  const { basePath, relativePath, navigate, goBack } = useAppNavigation();
+  const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
+
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedMoodFilter, setSelectedMoodFilter] = useState<string>("All");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>("All");
 
-  // Modals & Active State
-  const [isEditorOpen, setIsEditorOpen] = useState<boolean>(false);
-  const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
-  const [viewingEntry, setViewingEntry] = useState<DiaryEntry | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<DiaryEntry | null>(null);
-  
-  // Lightbox
-  const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
+
+  // Route states
+  const viewingEntry = useMemo(() => {
+    if (pathSegments[1] && pathSegments[1] !== "add") {
+      return entries.find((e) => e.id === pathSegments[1]) || null;
+    }
+    return null;
+  }, [pathSegments, entries]);
+
+  const isEditorOpen = useMemo(() => {
+    return pathSegments[1] === "add" || (!!viewingEntry && pathSegments[2] === "edit");
+  }, [pathSegments, viewingEntry]);
+
+  const editingEntry = useMemo(() => {
+    if (viewingEntry && pathSegments[2] === "edit") {
+      return viewingEntry;
+    }
+    return null;
+  }, [viewingEntry, pathSegments]);
+
+  const lightboxIndex = useMemo(() => {
+    if (pathSegments[2] === "photo" && pathSegments[3] !== undefined) {
+      return parseInt(pathSegments[3], 10) || 0;
+    }
+    return null;
+  }, [pathSegments]);
+
+  const lightboxImages = useMemo(() => {
+    if (lightboxIndex !== null && viewingEntry && viewingEntry.photos) {
+      return viewingEntry.photos;
+    }
+    return null;
+  }, [lightboxIndex, viewingEntry]);
 
   // Form State
   const [formDate, setFormDate] = useState<string>("");
@@ -145,34 +174,38 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
     localStorage.setItem(localStorageKey, JSON.stringify(updated));
   };
 
+  // Sync form state when editing or creating
+  useEffect(() => {
+    if (editingEntry) {
+      setFormDate(editingEntry.date || new Date().toISOString().split("T")[0]);
+      setFormTitle(editingEntry.title || "");
+      setFormLocation(editingEntry.location || "");
+      setFormContent(editingEntry.content || "");
+      setFormMood(editingEntry.mood || "😊 Happy");
+      setFormPhotos(editingEntry.photos || []);
+      setFormTags(editingEntry.tags || []);
+      setFormError(null);
+    } else if (isEditorOpen) {
+      const today = new Date().toISOString().split("T")[0];
+      setFormDate(today);
+      setFormTitle("");
+      setFormLocation(trip.destination || "");
+      setFormContent("");
+      setFormMood("😊 Happy");
+      setFormPhotos([]);
+      setFormTags(["Journey"]);
+      setFormError(null);
+    }
+  }, [editingEntry, isEditorOpen, trip.destination]);
+
   // Open Create Modal
   const handleOpenCreate = () => {
-    const today = new Date().toISOString().split("T")[0];
-    setEditingEntry(null);
-    setFormDate(today);
-    setFormTitle("");
-    setFormLocation(trip.destination || "");
-    setFormContent("");
-    setFormMood("😊 Happy");
-    setFormPhotos([]);
-    setFormTags(["Journey"]);
-    setFormError(null);
-    setIsEditorOpen(true);
+    navigate(`${basePath}/diary/add`);
   };
 
   // Open Edit Modal
   const handleOpenEdit = (entry: DiaryEntry) => {
-    setEditingEntry(entry);
-    setFormDate(entry.date || new Date().toISOString().split("T")[0]);
-    setFormTitle(entry.title || "");
-    setFormLocation(entry.location || "");
-    setFormContent(entry.content || "");
-    setFormMood(entry.mood || "😊 Happy");
-    setFormPhotos(entry.photos || []);
-    setFormTags(entry.tags || []);
-    setFormError(null);
-    setIsEditorOpen(true);
-    setViewingEntry(null);
+    navigate(`${basePath}/diary/${entry.id}/edit`);
   };
 
   // Compress & convert uploaded image to Base64
@@ -294,7 +327,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
     }
 
     setIsSaving(false);
-    setIsEditorOpen(false);
+    goBack();
   };
 
   // Delete Entry
@@ -316,7 +349,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
     }
 
     setEntryToDelete(null);
-    setViewingEntry(null);
+    goBack();
   };
 
   // Calculate Personal Stats
@@ -406,9 +439,8 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
   }, [filteredEntries]);
 
   // Photo Lightbox Trigger
-  const handleOpenLightbox = (photos: string[], startIndex: number = 0) => {
-    setLightboxImages(photos);
-    setLightboxIndex(startIndex);
+  const handleOpenLightbox = (entryId: string, startIndex: number = 0) => {
+    navigate(`${basePath}/diary/${entryId}/photo/${startIndex}`);
   };
 
   return (
@@ -609,7 +641,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                           )}
                         </div>
                         <h3
-                          onClick={() => setViewingEntry(entry)}
+                          onClick={() => navigate(`${basePath}/diary/${entry.id}`)}
                           className="text-base sm:text-lg font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#1AAB67] dark:hover:text-#34D399 transition-colors leading-snug"
                         >
                           {entry.title}
@@ -661,7 +693,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                             return (
                               <div
                                 key={idx}
-                                onClick={() => handleOpenLightbox(entry.photos, idx)}
+                                onClick={() => navigate(`${basePath}/diary/${entry.id}/photo/${idx}`)}
                                 className="relative aspect-video sm:aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group/photo border border-slate-200/50 dark:border-slate-800"
                               >
                                 <img
@@ -696,7 +728,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                       </div>
 
                       <button
-                        onClick={() => setViewingEntry(entry)}
+                        onClick={() => navigate(`${basePath}/diary/${entry.id}`)}
                         className="flex items-center gap-1 text-[#1AAB67] dark:text-#34D399 font-bold hover:underline cursor-pointer ml-auto text-xs"
                       >
                         <span>View Entry</span>
@@ -739,7 +771,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 </div>
 
                 <button
-                  onClick={() => setIsEditorOpen(false)}
+                  onClick={() => goBack()}
                   className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 active:scale-90"
                 >
                   <X className="w-4 h-4" />
@@ -956,7 +988,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setIsEditorOpen(false)}
+                    onClick={() => goBack()}
                     className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold cursor-pointer hover:bg-slate-200"
                   >
                     Cancel
@@ -1017,7 +1049,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 </div>
 
                 <button
-                  onClick={() => setViewingEntry(null)}
+                  onClick={() => goBack()}
                   className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 active:scale-90 shrink-0"
                 >
                   <X className="w-4 h-4" />
@@ -1036,7 +1068,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                       {viewingEntry.photos.map((photo, idx) => (
                         <div
                           key={idx}
-                          onClick={() => handleOpenLightbox(viewingEntry.photos, idx)}
+                          onClick={() => navigate(`${basePath}/diary/${viewingEntry.id}/photo/${idx}`)}
                           className="aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer border border-slate-200 dark:border-slate-800 group"
                         >
                           <img
@@ -1153,7 +1185,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 {lightboxIndex + 1} of {lightboxImages.length}
               </span>
               <button
-                onClick={() => setLightboxImages(null)}
+                onClick={() => goBack()}
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1171,21 +1203,23 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
               {lightboxImages.length > 1 && (
                 <>
                   <button
-                    onClick={() =>
-                      setLightboxIndex((prev) =>
-                        prev === 0 ? lightboxImages.length - 1 : prev - 1
-                      )
-                    }
+                    onClick={() => {
+                      if (lightboxImages && lightboxIndex !== null && viewingEntry) {
+                        const nextIdx = lightboxIndex === 0 ? lightboxImages.length - 1 : lightboxIndex - 1;
+                        navigate(`${basePath}/diary/${viewingEntry.id}/photo/${nextIdx}`, { replace: true });
+                      }
+                    }}
                     className="absolute left-2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/80 cursor-pointer"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <button
-                    onClick={() =>
-                      setLightboxIndex((prev) =>
-                        prev === lightboxImages.length - 1 ? 0 : prev + 1
-                      )
-                    }
+                    onClick={() => {
+                      if (lightboxImages && lightboxIndex !== null && viewingEntry) {
+                        const nextIdx = lightboxIndex === lightboxImages.length - 1 ? 0 : lightboxIndex + 1;
+                        navigate(`${basePath}/diary/${viewingEntry.id}/photo/${nextIdx}`, { replace: true });
+                      }
+                    }}
                     className="absolute right-2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/80 cursor-pointer"
                   >
                     <ChevronRight className="w-6 h-6" />
@@ -1200,7 +1234,11 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 {lightboxImages.map((img, i) => (
                   <button
                     key={i}
-                    onClick={() => setLightboxIndex(i)}
+                    onClick={() => {
+                      if (viewingEntry) {
+                        navigate(`${basePath}/diary/${viewingEntry.id}/photo/${i}`, { replace: true });
+                      }
+                    }}
                     className={`w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 cursor-pointer ${
                       i === lightboxIndex
                         ? "border-[#1AAB67]"

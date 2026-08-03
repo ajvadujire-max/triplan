@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { User as FirebaseUser } from "firebase/auth";
+import { useAppNavigation } from "../hooks/useAppNavigation";
 import {
   Trip,
   Expense,
@@ -120,15 +121,67 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   currentUser,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
+  const { basePath, relativePath, navigate, goBack } = useAppNavigation();
+  const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
+
   const [activeSection, setActiveSection] = useState<"trip" | "personal">("trip");
   const [personalExpenses, setPersonalExpenses] = useState<PersonalExpense[]>([]);
   const [isLoadingPersonal, setIsLoadingPersonal] = useState(false);
-  const [editingPersonalExpense, setEditingPersonalExpense] = useState<PersonalExpense | null>(null);
 
-  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
-  const [selectedPersonalExpenseId, setSelectedPersonalExpenseId] = useState<string | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  // Derive active view and modal state from path segments
+  // segments: ["expenses", ...]
+  // e.g. /expenses/add -> ["expenses", "add"]
+  // e.g. /expenses/exp_123 -> ["expenses", "exp_123"]
+  // e.g. /expenses/exp_123/edit -> ["expenses", "exp_123", "edit"]
+  // e.g. /expenses/personal -> ["expenses", "personal"]
+  // e.g. /expenses/personal/add -> ["expenses", "personal", "add"]
+  // e.g. /expenses/personal/pexp_123 -> ["expenses", "personal", "pexp_123"]
+  // e.g. /expenses/personal/pexp_123/edit -> ["expenses", "personal", "pexp_123", "edit"]
+  
+  const isPersonalPath = pathSegments[1] === "personal";
+  
+  const selectedPersonalExpenseId = useMemo(() => {
+    if (isPersonalPath && pathSegments[2] && pathSegments[2] !== "add") {
+      return pathSegments[2];
+    }
+    return null;
+  }, [isPersonalPath, pathSegments]);
+
+  const selectedExpenseId = useMemo(() => {
+    if (!isPersonalPath && pathSegments[1] && pathSegments[1] !== "add") {
+      return pathSegments[1];
+    }
+    return null;
+  }, [isPersonalPath, pathSegments]);
+
+  const isAddModalOpen = useMemo(() => {
+    if (isPersonalPath) {
+      return pathSegments[2] === "add" || pathSegments[3] === "edit";
+    }
+    return pathSegments[1] === "add" || pathSegments[2] === "edit";
+  }, [isPersonalPath, pathSegments]);
+
+  const editingExpense = useMemo(() => {
+    if (!isPersonalPath && pathSegments[1] && pathSegments[2] === "edit") {
+      return trip.expenses.find((e) => e.id === pathSegments[1]) || null;
+    }
+    return null;
+  }, [isPersonalPath, pathSegments, trip.expenses]);
+
+  const editingPersonalExpense = useMemo(() => {
+    if (isPersonalPath && pathSegments[2] && pathSegments[3] === "edit") {
+      return personalExpenses.find((p) => p.id === pathSegments[2]) || null;
+    }
+    return null;
+  }, [isPersonalPath, pathSegments, personalExpenses]);
+
+  useEffect(() => {
+    if (isPersonalPath) {
+      setActiveSection("personal");
+    } else {
+      setActiveSection("trip");
+    }
+  }, [isPersonalPath]);
 
   useEffect(() => {
     if (trip?.id && currentUser?.uid) {
@@ -165,6 +218,52 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
+  // Sync Form values with editing states
+  useEffect(() => {
+    if (editingExpense) {
+      setDescription(editingExpense.description);
+      const mode = editingExpense.amountMode || "total";
+      setAmountMode(mode);
+      if (mode === "per_person" && editingExpense.enteredAmount !== undefined) {
+        setAmount(editingExpense.enteredAmount);
+      } else {
+        setAmount(editingExpense.amount);
+      }
+      setCategory(editingExpense.category);
+      setWhoPaidId(editingExpense.whoPaidId);
+      setWhoUsedIds(editingExpense.whoUsedIds || trip.travellers.map((t) => t.id));
+      setSplitType(editingExpense.splitType || "equal");
+      setAccountUsedId(editingExpense.accountUsedId || accounts[0]?.id || "acc_hdfc");
+      setReceiptUrl(editingExpense.receiptUrl || "");
+      setNotes(editingExpense.notes || "");
+      setDate(editingExpense.date || new Date().toISOString().split("T")[0]);
+      if (editingExpense.splits) {
+        setCustomSplits(editingExpense.splits);
+      }
+    } else if (editingPersonalExpense) {
+      setDescription(editingPersonalExpense.title);
+      setAmount(editingPersonalExpense.amount);
+      setAmountMode("total");
+      setCategory(editingPersonalExpense.category as any);
+      setNotes(editingPersonalExpense.notes || "");
+      setDate(editingPersonalExpense.date || new Date().toISOString().split("T")[0]);
+    } else {
+      setDescription("");
+      setAmount("");
+      setAmountMode("total");
+      setCategory("Food");
+      setWhoPaidId(trip.travellers[0]?.id || "");
+      setWhoUsedIds(trip.travellers.map((t) => t.id));
+      setSplitType("equal");
+      setCustomSplits({});
+      setCustomPercentages({});
+      setAccountUsedId(accounts[0]?.id || "acc_hdfc");
+      setReceiptUrl("");
+      setNotes("");
+      setDate(new Date().toISOString().split("T")[0]);
+    }
+  }, [editingExpense, editingPersonalExpense, trip.travellers, accounts]);
+
   // UI States
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -180,62 +279,19 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   };
 
   const handleOpenAdd = () => {
-    setEditingExpense(null);
-    setEditingPersonalExpense(null);
-    setDescription("");
-    setAmount("");
-    setAmountMode("total");
-    setCategory("Food");
-    setWhoPaidId(trip.travellers[0]?.id || "");
-    setWhoUsedIds(trip.travellers.map((t) => t.id));
-    setSplitType("equal");
-    setCustomSplits({});
-    setCustomPercentages({});
-    setAccountUsedId(accounts[0]?.id || "acc_hdfc");
-    setReceiptUrl("");
-    setNotes("");
-    setDate(new Date().toISOString().split("T")[0]);
-    setIsAddModalOpen(true);
+    if (activeSection === "personal") {
+      navigate(`${basePath}/expenses/personal/add`);
+    } else {
+      navigate(`${basePath}/expenses/add`);
+    }
   };
 
   const handleOpenEditPersonal = (exp: PersonalExpense) => {
-    setEditingPersonalExpense(exp);
-    setEditingExpense(null);
-    setDescription(exp.title);
-    setAmount(exp.amount);
-    setAmountMode("total");
-    setCategory(exp.category as any);
-    setNotes(exp.notes || "");
-    setDate(exp.date || new Date().toISOString().split("T")[0]);
-    setIsAddModalOpen(true);
+    navigate(`${basePath}/expenses/personal/${exp.id}/edit`);
   };
 
   const handleOpenEdit = (exp: Expense) => {
-    setEditingExpense(exp);
-    setEditingPersonalExpense(null);
-    setDescription(exp.description);
-    
-    const mode = exp.amountMode || "total";
-    setAmountMode(mode);
-    if (mode === "per_person" && exp.enteredAmount !== undefined) {
-      setAmount(exp.enteredAmount);
-    } else {
-      setAmount(exp.amount);
-    }
-
-    setCategory(exp.category);
-    setWhoPaidId(exp.whoPaidId);
-    setWhoUsedIds(exp.whoUsedIds || trip.travellers.map((t) => t.id));
-    setSplitType(exp.splitType || "equal");
-    setAccountUsedId(exp.accountUsedId || accounts[0]?.id || "acc_hdfc");
-    setReceiptUrl(exp.receiptUrl || "");
-    setNotes(exp.notes || "");
-    setDate(exp.date || new Date().toISOString().split("T")[0]);
-
-    if (exp.splits) {
-      setCustomSplits(exp.splits);
-    }
-    setIsAddModalOpen(true);
+    navigate(`${basePath}/expenses/${exp.id}/edit`);
   };
 
   const toggleUserSelection = (id: string) => {
@@ -351,7 +407,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               showToast("Error adding personal expense", "error");
             });
         }
-        setIsAddModalOpen(false);
+        goBack();
       } else {
         if (!isOrganizer) {
           alert("Only organizers and super admins are allowed to add or modify shared trip expenses.");
@@ -418,7 +474,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           onAddExpense(newExpense, accountUsedId, numAmount);
           showToast("Expense added successfully");
         }
-        setIsAddModalOpen(false);
+        goBack();
       }
     } catch (err) {
       showToast("Error saving expense", "error");
@@ -437,8 +493,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         deletePersonalExpense(confirmDeleteId)
           .then(() => {
             setPersonalExpenses(personalExpenses.filter(p => p.id !== confirmDeleteId));
-            if (selectedPersonalExpenseId === confirmDeleteId) {
-              setSelectedPersonalExpenseId(null);
+            if (selectedPersonalExpense?.id === confirmDeleteId) {
+              goBack();
             }
             setConfirmDeleteId(null);
             showToast("Personal expense deleted successfully");
@@ -449,8 +505,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           });
       } else {
         onDeleteExpense(confirmDeleteId);
-        if (selectedExpenseId === confirmDeleteId) {
-          setSelectedExpenseId(null);
+        if (selectedExpense?.id === confirmDeleteId) {
+          goBack();
         }
         setConfirmDeleteId(null);
         showToast("Expense deleted successfully");
@@ -500,7 +556,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         {/* Navigation Bar */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
-            onClick={() => setSelectedPersonalExpenseId(null)}
+            onClick={() => goBack()}
             className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-3 py-2 rounded-xl transition-all"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -585,7 +641,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         {/* Navigation Bar */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
-            onClick={() => setSelectedPersonalExpenseId(null)}
+            onClick={() => goBack()}
             className="flex items-center gap-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-2 rounded-xl transition-all"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -721,7 +777,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         {/* Navigation Bar */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
-            onClick={() => setSelectedExpenseId(null)}
+            onClick={() => goBack()}
             className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-3 py-2 rounded-xl transition-all"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -965,7 +1021,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     {editingExpense ? "Edit Expense" : "Record & Split Expense"}
                   </h3>
                 </div>
-                <button onClick={() => setIsAddModalOpen(false)} className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <button onClick={() => goBack()} className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                   <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
@@ -1209,7 +1265,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                 <div className="flex justify-end gap-2 pt-3">
                   <button
                     type="button"
-                    onClick={() => setIsAddModalOpen(false)}
+                    onClick={() => goBack()}
                     className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
                   >
                     Cancel
@@ -1293,7 +1349,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <button
           onClick={() => {
-            setActiveSection("trip");
+            navigate(`${basePath}/expenses`);
             setSelectedCategoryFilter("All");
           }}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
@@ -1307,7 +1363,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         </button>
         <button
           onClick={() => {
-            setActiveSection("personal");
+            navigate(`${basePath}/expenses/personal`);
             setSelectedCategoryFilter("All");
           }}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
@@ -1446,7 +1502,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               {filteredPersonalExpenses.map((exp) => (
                 <div
                   key={exp.id}
-                  onClick={() => setSelectedPersonalExpenseId(exp.id)}
+                  onClick={() => navigate(`${basePath}/expenses/personal/${exp.id}`)}
                   className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
                 >
                   <div className="flex-1 min-w-0 space-y-1">
@@ -1498,7 +1554,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                 return (
                   <div
                     key={exp.id}
-                    onClick={() => setSelectedExpenseId(exp.id)}
+                    onClick={() => navigate(`${basePath}/expenses/${exp.id}`)}
                     className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
                   >
                     <div className="flex-1 min-w-0 space-y-1">
@@ -1562,7 +1618,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                   {editingPersonalExpense ? "Edit Personal Expense" : editingExpense ? "Edit Expense" : activeSection === "personal" ? "Record Personal Expense" : "Record & Split Expense"}
                 </h3>
               </div>
-              <button onClick={() => setIsAddModalOpen(false)}>
+              <button onClick={() => goBack()}>
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
@@ -1911,7 +1967,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => goBack()}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
                 >
                   Cancel

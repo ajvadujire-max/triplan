@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAppNavigation } from "../hooks/useAppNavigation";
 import { Trip, Traveller, TravellerRole, PendingTravellerRegistration, GoogleFormConfig } from "../types";
 import { db } from "../lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
@@ -49,11 +50,45 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   currentUser,
 }) => {
   const isOrganizer = appRole === "organizer" || appRole === "super_admin";
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isGoogleFormModalOpen, setIsGoogleFormModalOpen] = useState(false);
-  const [editingPendingReg, setEditingPendingReg] = useState<PendingTravellerRegistration | null>(null);
-  const [editingTraveller, setEditingTraveller] = useState<Traveller | null>(null);
-  const [selectedTravellerId, setSelectedTravellerId] = useState<string | null>(null);
+  const { basePath, relativePath, navigate, goBack } = useAppNavigation();
+  const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
+
+  // Route paths:
+  // /travellers -> ["travellers"]
+  // /travellers/add -> ["travellers", "add"]
+  // /travellers/collect-form -> ["travellers", "collect-form"]
+  // /travellers/pending/:id/edit -> ["travellers", "pending", ":id", "edit"]
+  // /travellers/:id -> ["travellers", ":id"]
+  // /travellers/:id/edit -> ["travellers", ":id", "edit"]
+
+  const selectedTravellerId = useMemo(() => {
+    if (pathSegments[1] && !["add", "collect-form", "pending"].includes(pathSegments[1])) {
+      return pathSegments[1];
+    }
+    return null;
+  }, [pathSegments]);
+
+  const isAddModalOpen = useMemo(() => {
+    return pathSegments[1] === "add" || (!!selectedTravellerId && pathSegments[2] === "edit");
+  }, [pathSegments, selectedTravellerId]);
+
+  const isGoogleFormModalOpen = useMemo(() => {
+    return pathSegments[1] === "collect-form";
+  }, [pathSegments]);
+
+  const editingPendingReg = useMemo(() => {
+    if (pathSegments[1] === "pending" && pathSegments[2] && pathSegments[3] === "edit") {
+      return (trip.pendingRegistrations || []).find((p) => p.id === pathSegments[2]) || null;
+    }
+    return null;
+  }, [pathSegments, trip.pendingRegistrations]);
+
+  const editingTraveller = useMemo(() => {
+    if (selectedTravellerId && pathSegments[2] === "edit") {
+      return trip.travellers.find((t) => t.id === selectedTravellerId) || null;
+    }
+    return null;
+  }, [selectedTravellerId, pathSegments, trip.travellers]);
 
   // UI States
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
@@ -163,7 +198,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       pendingRegistrations: updatedPending,
     });
 
-    setEditingPendingReg(null);
+    goBack();
   };
 
   // Modal Form State
@@ -180,38 +215,43 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   const [allocatedBudget, setAllocatedBudget] = useState(5000);
   const [profilePhoto, setProfilePhoto] = useState("");
 
+  // Sync form state when modal / editing state changes
+  React.useEffect(() => {
+    if (editingTraveller) {
+      setFullName(editingTraveller.fullName);
+      setAge(editingTraveller.age);
+      setGender(editingTraveller.gender);
+      setPhone(editingTraveller.phone);
+      setEmail(editingTraveller.email);
+      setEmergencyContact(editingTraveller.emergencyContact);
+      setBloodGroup(editingTraveller.bloodGroup);
+      setPassportNumber(editingTraveller.passportNumber || "");
+      setDrivingLicense(editingTraveller.drivingLicense || "");
+      setFormRole(editingTraveller.role);
+      setAllocatedBudget(editingTraveller.allocatedBudget);
+      setProfilePhoto(editingTraveller.profilePhoto || "");
+    } else if (isAddModalOpen) {
+      setFullName("");
+      setAge(26);
+      setGender("Male");
+      setPhone("+91 ");
+      setEmail("");
+      setEmergencyContact("+91 ");
+      setBloodGroup("O+");
+      setPassportNumber("");
+      setDrivingLicense("");
+      setFormRole("Traveller");
+      setAllocatedBudget(5000);
+      setProfilePhoto("");
+    }
+  }, [editingTraveller, isAddModalOpen]);
+
   const handleOpenAdd = () => {
-    setEditingTraveller(null);
-    setFullName("");
-    setAge(26);
-    setGender("Male");
-    setPhone("+91 ");
-    setEmail("");
-    setEmergencyContact("+91 ");
-    setBloodGroup("O+");
-    setPassportNumber("");
-    setDrivingLicense("");
-    setFormRole("Traveller");
-    setAllocatedBudget(5000);
-    setProfilePhoto("");
-    setIsAddModalOpen(true);
+    navigate(`${basePath}/travellers/add`);
   };
 
   const handleOpenEdit = (t: Traveller) => {
-    setEditingTraveller(t);
-    setFullName(t.fullName);
-    setAge(t.age);
-    setGender(t.gender);
-    setPhone(t.phone);
-    setEmail(t.email);
-    setEmergencyContact(t.emergencyContact);
-    setBloodGroup(t.bloodGroup);
-    setPassportNumber(t.passportNumber || "");
-    setDrivingLicense(t.drivingLicense || "");
-    setFormRole(t.role);
-    setAllocatedBudget(t.allocatedBudget);
-    setProfilePhoto(t.profilePhoto || "");
-    setIsAddModalOpen(true);
+    navigate(`${basePath}/travellers/${t.id}/edit`);
   };
 
   const handleSaveTraveller = async (e: React.FormEvent) => {
@@ -297,7 +337,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     }
 
     onUpdateTrip({ ...trip, travellers: updatedList });
-    setIsAddModalOpen(false);
+    goBack();
   };
 
   const handleDeleteTraveller = (id: string) => {
@@ -319,8 +359,8 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
     const updatedList = trip.travellers.filter((t) => t.id !== travellerToDeleteId);
     
-    if (selectedTravellerId === travellerToDeleteId) {
-      setSelectedTravellerId(null);
+    if (selectedTraveller?.id === travellerToDeleteId) {
+      goBack();
     }
     
     onUpdateTrip({ ...trip, travellers: updatedList });
@@ -376,7 +416,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         {/* Navigation Bar */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
-            onClick={() => setSelectedTravellerId(null)}
+            onClick={() => goBack()}
             className="flex items-center gap-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-2 rounded-xl transition-all"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -642,7 +682,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                 <h3 className="font-bold text-slate-900 dark:text-white">
                   {editingTraveller ? "Edit Traveller Profile" : "Add New Traveller"}
                 </h3>
-                <button onClick={() => setIsAddModalOpen(false)} className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <button onClick={() => goBack()} className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                   <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
@@ -814,7 +854,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                 <div className="flex justify-end gap-2 pt-3">
                   <button
                     type="button"
-                    onClick={() => setIsAddModalOpen(false)}
+                    onClick={() => goBack()}
                     className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
                   >
                     Cancel
@@ -950,7 +990,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         {travellerStats.map((t) => (
           <div
             key={t.id}
-            onClick={() => setSelectedTravellerId(t.id)}
+            onClick={() => navigate(`${basePath}/travellers/${t.id}`)}
             className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] sm:min-h-[105px]"
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -1016,7 +1056,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               <h3 className="font-bold text-slate-900 dark:text-white">
                 {editingTraveller ? "Edit Traveller Profile" : "Add New Traveller"}
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)}>
+              <button onClick={() => goBack()}>
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
@@ -1188,7 +1228,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => goBack()}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
                 >
                   Cancel
@@ -1209,7 +1249,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       <GoogleFormCollectModal
         trip={trip}
         isOpen={isGoogleFormModalOpen}
-        onClose={() => setIsGoogleFormModalOpen(false)}
+        onClose={() => goBack()}
         onUpdateTripConfig={(formConfig) => {
           onUpdateTrip({
             ...trip,
@@ -1233,7 +1273,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         <EditPendingRegistrationModal
           registration={editingPendingReg}
           isOpen={!!editingPendingReg}
-          onClose={() => setEditingPendingReg(null)}
+          onClose={() => goBack()}
           onSaveAndApprove={handleSaveAndApproveEdit}
         />
       )}

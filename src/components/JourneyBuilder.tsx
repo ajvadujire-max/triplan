@@ -1,7 +1,6 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+  @license
+  SPDX-License-Identifier: Apache-2.0 */
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -473,7 +472,6 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
   const handleAddSegment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fromLoc || !toLoc) return;
 
     if (editingSegment) {
       // Edit mode
@@ -590,7 +588,6 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
   const handleAddHotel = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hotelName) return;
 
     const newHtl: HotelModule = {
       id: `htl_${Date.now()}`,
@@ -1271,10 +1268,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 {transportCategory === "Bus" && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Operator Name *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Operator Name </label>
                       <input
                         type="text"
-                        required
+                        
                         value={operatorName}
                         onChange={(e) => setOperatorName(e.target.value)}
                         placeholder="e.g. KSRTC, RedBus, VRL"
@@ -1284,10 +1281,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Boarding Point *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Boarding Point </label>
                         <input
                           type="text"
-                          required
+                          
                           value={fromLoc}
                           onChange={(e) => setFromLoc(e.target.value)}
                           placeholder="e.g. Majestic BS"
@@ -1295,10 +1292,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Drop Point *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Drop Point </label>
                         <input
                           type="text"
-                          required
+                          
                           value={toLoc}
                           onChange={(e) => setToLoc(e.target.value)}
                           placeholder="e.g. Central Station"
@@ -1309,20 +1306,20 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Date & Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Date & Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arrival Date & Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arrival Date & Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
@@ -1332,10 +1329,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Seat *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Seat </label>
                         <input
                           type="text"
-                          required
+                          
                           value={seatNo}
                           onChange={(e) => setSeatNo(e.target.value)}
                           placeholder="e.g. 12A"
@@ -1343,17 +1340,17 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) </label>
                         <input
                           type="number"
-                          required
+                          
                           value={fareAmt || ""}
                           onChange={(e) => setFareAmt(Number(e.target.value))}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status </label>
                         <select
                           value={bookingStatus}
                           onChange={(e) => setBookingStatus(e.target.value as any)}
@@ -1412,10 +1409,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 {transportCategory === "Train" && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Train Name/Number *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Train Name/Number </label>
                       <input
                         type="text"
-                        required
+                        
                         value={operatorName}
                         onChange={(e) => setOperatorName(e.target.value)}
                         placeholder="e.g. Shatabdi Express (12002)"
@@ -1425,15 +1422,15 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <StationAutocomplete
-                        label="Boarding Station *"
-                        required
+                        label="Boarding Station "
+                        
                         value={fromLoc}
                         onChange={(formatted) => setFromLoc(formatted)}
                         placeholder="Search station or code (e.g. KBPR, CAN, YPR)..."
                       />
                       <StationAutocomplete
-                        label="Destination Station *"
-                        required
+                        label="Destination Station "
+                        
                         value={toLoc}
                         onChange={(formatted) => setToLoc(formatted)}
                         placeholder="Search station or code (e.g. NDLS, SBC)..."
@@ -1442,20 +1439,20 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Date & Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Date & Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arrival Date & Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arrival Date & Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
@@ -1485,10 +1482,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) </label>
                         <input
                           type="number"
-                          required
+                          
                           value={fareAmt || ""}
                           onChange={(e) => setFareAmt(Number(e.target.value))}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
@@ -1543,10 +1540,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Airline *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Airline </label>
                         <input
                           type="text"
-                          required
+                          
                           value={operatorName}
                           onChange={(e) => setOperatorName(e.target.value)}
                           placeholder="e.g. Indigo"
@@ -1554,10 +1551,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Flight Number *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Flight Number </label>
                         <input
                           type="text"
-                          required
+                          
                           value={bookingNo}
                           onChange={(e) => setBookingNo(e.target.value)}
                           placeholder="e.g. 6E-2412"
@@ -1568,10 +1565,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">From Airport *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">From Airport </label>
                         <input
                           type="text"
-                          required
+                          
                           value={fromLoc}
                           onChange={(e) => setFromLoc(e.target.value)}
                           placeholder="e.g. DEL"
@@ -1579,10 +1576,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">To Airport *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">To Airport </label>
                         <input
                           type="text"
-                          required
+                          
                           value={toLoc}
                           onChange={(e) => setToLoc(e.target.value)}
                           placeholder="e.g. BOM"
@@ -1593,20 +1590,20 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Date & Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Date & Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arrival Date & Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arrival Date & Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
@@ -1616,10 +1613,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Seat Number *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Seat Number </label>
                         <input
                           type="text"
-                          required
+                          
                           value={seatNo}
                           onChange={(e) => setSeatNo(e.target.value)}
                           placeholder="e.g. 12F"
@@ -1627,10 +1624,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) </label>
                         <input
                           type="number"
-                          required
+                          
                           value={fareAmt || ""}
                           onChange={(e) => setFareAmt(Number(e.target.value))}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
@@ -1673,10 +1670,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 {transportCategory === "Taxi" && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Provider (Uber, Ola, Local) *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Provider (Uber, Ola, Local) </label>
                       <input
                         type="text"
-                        required
+                        
                         value={operatorName}
                         onChange={(e) => setOperatorName(e.target.value)}
                         placeholder="e.g. Uber, Ola, Local Cab"
@@ -1686,10 +1683,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pickup Point *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pickup Point </label>
                         <input
                           type="text"
-                          required
+                          
                           value={fromLoc}
                           onChange={(e) => setFromLoc(e.target.value)}
                           placeholder="e.g. Hotel Main Entrance"
@@ -1697,10 +1694,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Drop Point *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Drop Point </label>
                         <input
                           type="text"
-                          required
+                          
                           value={toLoc}
                           onChange={(e) => setToLoc(e.target.value)}
                           placeholder="e.g. Gateway Mall"
@@ -1711,20 +1708,20 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fare ({trip.currency}) </label>
                         <input
                           type="number"
-                          required
+                          
                           value={fareAmt || ""}
                           onChange={(e) => setFareAmt(Number(e.target.value))}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
@@ -1776,10 +1773,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 {transportCategory === "PersonalVehicle" && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Vehicle Name *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Vehicle Name </label>
                       <input
                         type="text"
-                        required
+                        
                         value={operatorName}
                         onChange={(e) => setOperatorName(e.target.value)}
                         placeholder="e.g. Honda City, Pulsar 220"
@@ -1789,10 +1786,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">From *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">From </label>
                         <input
                           type="text"
-                          required
+                          
                           value={fromLoc}
                           onChange={(e) => setFromLoc(e.target.value)}
                           placeholder="e.g. Bangalore"
@@ -1800,10 +1797,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">To *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">To </label>
                         <input
                           type="text"
-                          required
+                          
                           value={toLoc}
                           onChange={(e) => setToLoc(e.target.value)}
                           placeholder="e.g. Mysore"
@@ -1814,20 +1811,20 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Departure Time </label>
                         <input
                           type="datetime-local"
-                          required
+                          
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                           className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Distance (km) *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Distance (km) </label>
                         <input
                           type="number"
-                          required
+                          
                           value={distKm || ""}
                           onChange={(e) => setDistKm(Number(e.target.value))}
                           placeholder="e.g. 145"
@@ -1893,10 +1890,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">From *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">From </label>
                         <input
                           type="text"
-                          required
+                          
                           value={fromLoc}
                           onChange={(e) => setFromLoc(e.target.value)}
                           placeholder="e.g. Gate A"
@@ -1904,10 +1901,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">To *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">To </label>
                         <input
                           type="text"
-                          required
+                          
                           value={toLoc}
                           onChange={(e) => setToLoc(e.target.value)}
                           placeholder="e.g. Food Court"
@@ -1918,11 +1915,11 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Distance (km) *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Distance (km) </label>
                         <input
                           type="number"
                           step="0.1"
-                          required
+                          
                           value={distKm || ""}
                           onChange={(e) => setDistKm(Number(e.target.value))}
                           placeholder="e.g. 0.8"
@@ -1930,10 +1927,10 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Estimated Time *</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Estimated Time </label>
                         <input
                           type="text"
-                          required
+                          
                           value={durationStr}
                           onChange={(e) => setDurationStr(e.target.value)}
                           placeholder="e.g. 10m, 45m"
@@ -2049,8 +2046,8 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
 
             <form onSubmit={handleAddHotel} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hotel Name *</label>
-                <input type="text" required value={hotelName} onChange={(e) => setHotelName(e.target.value)} placeholder="e.g. Taj Exotica" className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border text-slate-950 dark:text-white" />
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hotel Name </label>
+                <input type="text"  value={hotelName} onChange={(e) => setHotelName(e.target.value)} placeholder="e.g. Taj Exotica" className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border text-slate-950 dark:text-white" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

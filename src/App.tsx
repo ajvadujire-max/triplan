@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { User } from "firebase/auth";
 import { getDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "./lib/firebase";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AdminPortal } from "./components/AdminPortal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { InitSuperAdmin } from "./components/InitSuperAdmin";
@@ -33,7 +33,6 @@ import { ActivityTimeline } from "./components/ActivityTimeline";
 import { PlannerModule } from "./components/PlannerModule";
 import { WeatherMapsTimeline } from "./components/WeatherMapsTimeline";
 import { FinanceIntegration } from "./components/FinanceIntegration";
-import { AiInsightsModule } from "./components/AiInsightsModule";
 import { TravelDiaryModule } from "./components/TravelDiaryModule";
 import { initAuth, googleSignIn, logoutGoogle } from "./lib/googleAuth";
 import {
@@ -105,9 +104,33 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     };
   }, []);
 
-  const [activeTab, setActiveTab] = useState<
-    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "ai" | "ai_insights"
-  >("dashboard");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  let basePath = "/dashboard";
+  if (location.pathname.startsWith("/admin/dashboard")) {
+    basePath = "/admin/dashboard";
+  } else if (location.pathname.startsWith("/app")) {
+    basePath = "/app";
+  }
+
+  const relativePath = location.pathname.substring(basePath.length);
+  const pathSegments = relativePath.split("/").filter(Boolean);
+  const rawTab = pathSegments[0] || "dashboard";
+
+  const validTabs = [
+    "dashboard", "planner", "journey", "collections", "timeline",
+    "travellers", "expenses", "vault", "weather", "weather_maps",
+    "finance", "diary", "ai_insights"
+  ];
+
+  const activeTab = (validTabs.includes(rawTab) ? rawTab : "dashboard") as
+    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "diary";
+
+  const handleSelectTab = (tab: string) => {
+    if (tab === activeTab && pathSegments.length <= 1) return;
+    navigate(`${basePath}/${tab}`);
+  };
 
   const [accounts, setAccounts] = useState<FinanceAccount[]>(() => {
     const saved = localStorage.getItem("trippro_accounts");
@@ -556,6 +579,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
+      <ConnectivityIndicator />
       {isLoadingCloud && (
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4">
@@ -578,7 +602,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
         activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab as any)}
+        onSelectTab={handleSelectTab}
         user={user}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
@@ -598,7 +622,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
         activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab as any)}
+        onSelectTab={handleSelectTab}
         user={user}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
@@ -612,7 +636,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           <TripDashboard
             trip={activeTrip}
             onUpdateTrip={handleUpdateTrip}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
+            onNavigateTab={handleSelectTab}
             onEditTrip={() => {
               setEditingTrip(activeTrip);
               setIsCreateModalOpen(true);
@@ -625,7 +649,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           <CollectionsModule
             trip={activeTrip}
             onUpdateTrip={handleUpdateTrip}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
+            onNavigateTab={handleSelectTab}
           />
         )}
 
@@ -663,7 +687,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         )}
 
         {activeTab === "vault" && (
-          <VaultChecklist trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+          <VaultChecklist trip={activeTrip} onUpdateTrip={handleUpdateTrip} currentUser={user} />
         )}
 
         {(activeTab === "weather" || activeTab === "weather_maps") && (
@@ -681,8 +705,6 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             onDeleteCashbookEntry={handleDeleteCashbookEntry}
           />
         )}
-
-        {(activeTab === "ai" || activeTab === "ai_insights") && <AiInsightsModule trip={activeTrip} />}
       </main>
 
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-auto print:hidden">
@@ -712,6 +734,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   );
 }
 
+import { ConnectivityIndicator } from "./components/ConnectivityIndicator";
 import { ContactTravellerProvider } from "./components/ContactOptionsBottomSheet";
 
 import LandingPage from "./pages/LandingPage";
@@ -739,12 +762,12 @@ export default function App() {
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
         
         {/* Dashboards - All using original MainApp but with roles */}
-        <Route path="/dashboard" element={<MainApp role="traveller" />} />
-        <Route path="/admin/dashboard" element={<MainApp role="organizer" />} />
-        <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="/dashboard/*" element={<MainApp role="traveller" />} />
+        <Route path="/admin/dashboard/*" element={<MainApp role="organizer" />} />
+        <Route path="/super-admin/dashboard/*" element={<SuperAdminDashboard />} />
 
         {/* Fallbacks */}
-        <Route path="/app" element={<MainApp role="traveller" />} />
+        <Route path="/app/*" element={<MainApp role="traveller" />} />
       </Routes>
     </ContactTravellerProvider>
   );
