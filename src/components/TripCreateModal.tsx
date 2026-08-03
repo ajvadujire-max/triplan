@@ -8,6 +8,7 @@ import { Trip, TripPurpose, TripStatus } from "../types";
 import { X, Image as ImageIcon, Palette, Compass } from "lucide-react";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
 import { auth } from "../lib/firebase";
+import { useModalBack } from "../hooks/useModalBack";
 
 interface TripCreateModalProps {
   isOpen: boolean;
@@ -30,6 +31,8 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
   onSaveTrip,
   initialTrip,
 }) => {
+  useModalBack(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const [name, setName] = useState(initialTrip?.name || "");

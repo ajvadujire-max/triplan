@@ -6,6 +6,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Phone, X, Copy, Check, Smartphone, AlertCircle } from "lucide-react";
+import { useModalBack } from "../hooks/useModalBack";
 
 interface ContactTarget {
   phone: string;
@@ -52,6 +53,12 @@ export const ContactTravellerProvider: React.FC<ProviderProps> = ({ children }) 
   const [copied, setCopied] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
+  const closeContact = () => {
+    setTarget(null);
+  };
+
+  useModalBack(!!target, closeContact);
+
   const openContact = (phone: string, name?: string) => {
     if (!phone || !phone.trim()) {
       showSnackbar("No valid phone number provided for this traveller.");
@@ -59,10 +66,6 @@ export const ContactTravellerProvider: React.FC<ProviderProps> = ({ children }) 
     }
     setTarget({ phone: phone.trim(), name: name?.trim() });
     setCopied(false);
-  };
-
-  const closeContact = () => {
-    setTarget(null);
   };
 
   const showSnackbar = (msg: string) => {

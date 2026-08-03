@@ -8,6 +8,7 @@ import { User } from "firebase/auth";
 import { getDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "./lib/firebase";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
 import { AdminPortal } from "./components/AdminPortal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { InitSuperAdmin } from "./components/InitSuperAdmin";
@@ -631,80 +632,91 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         onRoleChange={(newRole) => setUserRole(newRole)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 space-y-6">
-        {activeTab === "dashboard" && (
-          <TripDashboard
-            trip={activeTrip}
-            onUpdateTrip={handleUpdateTrip}
-            onNavigateTab={handleSelectTab}
-            onEditTrip={() => {
-              setEditingTrip(activeTrip);
-              setIsCreateModalOpen(true);
-            }}
-            role={userRole}
-          />
-        )}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="w-full space-y-6"
+          >
+            {activeTab === "dashboard" && (
+              <TripDashboard
+                trip={activeTrip}
+                onUpdateTrip={handleUpdateTrip}
+                onNavigateTab={handleSelectTab}
+                onEditTrip={() => {
+                  setEditingTrip(activeTrip);
+                  setIsCreateModalOpen(true);
+                }}
+                role={userRole}
+              />
+            )}
 
-        {activeTab === "collections" && (
-          <CollectionsModule
-            trip={activeTrip}
-            onUpdateTrip={handleUpdateTrip}
-            onNavigateTab={handleSelectTab}
-          />
-        )}
+            {activeTab === "collections" && (
+              <CollectionsModule
+                trip={activeTrip}
+                onUpdateTrip={handleUpdateTrip}
+                onNavigateTab={handleSelectTab}
+              />
+            )}
 
-        {activeTab === "travellers" && (
-          <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} appRole={userRole} currentUser={user} />
-        )}
-        
-        {activeTab === "planner" && (
-          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
-        )}
+            {activeTab === "travellers" && (
+              <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} appRole={userRole} currentUser={user} />
+            )}
+            
+            {activeTab === "planner" && (
+              <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
+            )}
 
-        {activeTab === "diary" && (
-          <TravelDiaryModule trip={activeTrip} currentUser={user} />
-        )}
+            {activeTab === "diary" && (
+              <TravelDiaryModule trip={activeTrip} currentUser={user} />
+            )}
 
-        {/* Fallbacks for internal navigation if any */}
-        {activeTab === "journey" && (
-          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
-        )}
+            {/* Fallbacks for internal navigation if any */}
+            {activeTab === "journey" && (
+              <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
+            )}
 
-        {activeTab === "timeline" && (
-          <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
-        )}
+            {activeTab === "timeline" && (
+              <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
+            )}
 
-        {activeTab === "expenses" && (
-          <ExpensesModule
-            trip={activeTrip}
-            accounts={accounts}
-            onAddExpense={handleAddExpense}
-            onDeleteExpense={handleDeleteExpense}
-            onUpdateTrip={handleUpdateTrip}
-            role={userRole}
-            currentUser={user}
-          />
-        )}
+            {activeTab === "expenses" && (
+              <ExpensesModule
+                trip={activeTrip}
+                accounts={accounts}
+                onAddExpense={handleAddExpense}
+                onDeleteExpense={handleDeleteExpense}
+                onUpdateTrip={handleUpdateTrip}
+                role={userRole}
+                currentUser={user}
+              />
+            )}
 
-        {activeTab === "vault" && (
-          <VaultChecklist trip={activeTrip} onUpdateTrip={handleUpdateTrip} currentUser={user} />
-        )}
+            {activeTab === "vault" && (
+              <VaultChecklist trip={activeTrip} onUpdateTrip={handleUpdateTrip} currentUser={user} />
+            )}
 
-        {(activeTab === "weather" || activeTab === "weather_maps") && (
-          <WeatherMapsTimeline trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
-        )}
+            {(activeTab === "weather" || activeTab === "weather_maps") && (
+              <WeatherMapsTimeline trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+            )}
 
-        {activeTab === "finance" && (
-          <FinanceIntegration
-            trip={activeTrip}
-            accounts={accounts}
-            cashbookEntries={cashbook}
-            onSaveAccount={handleSaveAccount}
-            onDeleteAccount={handleDeleteAccount}
-            onSaveCashbookEntry={handleSaveCashbookEntry}
-            onDeleteCashbookEntry={handleDeleteCashbookEntry}
-          />
-        )}
+            {activeTab === "finance" && (
+              <FinanceIntegration
+                trip={activeTrip}
+                accounts={accounts}
+                cashbookEntries={cashbook}
+                onSaveAccount={handleSaveAccount}
+                onDeleteAccount={handleDeleteAccount}
+                onSaveCashbookEntry={handleSaveCashbookEntry}
+                onDeleteCashbookEntry={handleDeleteCashbookEntry}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-auto print:hidden">
