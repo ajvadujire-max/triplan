@@ -228,6 +228,8 @@ export default function JoinTrip() {
         }
         localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
         localStorage.setItem("trippro_active_trip_id", trip.id);
+        localStorage.setItem("trippro_last_trip_id", trip.id);
+        localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
         window.dispatchEvent(new Event("trip_changed"));
 
         setIsSuccess(true);
@@ -400,6 +402,8 @@ export default function JoinTrip() {
         }
         localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
         localStorage.setItem("trippro_active_trip_id", trip.id);
+        localStorage.setItem("trippro_last_trip_id", trip.id);
+        localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
         window.dispatchEvent(new Event("trip_changed"));
 
         setIsSuccess(true);
@@ -464,6 +468,8 @@ export default function JoinTrip() {
             onClick={() => {
               if (trip) {
                 localStorage.setItem("trippro_active_trip_id", trip.id);
+                localStorage.setItem("trippro_last_trip_id", trip.id);
+                localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
                 window.dispatchEvent(new Event("trip_changed"));
               }
               navigate("/dashboard");
@@ -471,6 +477,12 @@ export default function JoinTrip() {
             className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg cursor-pointer"
           >
             Open Trip Dashboard
+          </button>
+          <button
+            onClick={() => navigate("/join")}
+            className="w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs cursor-pointer"
+          >
+            Join Another Trip
           </button>
         </motion.div>
       </div>
@@ -494,6 +506,8 @@ export default function JoinTrip() {
             onClick={() => {
               if (trip) {
                 localStorage.setItem("trippro_active_trip_id", trip.id);
+                localStorage.setItem("trippro_last_trip_id", trip.id);
+                localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
                 window.dispatchEvent(new Event("trip_changed"));
               }
               navigate("/dashboard");
@@ -501,6 +515,12 @@ export default function JoinTrip() {
             className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 cursor-pointer"
           >
             Go to My Dashboard
+          </button>
+          <button
+            onClick={() => navigate("/join")}
+            className="w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs cursor-pointer mt-2"
+          >
+            Join Another Trip
           </button>
         </motion.div>
       </div>

@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Ticket, AlertCircle, ArrowLeft } from "lucide-react";
+import { ArrowRight, Ticket, AlertCircle, ArrowLeft, Compass } from "lucide-react";
 import { motion } from "motion/react";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 
 export default function JoinTripByCode() {
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => localStorage.getItem("trippro_last_trip_code") || "");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const lastJoinedCode = localStorage.getItem("trippro_last_trip_code");
+  const activeTripId = localStorage.getItem("trippro_active_trip_id");
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +40,8 @@ export default function JoinTripByCode() {
         }
       }
 
-      // If trip exists, open Join Trip page
+      // If trip exists, save as last joined code and open Join Trip page
+      localStorage.setItem("trippro_last_trip_code", cleanCode);
       navigate(`/t/${cleanCode}`);
     } catch (err) {
       console.error("Error looking up trip code:", err);
@@ -83,6 +87,31 @@ export default function JoinTripByCode() {
           <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {activeTripId && (
+          <div className="mb-4 p-3.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                <Compass className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 text-left">
+                <div className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">
+                  Active Session
+                </div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                  Resume Trip Dashboard
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+            >
+              Open Dashboard
+            </button>
           </div>
         )}
 
