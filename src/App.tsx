@@ -113,6 +113,15 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const activeTrip = trips.find((t) => t.id === selectedTripId) || trips[0];
+
+  useEffect(() => {
+    if (activeTrip && user && userRole !== "super_admin") {
+      const isOrganizer = activeTrip.organizerUid === user.uid || activeTrip.organizerId === user.uid;
+      setUserRole(isOrganizer ? "organizer" : "traveller");
+    }
+  }, [activeTrip?.id, user?.uid]);
+
   let basePath = "/dashboard";
   if (location.pathname.startsWith("/admin/dashboard")) {
     basePath = "/admin/dashboard";
@@ -240,21 +249,29 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
           // Real-time trips listener based on role
           const tripsRef = collection(db, "trips");
-          const tripsQuery = role === "organizer"
-            ? query(tripsRef, where("organizerUid", "==", loggedInUser.uid))
-            : query(tripsRef, where("memberUids", "array-contains", loggedInUser.uid));
+          const tripsQuery = query(
+            tripsRef, 
+            where("memberUids", "array-contains", loggedInUser.uid)
+          );
 
           unsubscribeTrips = onSnapshot(tripsQuery, (snapshot) => {
             const fetchedTrips: Trip[] = [];
             snapshot.forEach((docSnap) => {
               fetchedTrips.push(docSnap.data() as Trip);
             });
+            
             if (fetchedTrips.length > 0) {
               setTrips(fetchedTrips);
-              setSelectedTripId((prevId) => {
-                if (fetchedTrips.some((t) => t.id === prevId)) return prevId;
-                return fetchedTrips[0].id;
-              });
+              
+              const active = localStorage.getItem("trippro_active_trip_id");
+              if (active && fetchedTrips.some(t => t.id === active)) {
+                setSelectedTripId(active);
+              } else {
+                setSelectedTripId(fetchedTrips[0].id);
+                localStorage.setItem("trippro_active_trip_id", fetchedTrips[0].id);
+              }
+            } else {
+              setTrips([]);
             }
             setIsLoadingCloud(false);
           }, (err) => {
@@ -435,8 +452,6 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
       console.error("Google logout failed:", err);
     }
   };
-
-  const activeTrip = trips.find((t) => t.id === selectedTripId) || trips[0];
 
   const handleUpdateTrip = (updatedTrip: Trip) => {
     setTrips((prev) => prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t)));
@@ -619,6 +634,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           setEditingTrip(null);
           setIsCreateModalOpen(true);
         }}
+        onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
         activeTab={activeTab}
@@ -639,6 +655,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           setEditingTrip(null);
           setIsCreateModalOpen(true);
         }}
+        onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
         activeTab={activeTab}
@@ -762,6 +779,35 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         }}
         onSaveTrip={handleSaveTrip}
         initialTrip={editingTrip}
+      />
+
+      <SwitchTripModal
+        isOpen={isSwitchTripModalOpen}
+        onClose={() => setIsSwitchTripModalOpen(false)}
+        trips={trips}
+        activeTripId={selectedTripId}
+        onSelectTrip={(id) => setSelectedTripId(id)}
+        onJoinNewTrip={() => {
+          setIsSwitchTripModalOpen(false);
+          navigate('/join');
+        }}
+        onLeaveTrip={async (tripId) => {
+          if (!user) return;
+          try {
+            await leaveTrip(tripId, user.uid);
+            // Assuming leaveTrip removes them from backend, 
+            // the onSnapshot listener will update trips automatically
+            if (tripId === selectedTripId) {
+              const remainingTrips = trips.filter(t => t.id !== tripId);
+              if (remainingTrips.length > 0) {
+                setSelectedTripId(remainingTrips[0].id);
+              }
+            }
+          } catch (err) {
+            console.error("Failed to leave trip", err);
+          }
+        }}
+        currentUserId={user?.uid}
       />
     </div>
   );

@@ -692,7 +692,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
 
                             return (
                               <div
-                                key={idx}
+                                key={photoUrl + idx}
                                 onClick={() => navigate(`${basePath}/diary/${entry.id}/photo/${idx}`)}
                                 className="relative aspect-video sm:aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group/photo border border-slate-200/50 dark:border-slate-800"
                               >
@@ -903,7 +903,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
                       {formPhotos.map((photo, idx) => (
                         <div
-                          key={idx}
+                          key={photo + idx}
                           className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group"
                         >
                           <img
@@ -1077,7 +1077,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {viewingEntry.photos.map((photo, idx) => (
                         <div
-                          key={idx}
+                          key={photo + idx}
                           onClick={() => navigate(`${basePath}/diary/${viewingEntry.id}/photo/${idx}`)}
                           className="aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer border border-slate-200 dark:border-slate-800 group"
                         >
@@ -1253,7 +1253,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
               <div className="flex gap-2 max-w-md overflow-x-auto py-2">
                 {lightboxImages.map((img, i) => (
                   <button
-                    key={i}
+                    key={img + i}
                     onClick={() => {
                       if (viewingEntry) {
                         navigate(`${basePath}/diary/${viewingEntry.id}/photo/${i}`, { replace: true });

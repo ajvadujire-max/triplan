@@ -31,10 +31,6 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
   onSaveTrip,
   initialTrip,
 }) => {
-  useModalBack(isOpen, onClose);
-
-  if (!isOpen) return null;
-
   const [name, setName] = useState(initialTrip?.name || "");
   const [destination, setDestination] = useState(initialTrip?.destination || "");
   const [purpose, setPurpose] = useState<TripPurpose>(initialTrip?.purpose || "Vacation");
@@ -47,6 +43,10 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
   const [currency, setCurrency] = useState(initialTrip?.currency || "₹");
   const [travelCategory, setTravelCategory] = useState(initialTrip?.travelCategory || "Family Vacation");
   const [totalBudget, setTotalBudget] = useState(initialTrip?.totalBudget || 30000);
+
+  useModalBack(isOpen, onClose);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,7 +318,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
             <div className="flex items-center gap-2 overflow-x-auto py-1">
               {defaultCovers.map((img, idx) => (
                 <img
-                  key={idx}
+                  key={img + idx}
                   src={img}
                   alt="cover preset"
                   onClick={() => setCoverPhoto(img)}

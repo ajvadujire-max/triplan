@@ -216,7 +216,7 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px]">
           {smartChips.map((chip, idx) => (
             <button
-              key={idx}
+              key={chip.label + idx}
               onClick={() => handleOpenGoogleMaps(chip.query)}
               className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:border-#1AAB67/100 font-bold whitespace-nowrap shrink-0 transition-colors active:scale-95 cursor-pointer"
             >

@@ -994,7 +994,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {selectedTraveller.history.map((item, idx) => (
                   <div
-                    key={idx}
+                    key={item.description + idx}
                     className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
                   >
                     <div className="min-w-0 pr-2">
@@ -1082,34 +1082,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   );
 
   return (
-    <div className="space-y-3 sm:space-y-6">
-      {/* Module Title & Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4 bg-white dark:bg-slate-900 p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400" />
-            <h2 className="text-sm sm:text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
-              Travellers & Individual Budgets
-            </h2>
-          </div>
-          <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-            Manage trip members, emergency contacts, roles, personal budgets, and expenditure.
-          </p>
-        </div>
-
-        {isOrganizer && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 text-xs cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" /> Add Traveller
-            </button>
-          </div>
-        )}
-      </div>
-
+    <>
       {/* Travellers List & Individual Budget Progress */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {travellerStats.map((t) => (
@@ -1293,6 +1266,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };

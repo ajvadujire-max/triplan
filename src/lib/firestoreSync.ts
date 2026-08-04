@@ -47,42 +47,29 @@ export async function fetchTripByInviteCode(code: string): Promise<Trip | null> 
 
   try {
     const colRef = collection(db, path);
-    const allSnapshot = await getDocs(colRef);
-    console.log("[Trip Lookup Debug] Total documents in collection 'trips' scanned =", allSnapshot.size);
+    
+    // First try querying by inviteCode (requires proper Firestore rules or indexing, but list is allowed if inviteCode is present)
+    const inviteQuery = query(colRef, where("inviteCode", "==", normalizedCode));
+    const inviteSnap = await getDocs(inviteQuery);
+    if (!inviteSnap.empty) {
+      return inviteSnap.docs[0].data() as Trip;
+    }
 
-    let matchingDoc: any = null;
-    let matchingTrip: Trip | null = null;
+    // Next try querying by tripCode
+    const tripCodeQuery = query(colRef, where("tripCode", "==", normalizedCode));
+    const tripCodeSnap = await getDocs(tripCodeQuery);
+    if (!tripCodeSnap.empty) {
+      return tripCodeSnap.docs[0].data() as Trip;
+    }
 
-    allSnapshot.forEach((docSnap) => {
-      const data = docSnap.data() as Trip;
-      const tripCodeMatch = data.tripCode && data.tripCode.toUpperCase() === normalizedCode;
-      const inviteCodeMatch = data.inviteCode && data.inviteCode.toUpperCase() === normalizedCode;
-      const idMatch = data.id && data.id.toUpperCase() === normalizedCode;
-
-      if (tripCodeMatch || inviteCodeMatch || idMatch) {
-        const organizerEmail = data.travellers?.find(t => t.role?.toLowerCase() === "organizer")?.email || data.organizerId || "unknown";
-        const organizerUid = data.organizerUid || data.organizerId || "unknown";
-        const docPath = `${path}/${docSnap.id}`;
-        
-        console.log("[Trip Lookup Debug] MATCH FOUND:", {
-          documentId: docSnap.id,
-          collectionPath: docPath,
-          tripName: data.name,
-          organizerEmail,
-          organizerUid,
-          tripCode: data.tripCode,
-          inviteCode: data.inviteCode,
-        });
-
-        if (!matchingTrip) {
-          matchingTrip = data;
-          matchingDoc = docSnap;
-        }
+    // Finally try checking if the code is actually a tripId directly
+    try {
+      const docSnap = await getDoc(doc(db, path, normalizedCode));
+      if (docSnap.exists()) {
+        return docSnap.data() as Trip;
       }
-    });
-
-    if (matchingTrip) {
-      return matchingTrip;
+    } catch (e) {
+      // Ignore if document not found
     }
 
     console.warn("[Trip Lookup Debug] Zero documents found in Firestore matching tripCode or inviteCode:", normalizedCode);
