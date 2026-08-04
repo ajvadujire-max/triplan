@@ -56,6 +56,11 @@ service cloud.firestore {
       // Full update/delete restricted to Trip Organizer or Super Admin
       // Travellers can update expenses, travellers array, pendingRegistrations, memberUids, members, or updatedAt when joining/adding expenses or editing profile
       allow delete: if isTripOrganizer(resource.data);
+      allow get: if (isAuthenticated() && (
+        isTripOrganizer(resource.data) ||
+        (resource.data.memberUids != null && request.auth.uid in resource.data.memberUids)
+      )) || (resource.data.inviteCode != null || resource.data.tripCode != null);
+      allow list: if isAuthenticated();
       allow update: if isAuthenticated() && (
         isTripOrganizer(resource.data) ||
         request.auth.uid in request.resource.data.memberUids ||

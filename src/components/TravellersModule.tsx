@@ -1084,6 +1084,17 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   return (
     <>
       {/* Travellers List & Individual Budget Progress */}
+      {isOrganizer && (
+        <div className="mb-3">
+          <button
+            onClick={handleOpenAdd}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold py-3 rounded-xl border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            + Add Traveller
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {travellerStats.map((t) => (
           <div
