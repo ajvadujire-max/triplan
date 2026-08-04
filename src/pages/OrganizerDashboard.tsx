@@ -356,7 +356,12 @@ export default function OrganizerDashboard() {
       {/* QR Modal */}
       <AnimatePresence>
         {showQr && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          >
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -382,7 +387,7 @@ export default function OrganizerDashboard() {
                 Close
               </button>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

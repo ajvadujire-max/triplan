@@ -123,7 +123,12 @@ export const ContactTravellerProvider: React.FC<ProviderProps> = ({ children }) 
       {/* Material 3 Bottom Sheet Modal */}
       <AnimatePresence>
         {target && (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4"
+          >
             {/* Backdrop click to dismiss */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -239,7 +244,7 @@ export const ContactTravellerProvider: React.FC<ProviderProps> = ({ children }) 
                 </button>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -13,6 +13,7 @@ import { GoogleFormCollectModal } from "./GoogleFormCollectModal";
 import { EditPendingRegistrationModal } from "./EditPendingRegistrationModal";
 import { ProfilePhotoUpload, getInitials } from "./ProfilePhotoUpload";
 import { Avatar, getTravellerPhoto } from "./Avatar";
+import { uploadProfilePhotoToStorage } from "../lib/image-utils";
 import { ContactPhoneButton } from "./ContactOptionsBottomSheet";
 import {
   Users,
@@ -35,7 +36,467 @@ import {
   ArrowLeft,
   Trash2,
   Droplet,
+  Loader2,
 } from "lucide-react";
+
+interface EditTravellerModalProps {
+  isOpen: boolean;
+  editingTraveller: Traveller | null;
+  isOrganizer: boolean;
+  currency: string;
+  currentUser: any;
+  onClose: () => void;
+  onSave: (updatedTraveller: Traveller, isEditMode: boolean) => Promise<void>;
+  showToast: (message: string, type?: "success" | "error") => void;
+}
+
+const EditTravellerModal: React.FC<EditTravellerModalProps> = ({
+  isOpen,
+  editingTraveller,
+  isOrganizer,
+  currency,
+  currentUser,
+  onClose,
+  onSave,
+  showToast,
+}) => {
+  if (!isOpen) return null;
+
+  const [fullName, setFullName] = useState("");
+  const [age, setAge] = useState<number>(25);
+  const [gender, setGender] = useState<"Male" | "Female" | "Other">("Male");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("O+");
+  const [passportNumber, setPassportNumber] = useState("");
+  const [drivingLicense, setDrivingLicense] = useState("");
+  const [formRole, setFormRole] = useState<TravellerRole>("Traveller");
+  const [allocatedBudget, setAllocatedBudget] = useState<number>(5000);
+  const [profilePhoto, setProfilePhoto] = useState("");
+
+  const [initialState, setInitialState] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  // Sync / initialize form state when modal opens
+  React.useEffect(() => {
+    if (editingTraveller) {
+      const photo = editingTraveller.profilePhotoUrl || editingTraveller.profilePhoto || "";
+      const init = {
+        fullName: editingTraveller.fullName || "",
+        age: editingTraveller.age ?? 25,
+        gender: editingTraveller.gender || "Male",
+        phone: editingTraveller.phone || "",
+        email: editingTraveller.email || "",
+        emergencyContact: editingTraveller.emergencyContact || "",
+        bloodGroup: editingTraveller.bloodGroup || "O+",
+        passportNumber: editingTraveller.passportNumber || "",
+        drivingLicense: editingTraveller.drivingLicense || "",
+        formRole: editingTraveller.role || "Traveller",
+        allocatedBudget: editingTraveller.allocatedBudget ?? 0,
+        profilePhoto: photo,
+      };
+      setFullName(init.fullName);
+      setAge(init.age);
+      setGender(init.gender as any);
+      setPhone(init.phone);
+      setEmail(init.email);
+      setEmergencyContact(init.emergencyContact);
+      setBloodGroup(init.bloodGroup);
+      setPassportNumber(init.passportNumber);
+      setDrivingLicense(init.drivingLicense);
+      setFormRole(init.formRole);
+      setAllocatedBudget(init.allocatedBudget);
+      setProfilePhoto(init.profilePhoto);
+      setInitialState(init);
+    } else {
+      const init = {
+        fullName: "",
+        age: 26,
+        gender: "Male" as const,
+        phone: "+91 ",
+        email: "",
+        emergencyContact: "+91 ",
+        bloodGroup: "O+",
+        passportNumber: "",
+        drivingLicense: "",
+        formRole: "Traveller" as TravellerRole,
+        allocatedBudget: 5000,
+        profilePhoto: "",
+      };
+      setFullName(init.fullName);
+      setAge(init.age);
+      setGender(init.gender);
+      setPhone(init.phone);
+      setEmail(init.email);
+      setEmergencyContact(init.emergencyContact);
+      setBloodGroup(init.bloodGroup);
+      setPassportNumber(init.passportNumber);
+      setDrivingLicense(init.drivingLicense);
+      setFormRole(init.formRole);
+      setAllocatedBudget(init.allocatedBudget);
+      setProfilePhoto(init.profilePhoto);
+      setInitialState(init);
+    }
+  }, [editingTraveller, isOpen]);
+
+  // Compute if form has unsaved changes
+  const isDirty = useMemo(() => {
+    if (!initialState) return false;
+    return (
+      fullName !== initialState.fullName ||
+      age !== initialState.age ||
+      gender !== initialState.gender ||
+      phone !== initialState.phone ||
+      email !== initialState.email ||
+      emergencyContact !== initialState.emergencyContact ||
+      bloodGroup !== initialState.bloodGroup ||
+      passportNumber !== initialState.passportNumber ||
+      drivingLicense !== initialState.drivingLicense ||
+      formRole !== initialState.formRole ||
+      allocatedBudget !== initialState.allocatedBudget ||
+      profilePhoto !== initialState.profilePhoto
+    );
+  }, [
+    initialState,
+    fullName,
+    age,
+    gender,
+    phone,
+    email,
+    emergencyContact,
+    bloodGroup,
+    passportNumber,
+    drivingLicense,
+    formRole,
+    allocatedBudget,
+    profilePhoto,
+  ]);
+
+  const handleCloseEditTraveller = () => {
+    if (isDirty) {
+      setShowDiscardConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSaving) return;
+
+    if (!fullName.trim()) {
+      showToast("Full Name is required", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      let finalPhotoUrl = profilePhoto.trim();
+
+      // Upload newly selected base64/data URL photo to storage
+      if (finalPhotoUrl && finalPhotoUrl.startsWith("data:")) {
+        try {
+          const targetId = editingTraveller?.id || `trv_${Date.now()}`;
+          finalPhotoUrl = await uploadProfilePhotoToStorage(finalPhotoUrl, targetId);
+        } catch (photoErr) {
+          console.error("Profile photo upload notice:", photoErr);
+        }
+      }
+
+      const updatedTraveller: Traveller = {
+        id: editingTraveller?.id || `trv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        fullName: fullName.trim(),
+        age: Number(age) || 0,
+        gender,
+        phone: phone.trim(),
+        email: email.trim(),
+        emergencyContact: emergencyContact.trim(),
+        bloodGroup: bloodGroup.trim(),
+        passportNumber: passportNumber.trim(),
+        drivingLicense: drivingLicense.trim(),
+        role: formRole,
+        allocatedBudget: Number(allocatedBudget) || 0,
+        profilePhotoUrl: finalPhotoUrl,
+        profilePhoto: finalPhotoUrl,
+      };
+
+      await onSave(updatedTraveller, !!editingTraveller);
+      onClose();
+    } catch (err) {
+      console.error("Failed to save traveller:", err);
+      showToast("Unable to save traveller. Please try again.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div 
+        onClick={handleCloseEditTraveller}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden"
+      >
+        <motion.div
+          initial={{ y: "100%", opacity: 0.5 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "100%", opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 220 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[24px] shadow-2xl w-[calc(100%-24px)] max-w-[520px] max-h-[92dvh] flex flex-col overflow-hidden relative pointer-events-auto"
+        >
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              {editingTraveller ? "Edit Traveller Profile" : "Add New Traveller"}
+            </h3>
+            <button
+              type="button"
+              onClick={handleCloseEditTraveller}
+              className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer shrink-0 pointer-events-auto z-10"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5 pointer-events-none" />
+            </button>
+          </div>
+
+          {/* Form Content */}
+          <form onSubmit={handleSubmit} className="overflow-y-auto px-5 py-4 space-y-3.5 flex-1">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Nafih Hashim"
+                className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Age
+                </label>
+                <input
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(Number(e.target.value))}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Gender
+                </label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value as any)}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Role
+                </label>
+                <select
+                  value={formRole}
+                  disabled={!isOrganizer}
+                  onChange={(e) => setFormRole(e.target.value as TravellerRole)}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="Organizer">Organizer</option>
+                  <option value="Traveller">Traveller</option>
+                  <option value="Driver">Driver</option>
+                  <option value="Guest">Guest</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Personal Budget ({currency})
+                </label>
+                <input
+                  type="number"
+                  disabled={!isOrganizer}
+                  value={allocatedBudget}
+                  onChange={(e) => setAllocatedBudget(Number(e.target.value))}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Phone
+              </label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Emergency Contact
+              </label>
+              <input
+                type="text"
+                value={emergencyContact}
+                onChange={(e) => setEmergencyContact(e.target.value)}
+                className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Blood Group
+                </label>
+                <input
+                  type="text"
+                  value={bloodGroup}
+                  onChange={(e) => setBloodGroup(e.target.value)}
+                  placeholder="e.g. O+"
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  disabled={!isOrganizer}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Passport No (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={passportNumber}
+                  onChange={(e) => setPassportNumber(e.target.value)}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Driving License (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={drivingLicense}
+                  onChange={(e) => setDrivingLicense(e.target.value)}
+                  className="w-full h-12 px-3.5 text-sm sm:text-base rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <ProfilePhotoUpload
+              photoUrl={profilePhoto}
+              fullName={fullName}
+              onChangePhoto={(newUrl) => setProfilePhoto(newUrl)}
+              onRemovePhoto={() => setProfilePhoto("")}
+            />
+
+            <div className="flex items-center justify-end gap-3 pt-3 pb-1 border-t border-slate-100 dark:border-slate-800 mt-2">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={handleCloseEditTraveller}
+                className="min-h-[44px] px-5 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all disabled:opacity-50 cursor-pointer pointer-events-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="min-h-[44px] px-6 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>Save Member</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+
+      {/* Discard Changes Confirmation Dialog */}
+      <AnimatePresence>
+        {showDiscardConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+            >
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Discard changes?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">You have unsaved changes.</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDiscardConfirm(false)}
+                  className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+                >
+                  Keep Editing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDiscardConfirm(false);
+                    onClose();
+                  }}
+                  className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 active:scale-95 transition-all shadow-md shadow-rose-600/20 cursor-pointer"
+                >
+                  Discard
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
 
 interface TravellersModuleProps {
   trip: Trip;
@@ -53,14 +514,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   const isOrganizer = appRole === "organizer" || appRole === "super_admin";
   const { basePath, relativePath, navigate, goBack } = useAppNavigation();
   const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
-
-  // Route paths:
-  // /travellers -> ["travellers"]
-  // /travellers/add -> ["travellers", "add"]
-  // /travellers/collect-form -> ["travellers", "collect-form"]
-  // /travellers/pending/:id/edit -> ["travellers", "pending", ":id", "edit"]
-  // /travellers/:id -> ["travellers", ":id"]
-  // /travellers/:id/edit -> ["travellers", ":id", "edit"]
 
   const selectedTravellerId = useMemo(() => {
     if (pathSegments[1] && !["add", "collect-form", "pending"].includes(pathSegments[1])) {
@@ -107,7 +560,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
   // Approve Pending Registration
   const handleApproveRegistration = (reg: PendingTravellerRegistration) => {
-    // Validation rules
     if (!reg.fullName?.trim()) {
       alert("Full Name is required for traveller approval.");
       return;
@@ -126,7 +578,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     }
 
     const newTraveller: Traveller = {
-      id: reg.id || `trv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      id: reg.id || `trv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       fullName: reg.fullName.trim(),
       age: Number(reg.age),
       gender: reg.gender,
@@ -174,7 +626,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   // Handle Save and Approve from Edit Modal
   const handleSaveAndApproveEdit = (updatedReg: PendingTravellerRegistration) => {
     const newTraveller: Traveller = {
-      id: updatedReg.id || `trv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      id: updatedReg.id || `trv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       fullName: updatedReg.fullName.trim(),
       age: Number(updatedReg.age),
       gender: updatedReg.gender,
@@ -202,51 +654,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     goBack();
   };
 
-  // Modal Form State
-  const [fullName, setFullName] = useState("");
-  const [age, setAge] = useState(25);
-  const [gender, setGender] = useState<"Male" | "Female" | "Other">("Male");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [emergencyContact, setEmergencyContact] = useState("");
-  const [bloodGroup, setBloodGroup] = useState("O+");
-  const [passportNumber, setPassportNumber] = useState("");
-  const [drivingLicense, setDrivingLicense] = useState("");
-  const [formRole, setFormRole] = useState<TravellerRole>("Traveller");
-  const [allocatedBudget, setAllocatedBudget] = useState(5000);
-  const [profilePhoto, setProfilePhoto] = useState("");
-
-  // Sync form state when modal / editing state changes
-  React.useEffect(() => {
-    if (editingTraveller) {
-      setFullName(editingTraveller.fullName);
-      setAge(editingTraveller.age);
-      setGender(editingTraveller.gender);
-      setPhone(editingTraveller.phone);
-      setEmail(editingTraveller.email);
-      setEmergencyContact(editingTraveller.emergencyContact);
-      setBloodGroup(editingTraveller.bloodGroup);
-      setPassportNumber(editingTraveller.passportNumber || "");
-      setDrivingLicense(editingTraveller.drivingLicense || "");
-      setFormRole(editingTraveller.role);
-      setAllocatedBudget(editingTraveller.allocatedBudget);
-      setProfilePhoto(editingTraveller.profilePhoto || "");
-    } else if (isAddModalOpen) {
-      setFullName("");
-      setAge(26);
-      setGender("Male");
-      setPhone("+91 ");
-      setEmail("");
-      setEmergencyContact("+91 ");
-      setBloodGroup("O+");
-      setPassportNumber("");
-      setDrivingLicense("");
-      setFormRole("Traveller");
-      setAllocatedBudget(5000);
-      setProfilePhoto("");
-    }
-  }, [editingTraveller, isAddModalOpen]);
-
   const handleOpenAdd = () => {
     navigate(`${basePath}/travellers/add`);
   };
@@ -255,90 +662,64 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     navigate(`${basePath}/travellers/${t.id}/edit`);
   };
 
-  const handleSaveTraveller = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim()) return;
-
-    const isEditingSelf = !!(editingTraveller && currentUser && (
-      editingTraveller.id === currentUser.uid ||
-      (editingTraveller.email && editingTraveller.email.toLowerCase() === currentUser.email?.toLowerCase())
-    ));
-
-    if (!isOrganizer && !isEditingSelf) {
-      alert("You do not have permission to modify this profile.");
-      return;
+  const handleCloseEditModal = () => {
+    if (selectedTravellerId) {
+      navigate(`${basePath}/travellers/${selectedTravellerId}`);
+    } else {
+      navigate(`${basePath}/travellers`);
     }
+  };
 
+  const handleSaveTraveller = async (updatedTraveller: Traveller, isEditMode: boolean) => {
     let updatedList: Traveller[];
 
-    if (editingTraveller) {
+    if (isEditMode) {
       updatedList = trip.travellers.map((t) =>
-        t.id === editingTraveller.id
+        t.id === updatedTraveller.id
           ? {
               ...t,
-              fullName,
-              age,
-              gender,
-              phone,
-              email,
-              emergencyContact,
-              bloodGroup,
-              passportNumber,
-              drivingLicense,
-              role: formRole,
-              allocatedBudget: Number(allocatedBudget),
-              profilePhoto,
+              ...updatedTraveller,
+              profilePhotoUrl: updatedTraveller.profilePhotoUrl || updatedTraveller.profilePhoto || t.profilePhotoUrl || t.profilePhoto || "",
+              profilePhoto: updatedTraveller.profilePhotoUrl || updatedTraveller.profilePhoto || t.profilePhotoUrl || t.profilePhoto || "",
             }
           : t
       );
 
+      // Try updating user document in Firestore if userDocId exists
       try {
-        const isRealUid = editingTraveller.id && !editingTraveller.id.startsWith("trv_");
-        const userDocId = isRealUid ? editingTraveller.id : (isEditingSelf ? currentUser?.uid : null);
+        const isRealUid = updatedTraveller.id && !updatedTraveller.id.startsWith("trv_");
+        const userDocId = isRealUid ? updatedTraveller.id : currentUser?.uid;
         if (userDocId) {
           const userDocRef = doc(db, "users", userDocId);
-          await setDoc(userDocRef, {
-            fullName,
-            name: fullName,
-            age,
-            gender,
-            phone,
-            email,
-            emergencyContact,
-            bloodGroup,
-            passportNumber,
-            drivingLicense,
-            profilePhoto,
-          }, { merge: true });
+          await setDoc(
+            userDocRef,
+            {
+              fullName: updatedTraveller.fullName,
+              name: updatedTraveller.fullName,
+              age: updatedTraveller.age,
+              gender: updatedTraveller.gender,
+              phone: updatedTraveller.phone,
+              email: updatedTraveller.email,
+              emergencyContact: updatedTraveller.emergencyContact,
+              bloodGroup: updatedTraveller.bloodGroup,
+              passportNumber: updatedTraveller.passportNumber,
+              drivingLicense: updatedTraveller.drivingLicense,
+              profilePhotoUrl: updatedTraveller.profilePhotoUrl || updatedTraveller.profilePhoto,
+              profilePhoto: updatedTraveller.profilePhotoUrl || updatedTraveller.profilePhoto,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
         }
       } catch (err) {
         console.error("Failed to update user Firestore document:", err);
       }
     } else {
-      if (!isOrganizer) {
-        alert("Only organizers can add new travellers.");
-        return;
-      }
-      const newTraveller: Traveller = {
-        id: `trv_${Date.now()}`,
-        fullName,
-        age,
-        gender,
-        phone,
-        email,
-        emergencyContact,
-        bloodGroup,
-        passportNumber,
-        drivingLicense,
-        role: formRole,
-        allocatedBudget: Number(allocatedBudget),
-        profilePhoto: profilePhoto || "",
-      };
-      updatedList = [...trip.travellers, newTraveller];
+      updatedList = [...trip.travellers, updatedTraveller];
     }
 
     onUpdateTrip({ ...trip, travellers: updatedList });
-    goBack();
+    showToast(isEditMode ? "Traveller updated successfully" : "Traveller added successfully", "success");
   };
 
   const handleDeleteTraveller = (id: string) => {
@@ -375,7 +756,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     const history: { description: string; amount: number; date: string }[] = [];
 
     trip.expenses.forEach((expense) => {
-      // Check if traveller paid or shared in this expense
       if (expense.splits && expense.splits[traveller.id]) {
         const shareAmount = expense.splits[traveller.id];
         moneySpent += shareAmount;
@@ -418,7 +798,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
             onClick={() => goBack()}
-            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-2 rounded-xl transition-all"
+            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-3 py-2 rounded-xl transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Back to Travellers</span>
@@ -428,7 +808,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           </span>
         </div>
 
-        {/* Profile Details Container with Material transition */}
+        {/* Profile Details Container */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -465,12 +845,12 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400 pt-1">
                   {selectedTraveller.phone && (
-                    <ContactPhoneButton 
-                      phone={selectedTraveller.phone} 
+                    <ContactPhoneButton
+                      phone={selectedTraveller.phone}
                       travellerName={selectedTraveller.fullName}
-                      className="hover:text-indigo-600 dark:hover:text-indigo-400"
+                      className="font-medium hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
                     />
                   )}
                   {selectedTraveller.email && (
@@ -526,7 +906,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1">
-                    <Award className="w-3.5 h-3.5 text-#1AAB67" /> Driving License
+                    <Award className="w-3.5 h-3.5 text-emerald-500" /> Driving License
                   </p>
                   <p className="font-bold text-slate-900 dark:text-white text-sm">
                     {selectedTraveller.drivingLicense || "Not provided"}
@@ -643,15 +1023,17 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           {(isOrganizer || isOwnProfile) && (
             <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => handleOpenEdit(selectedTraveller)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm cursor-pointer"
               >
                 <Edit className="w-4 h-4" /> Edit Traveller
               </button>
               {isOrganizer && (
                 <button
+                  type="button"
                   onClick={() => handleDeleteTraveller(selectedTraveller.id)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" /> Remove Traveller
                 </button>
@@ -660,207 +1042,18 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           )}
         </motion.div>
 
-        {/* Add / Edit Traveller Modal */}
-        {isAddModalOpen && (
-          <div className="fixed inset-0 z-[100] flex max-sm:items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
-            <motion.div
-              initial={{ y: "100%", opacity: 0.5 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 max-sm:rounded-t-[32px] sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
-            >
-              <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <h3 className="font-bold text-slate-900 dark:text-white">
-                  {editingTraveller ? "Edit Traveller Profile" : "Add New Traveller"}
-                </h3>
-                <button onClick={() => goBack()} className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                </button>
-              </div>
+        {/* Edit Traveller Profile Modal */}
+        <EditTravellerModal
+          isOpen={isAddModalOpen}
+          editingTraveller={editingTraveller}
+          isOrganizer={isOrganizer}
+          currency={trip.currency}
+          currentUser={currentUser}
+          onClose={handleCloseEditModal}
+          onSave={handleSaveTraveller}
+          showToast={showToast}
+        />
 
-              <form onSubmit={handleSaveTraveller} className="p-5 space-y-3 max-h-[80vh] overflow-y-auto">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Nafih Hashim"
-                    className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Age
-                    </label>
-                    <input
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(Number(e.target.value))}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Gender
-                    </label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value as any)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Role
-                    </label>
-                    <select
-                      value={formRole}
-                      disabled={!isOrganizer}
-                      onChange={(e) => setFormRole(e.target.value as TravellerRole)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <option value="Organizer">Organizer</option>
-                      <option value="Traveller">Traveller</option>
-                      <option value="Driver">Driver</option>
-                      <option value="Guest">Guest</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Personal Budget ({trip.currency}) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      disabled={!isOrganizer}
-                      value={allocatedBudget}
-                      onChange={(e) => setAllocatedBudget(Number(e.target.value))}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Phone
-                    </label>
-                    <input
-                      type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Emergency Contact
-                    </label>
-                    <input
-                      type="text"
-                      value={emergencyContact}
-                      onChange={(e) => setEmergencyContact(e.target.value)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Blood Group
-                    </label>
-                    <input
-                      type="text"
-                      value={bloodGroup}
-                      onChange={(e) => setBloodGroup(e.target.value)}
-                      placeholder="e.g. O+"
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      disabled={!isOrganizer}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Passport No (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={passportNumber}
-                      onChange={(e) => setPassportNumber(e.target.value)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Driving License (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={drivingLicense}
-                      onChange={(e) => setDrivingLicense(e.target.value)}
-                      className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <ProfilePhotoUpload
-                  photoUrl={profilePhoto}
-                  fullName={fullName}
-                  onChangePhoto={(newUrl) => setProfilePhoto(newUrl)}
-                  onRemovePhoto={() => setProfilePhoto("")}
-                />
-
-                <div className="flex justify-end gap-2 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => goBack()}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-500"
-                  >
-                    Save Member
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
         {/* Global Toast Notification */}
         <AnimatePresence>
           {toast && (
@@ -868,7 +1061,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
-              className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
+              className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
                 toast.type === "success"
                   ? "bg-emerald-600 text-white border-emerald-500"
                   : "bg-rose-600 text-white border-rose-500"
@@ -879,75 +1072,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Custom Confirmation Modal for Rejection & Deletion */}
-        <AnimatePresence>
-          {rejectConfirmId && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
-              >
-                <div className="flex items-center gap-3 text-rose-600">
-                  <XCircle className="w-6 h-6" />
-                  <h3 className="text-lg font-black">Reject Registration?</h3>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Are you sure you want to reject this registration? The user will not be added to the trip travellers list.
-                </p>
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setRejectConfirmId(null)}
-                    className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmReject}
-                    className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20"
-                  >
-                    Reject Now
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-
-          {travellerToDeleteId && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
-              >
-                <div className="flex items-center gap-3 text-rose-600">
-                  <Trash2 className="w-6 h-6" />
-                  <h3 className="text-lg font-black">Remove Traveller?</h3>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Are you sure you want to remove this traveller from the trip? This will permanently delete their profile details from the trip list.
-                </p>
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setTravellerToDeleteId(null)}
-                    className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteTraveller}
-                    className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20"
-                  >
-                    Remove Now
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </div>
     );
   }
@@ -956,8 +1080,6 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     (acc, t) => acc + t.allocatedBudget,
     0
   );
-  const totalIndividualSpent = travellerStats.reduce((acc, t) => acc + t.moneySpent, 0);
-  const budgetVariance = trip.totalBudget - totalIndividualAllocated;
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -974,6 +1096,18 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             Manage trip members, emergency contacts, roles, personal budgets, and expenditure.
           </p>
         </div>
+
+        {isOrganizer && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 text-xs cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" /> Add Traveller
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Travellers List & Individual Budget Progress */}
@@ -998,7 +1132,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                     </span>
                   )}
                   {t.role === "Driver" && (
-                    <span className="text-[8px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full bg-#1AAB67/20 dark:bg-#1AAB67/20 text-#159257 dark:text-#74D0A5 shrink-0">
+                    <span className="text-[8px] sm:text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
                       Driver
                     </span>
                   )}
@@ -1023,207 +1157,17 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         ))}
       </div>
 
-      {/* Add / Edit Traveller Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
-          <motion.div
-            initial={{ y: "100%", opacity: 0.5 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 rounded-t-[24px] sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden mt-auto sm:mt-0"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <h3 className="font-bold text-slate-900 dark:text-white">
-                {editingTraveller ? "Edit Traveller Profile" : "Add New Traveller"}
-              </h3>
-              <button onClick={() => goBack()}>
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveTraveller} className="p-5 space-y-3 max-h-[80vh] overflow-y-auto">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Nafih Hashim"
-                  className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Age
-                  </label>
-                  <input
-                    type="number"
-                    value={age}
-                    onChange={(e) => setAge(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value as any)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Role
-                  </label>
-                  <select
-                    value={formRole}
-                    disabled={!isOrganizer}
-                    onChange={(e) => setFormRole(e.target.value as TravellerRole)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <option value="Organizer">Organizer</option>
-                    <option value="Traveller">Traveller</option>
-                    <option value="Driver">Driver</option>
-                    <option value="Guest">Guest</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Personal Budget ({trip.currency}) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    disabled={!isOrganizer}
-                    value={allocatedBudget}
-                    onChange={(e) => setAllocatedBudget(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Emergency Contact
-                  </label>
-                  <input
-                    type="text"
-                    value={emergencyContact}
-                    onChange={(e) => setEmergencyContact(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Blood Group
-                  </label>
-                  <input
-                    type="text"
-                    value={bloodGroup}
-                    onChange={(e) => setBloodGroup(e.target.value)}
-                    placeholder="e.g. O+"
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    disabled={!isOrganizer}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Passport No (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={passportNumber}
-                    onChange={(e) => setPassportNumber(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Driving License (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={drivingLicense}
-                    onChange={(e) => setDrivingLicense(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <ProfilePhotoUpload
-                photoUrl={profilePhoto}
-                fullName={fullName}
-                onChangePhoto={(newUrl) => setProfilePhoto(newUrl)}
-                onRemovePhoto={() => setProfilePhoto("")}
-              />
-
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => goBack()}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-500"
-                >
-                  Save Member
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+      {/* Edit Traveller Profile Modal */}
+      <EditTravellerModal
+        isOpen={isAddModalOpen}
+        editingTraveller={editingTraveller}
+        isOrganizer={isOrganizer}
+        currency={trip.currency}
+        currentUser={currentUser}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveTraveller}
+        showToast={showToast}
+      />
 
       {/* Google Form Collection Modal */}
       <GoogleFormCollectModal
@@ -1236,27 +1180,119 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             googleFormConfig: formConfig,
           });
         }}
-        onSyncResponses={(newPending) => {
-          // Merge newly fetched pending registrations with existing
-          const existingMap = new Set((trip.pendingRegistrations || []).map((p) => p.id));
-          const toAdd = newPending.filter((p) => !existingMap.has(p.id));
-          const updatedList = [...(trip.pendingRegistrations || []), ...toAdd];
-          onUpdateTrip({
-            ...trip,
-            pendingRegistrations: updatedList,
-          });
-        }}
       />
 
       {/* Edit Pending Registration Modal */}
       {editingPendingReg && (
         <EditPendingRegistrationModal
           registration={editingPendingReg}
-          isOpen={!!editingPendingReg}
+          currency={trip.currency}
           onClose={() => goBack()}
-          onSaveAndApprove={handleSaveAndApproveEdit}
+          onSave={handleSaveAndApproveEdit}
         />
       )}
+
+      {/* Global Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white border-emerald-500"
+                : "bg-rose-600 text-white border-rose-500"
+            }`}
+          >
+            {toast.type === "success" ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <span className="text-sm font-bold">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Confirmation Modal for Rejection & Deletion */}
+      <AnimatePresence>
+        {rejectConfirmId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3 text-rose-600">
+                <XCircle className="w-6 h-6" />
+                <h3 className="text-lg font-black">Reject Registration?</h3>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                Are you sure you want to reject this registration? The user will not be added to the trip travellers list.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectConfirmId(null)}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmReject}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20 cursor-pointer"
+                >
+                  Reject Now
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {travellerToDeleteId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3 text-rose-600">
+                <Trash2 className="w-6 h-6" />
+                <h3 className="text-lg font-black">Remove Traveller?</h3>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                Are you sure you want to remove this traveller from the trip? This will permanently delete their profile details from the trip list.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTravellerToDeleteId(null)}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteTraveller}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20 cursor-pointer"
+                >
+                  Remove Now
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

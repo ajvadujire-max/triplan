@@ -123,6 +123,122 @@ export async function fetchUserTrips(orgId: string): Promise<Trip[]> {
   }
 }
 
+function optimizeTripDocumentPayload(rawTrip: any): any {
+  if (!rawTrip) return rawTrip;
+
+  const trip = { ...rawTrip };
+  let jsonStr = JSON.stringify(trip);
+  const MAX_ALLOWED_BYTES = 800_000; // Safe threshold well below Firestore's 1,048,576 bytes limit
+
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) {
+    return trip;
+  }
+
+  console.warn(`[Firestore Sync] Trip document size (${jsonStr.length} bytes) exceeds target threshold (${MAX_ALLOWED_BYTES} bytes). Optimizing payload...`);
+
+  // Phase 1: Trim large documents fileUrl (>20KB data URLs)
+  if (Array.isArray(trip.documents)) {
+    trip.documents = trip.documents.map((docItem: any) => {
+      if (typeof docItem.fileUrl === "string" && docItem.fileUrl.startsWith("data:") && docItem.fileUrl.length > 20_000) {
+        return {
+          ...docItem,
+          fileUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop"
+        };
+      }
+      return docItem;
+    });
+  }
+
+  jsonStr = JSON.stringify(trip);
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) return trip;
+
+  // Phase 2: Trim timeline attachments with large data URLs
+  if (Array.isArray(trip.timeline)) {
+    trip.timeline = trip.timeline.map((act: any) => {
+      if (Array.isArray(act.attachments)) {
+        const cleanAttachments = act.attachments.map((att: any) => {
+          if (typeof att.url === "string" && att.url.startsWith("data:") && att.url.length > 20_000) {
+            return { ...att, url: "" };
+          }
+          return att;
+        });
+        return { ...act, attachments: cleanAttachments };
+      }
+      return act;
+    });
+  }
+
+  jsonStr = JSON.stringify(trip);
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) return trip;
+
+  // Phase 3: Trim ticketUrl in transport segments
+  if (Array.isArray(trip.segments)) {
+    trip.segments = trip.segments.map((seg: any) => {
+      if (typeof seg.ticketUrl === "string" && seg.ticketUrl.startsWith("data:") && seg.ticketUrl.length > 20_000) {
+        return { ...seg, ticketUrl: "" };
+      }
+      return seg;
+    });
+  }
+
+  jsonStr = JSON.stringify(trip);
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) return trip;
+
+  // Phase 4: Trim expense receipts
+  if (Array.isArray(trip.expenses)) {
+    trip.expenses = trip.expenses.map((exp: any) => {
+      if (typeof exp.receiptUrl === "string" && exp.receiptUrl.startsWith("data:") && exp.receiptUrl.length > 20_000) {
+        return { ...exp, receiptUrl: "" };
+      }
+      return exp;
+    });
+  }
+
+  jsonStr = JSON.stringify(trip);
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) return trip;
+
+  // Phase 5: Trim pendingRegistrations profile photos from main doc
+  if (Array.isArray(trip.pendingRegistrations)) {
+    trip.pendingRegistrations = trip.pendingRegistrations.map((reg: any) => {
+      if (typeof reg.profilePhoto === "string" && reg.profilePhoto.startsWith("data:") && reg.profilePhoto.length > 15_000) {
+        return { ...reg, profilePhoto: "", profilePhotoUrl: reg.profilePhotoUrl?.startsWith("data:") ? "" : reg.profilePhotoUrl };
+      }
+      return reg;
+    });
+  }
+
+  jsonStr = JSON.stringify(trip);
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) return trip;
+
+  // Phase 6: Trim travellers profile photos if they are huge data URLs
+  if (Array.isArray(trip.travellers)) {
+    trip.travellers = trip.travellers.map((trav: any) => {
+      let photo = trav.profilePhoto;
+      let photoUrl = trav.profilePhotoUrl;
+      if (typeof photo === "string" && photo.startsWith("data:") && photo.length > 30_000) {
+        photo = "";
+      }
+      if (typeof photoUrl === "string" && photoUrl.startsWith("data:") && photoUrl.length > 30_000) {
+        photoUrl = "";
+      }
+      return { ...trav, profilePhoto: photo, profilePhotoUrl: photoUrl };
+    });
+  }
+
+  jsonStr = JSON.stringify(trip);
+  if (jsonStr.length <= MAX_ALLOWED_BYTES) return trip;
+
+  // Phase 7: Trim coverPhoto / coverImage if large data URL
+  if (typeof trip.coverImage === "string" && trip.coverImage.startsWith("data:") && trip.coverImage.length > 30_000) {
+    trip.coverImage = "";
+  }
+  if (typeof trip.coverPhoto === "string" && trip.coverPhoto.startsWith("data:") && trip.coverPhoto.length > 30_000) {
+    trip.coverPhoto = "";
+  }
+
+  return trip;
+}
+
 export async function saveUserTrip(orgId: string | Trip, trip?: Trip): Promise<void> {
   let actualTrip: Trip;
   if (typeof orgId === "object") {
@@ -167,8 +283,10 @@ export async function saveUserTrip(orgId: string | Trip, trip?: Trip): Promise<v
       members
     });
 
+    const optimizedTrip = optimizeTripDocumentPayload(sanitizedTrip);
+
     // Write to trip document
-    await setDoc(doc(db, "trips", actualTrip.id), sanitizedTrip);
+    await setDoc(doc(db, "trips", actualTrip.id), optimizedTrip);
 
     // Sync registrations to subcollection
     if (actualTrip.pendingRegistrations) {

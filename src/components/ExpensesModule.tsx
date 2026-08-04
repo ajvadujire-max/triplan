@@ -1338,7 +1338,12 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         {/* Custom Confirmation Modal for Deletion */}
         <AnimatePresence>
           {confirmDeleteId && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+            >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -1367,7 +1372,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                   </button>
                 </div>
               </motion.div>
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -1463,22 +1468,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
       {/* 2x2 Mobile Action Grid for Trip Expenses */}
       {activeSection === "trip" && (
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              if (!isOrganizer) {
-                alert("Only trip organizers can update the trip budget.");
-                return;
-              }
-              handleAddBudget();
-            }}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
-          >
-            <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="truncate">Add Budget</span>
-          </button>
-
+        <div className="flex flex-col gap-2.5">
           <button
             type="button"
             onClick={() => {
@@ -1488,29 +1478,31 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               }
               handleOpenAdd();
             }}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
           >
             <Plus className="w-4 h-4 shrink-0" />
             <span className="truncate">Record Expense</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setIsReportsOpen(!isReportsOpen)}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
-          >
-            <PieChart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="truncate">{isReportsOpen ? "Hide Reports" : "Reports"}</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsReportsOpen(!isReportsOpen)}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+            >
+              <PieChart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="truncate">{isReportsOpen ? "Hide Reports" : "Reports"}</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="truncate">Export CSV</span>
-          </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="truncate">Export CSV</span>
+            </button>
+          </div>
         </div>
       )}
 

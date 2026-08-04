@@ -10,6 +10,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "fire
 import { googleSignIn } from "../lib/googleAuth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ProfilePhotoUpload } from "../components/ProfilePhotoUpload";
+import { uploadProfilePhotoToStorage } from "../lib/image-utils";
 
 export default function JoinTrip() {
   const { tripCode } = useParams();
@@ -151,6 +152,15 @@ export default function JoinTrip() {
           status: "active"
         }, { merge: true });
 
+        let finalGooglePhoto = res.user.photoURL || formData.profilePhoto || "";
+        if (finalGooglePhoto && finalGooglePhoto.startsWith("data:")) {
+          try {
+            finalGooglePhoto = await uploadProfilePhotoToStorage(finalGooglePhoto, activeUid);
+          } catch (err) {
+            console.error("Profile photo upload failed:", err);
+          }
+        }
+
         // Prepare traveller record and update trip
         const newTraveller: Traveller = {
           id: activeUid,
@@ -163,7 +173,8 @@ export default function JoinTrip() {
           bloodGroup: "O+",
           role: "Traveller",
           allocatedBudget: 0,
-          profilePhoto: res.user.photoURL || formData.profilePhoto || "",
+          profilePhotoUrl: finalGooglePhoto,
+          profilePhoto: finalGooglePhoto,
           status: "active"
         };
 
@@ -334,6 +345,15 @@ export default function JoinTrip() {
           status: "active"
         }, { merge: true });
 
+        let finalPhotoUrl = formData.profilePhoto || currentUser?.photoURL || "";
+        if (finalPhotoUrl && finalPhotoUrl.startsWith("data:")) {
+          try {
+            finalPhotoUrl = await uploadProfilePhotoToStorage(finalPhotoUrl, activeUid);
+          } catch (err) {
+            console.error("Profile photo upload failed:", err);
+          }
+        }
+
         const resolvedName = formData.fullName || currentUser?.displayName || userEmail.split("@")[0] || "Traveller";
         const newTraveller: Traveller = {
           id: activeUid,
@@ -346,7 +366,8 @@ export default function JoinTrip() {
           bloodGroup: "O+",
           role: "Traveller",
           allocatedBudget: 0,
-          profilePhoto: formData.profilePhoto || currentUser?.photoURL || "",
+          profilePhotoUrl: finalPhotoUrl,
+          profilePhoto: finalPhotoUrl,
           status: "active"
         };
         

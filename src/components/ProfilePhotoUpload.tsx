@@ -65,24 +65,10 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
-  const handleApplyCropped = async (croppedDataUrl: string) => {
+  const handleApplyCropped = (croppedDataUrl: string) => {
     setErrorMsg(null);
-    setIsProcessing(true);
-    try {
-      const uid = auth.currentUser?.uid || `user_${Date.now()}`;
-      let downloadUrl = croppedDataUrl;
-      try {
-        downloadUrl = await uploadProfilePhotoToStorage(croppedDataUrl, uid);
-      } catch (uploadErr) {
-        console.warn("Storage upload failed, using dataUrl fallback:", uploadErr);
-      }
-      onChangePhoto(downloadUrl);
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to save photo.");
-    } finally {
-      setIsProcessing(false);
-      setSelectedImage(null);
-    }
+    onChangePhoto(croppedDataUrl);
+    setSelectedImage(null);
   };
 
   const initials = getInitials(fullName);

@@ -1918,7 +1918,12 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       {/* Custom Confirmation Modal for Deletion */}
       <AnimatePresence>
         {confirmDeleteId && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1947,7 +1952,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                 </button>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -54,12 +54,14 @@ interface CollectionsModuleProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
   onNavigateTab?: (tab: string) => void;
+  isOrganizer?: boolean;
 }
 
 export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
   trip,
   onUpdateTrip,
   onNavigateTab,
+  isOrganizer = false,
 }) => {
   // State variables
   const [searchQuery, setSearchQuery] = useState("");
@@ -269,6 +271,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
   // Handle Save Payment
   const handleSavePayment = (e: React.FormEvent) => {
+    if (!isOrganizer) return;
     e.preventDefault();
     if (!activePaymentTraveller) return;
 
@@ -388,6 +391,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
   // Delete Payment History Item
   const handleDeletePaymentRecord = (travellerId: string, recordId: string) => {
+    if (!isOrganizer) return;
     const updatedTravellers = trip.travellers.map((trv) => {
       if (trv.id === travellerId) {
         const filteredHistory = (trv.paymentHistory || []).filter(
@@ -419,6 +423,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
 
   // Edit Budget for a traveller
   const handleSaveTravellerBudget = (travellerId: string, newBudget: number) => {
+    if (!isOrganizer) return;
     const activeCount = Math.max(1, uniqueTravellers.length);
     const updatedTotalBudget = Math.max(0, newBudget) * activeCount;
 
@@ -539,6 +544,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
           onBack={handleBackToCollections}
           onUpdateTrip={onUpdateTrip}
           openReceivePayment={openReceivePayment}
+          isOrganizer={isOrganizer}
           handleSendReminder={handleSendReminder}
           setEditingBudgetTraveller={openEditBudget}
           setActiveHistoryTraveller={openHistory}
@@ -554,9 +560,16 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                 <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2D6BF7]/10 dark:bg-indigo-500/20 text-[#2D6BF7] dark:text-indigo-400 border border-[#2D6BF7]/20 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
                   <IndianRupee className="w-4 h-4 text-[#2D6BF7] dark:text-indigo-400" />
                 </span>
-                <h1 className="text-base sm:text-lg font-black tracking-tight text-[#111827] dark:text-white truncate">
-                  Trip Treasury & Collections
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base sm:text-lg font-black tracking-tight text-[#111827] dark:text-white truncate">
+                    Trip Treasury & Collections
+                  </h1>
+                  {!isOrganizer && (
+                    <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 dark:text-slate-400 px-1.5 py-0.5 rounded-md shrink-0">
+                      View Only
+                    </span>
+                  )}
+                </div>
               </div>
               <p className="text-[11px] sm:text-xs text-[#64748B] dark:text-slate-400 font-medium leading-snug mt-1 truncate">
                 Track member budgets, payments & status for{" "}
@@ -582,65 +595,6 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                 <Download className="w-3.5 h-3.5" />
                 <span>Export CSV</span>
               </button>
-            </div>
-          </div>
-
-          {/* 1. TOP COMPACT SUMMARY CARDS (2x2 Grid) */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {/* Total Travellers */}
-            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
-              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#111827] dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                <span>Total Travellers</span>
-                <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              </div>
-              <div className="text-[clamp(20px,5.5vw,26px)] font-black text-[#111827] dark:text-white tabular-nums leading-none my-0.5">
-                {collectionSummary.totalTravellers}
-              </div>
-              <div className="text-[10px] sm:text-[11px] text-[#64748B] dark:text-slate-400 font-medium truncate">
-                Active members
-              </div>
-            </div>
-
-            {/* Expected */}
-            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#EFF6FF] dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
-              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#2D6BF7] dark:text-blue-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Expected</span>
-                <IndianRupee className="w-3.5 h-3.5 text-[#2D6BF7] dark:text-blue-400 shrink-0" />
-              </div>
-              <div className="text-[clamp(18px,5vw,24px)] font-black text-[#2D6BF7] dark:text-blue-300 tabular-nums whitespace-nowrap tracking-tight overflow-hidden text-ellipsis leading-none my-0.5">
-                ₹{collectionSummary.totalExpected.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] sm:text-[11px] text-[#2D6BF7]/80 dark:text-blue-400/80 font-medium truncate">
-                Total trip budget
-              </div>
-            </div>
-
-            {/* Collected */}
-            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#ECFDF5] dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
-              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#059669] dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Collected</span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400 shrink-0" />
-              </div>
-              <div className="text-[clamp(18px,5vw,24px)] font-black text-[#059669] dark:text-emerald-300 tabular-nums whitespace-nowrap tracking-tight overflow-hidden text-ellipsis leading-none my-0.5">
-                ₹{collectionSummary.totalCollected.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] sm:text-[11px] text-[#059669]/80 dark:text-emerald-400/80 font-medium truncate">
-                Received
-              </div>
-            </div>
-
-            {/* Remaining */}
-            <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#FFF7ED] dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] min-w-0">
-              <div className="text-[10px] sm:text-[11px] font-extrabold text-[#D97706] dark:text-amber-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Remaining</span>
-                <AlertCircle className="w-3.5 h-3.5 text-[#D97706] dark:text-amber-400 shrink-0" />
-              </div>
-              <div className="text-[clamp(18px,5vw,24px)] font-black text-[#D97706] dark:text-amber-300 tabular-nums whitespace-nowrap tracking-tight overflow-hidden text-ellipsis leading-none my-0.5">
-                ₹{collectionSummary.totalRemaining.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] sm:text-[11px] text-[#D97706]/80 dark:text-amber-400/80 font-medium truncate">
-                Pending
-              </div>
             </div>
           </div>
 
@@ -973,7 +927,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
   )}
 
       {/* 4. RECEIVE PAYMENT BOTTOM SHEET / MODAL */}
-      {activePaymentTraveller && (
+      {isOrganizer && activePaymentTraveller && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex max-sm:items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg max-sm:rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-200">
             {/* Sheet Header */}
@@ -1210,36 +1164,38 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
                     </div>
 
                     {/* Entry Action Buttons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingPaymentRecord({
-                            travellerId: activeHistoryTraveller.id,
-                            record: rec,
-                          });
-                          openReceivePayment(activeHistoryTraveller, rec.amount);
-                          setPaymentMethod(rec.method);
-                          setPaymentDate(rec.date);
-                          setPaymentNotes(rec.notes || "");
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
-                        title="Edit Entry"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                    {isOrganizer && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingPaymentRecord({
+                              travellerId: activeHistoryTraveller.id,
+                              record: rec,
+                            });
+                            openReceivePayment(activeHistoryTraveller, rec.amount);
+                            setPaymentMethod(rec.method);
+                            setPaymentDate(rec.date);
+                            setPaymentNotes(rec.notes || "");
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                          title="Edit Entry"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDeletePaymentRecord(activeHistoryTraveller.id, rec.id)
-                        }
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950"
-                        title="Delete Entry"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeletePaymentRecord(activeHistoryTraveller.id, rec.id)
+                          }
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950"
+                          title="Delete Entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -1253,25 +1209,27 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             </div>
 
             {/* Footer button */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  const trv = activeHistoryTraveller;
-                  openReceivePayment(trv);
-                }}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Record New Payment</span>
-              </button>
-            </div>
+            {isOrganizer && (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trv = activeHistoryTraveller;
+                    openReceivePayment(trv);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Record New Payment</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* 6. EDIT TRAVELLER BUDGET MODAL */}
-      {editingBudgetTraveller && (
+      {isOrganizer && editingBudgetTraveller && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -1345,6 +1303,7 @@ interface CollectionDetailsProps {
   };
   onBack: () => void;
   onUpdateTrip: (updatedTrip: Trip) => void;
+  isOrganizer?: boolean;
   openReceivePayment: (traveller: Traveller, prefillAmount?: number) => void;
   handleSendReminder: (traveller: Traveller) => void;
   setEditingBudgetTraveller: (traveller: Traveller | null) => void;
@@ -1360,6 +1319,7 @@ const CollectionDetails: React.FC<CollectionDetailsProps> = ({
   onBack,
   onUpdateTrip,
   openReceivePayment,
+  isOrganizer,
   handleSendReminder,
   setEditingBudgetTraveller,
   setActiveHistoryTraveller,
@@ -1454,33 +1414,37 @@ const CollectionDetails: React.FC<CollectionDetailsProps> = ({
           )}
         </div>
 
-        {/* Primary Action Button: Receive Payment */}
-        <button
-          onClick={() => openReceivePayment(traveller)}
-          className="w-full min-h-[46px] flex items-center justify-center gap-2 p-3 rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white font-bold text-sm shadow-sm active:scale-98 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Receive Payment</span>
-        </button>
+        {isOrganizer && (
+          <>
+            {/* Primary Action Button: Receive Payment */}
+            <button
+              onClick={() => openReceivePayment(traveller)}
+              className="w-full min-h-[46px] flex items-center justify-center gap-2 p-3 rounded-xl bg-[#2D6BF7] hover:bg-blue-600 text-white font-bold text-sm shadow-sm active:scale-98 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Receive Payment</span>
+            </button>
 
-        {/* Secondary Actions: Send Reminder & Edit Collection */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => handleSendReminder(traveller)}
-            className="min-h-[44px] flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all active:scale-98 cursor-pointer"
-          >
-            <Bell className="w-4 h-4 text-amber-500 shrink-0" />
-            <span className="truncate">Send Reminder</span>
-          </button>
+            {/* Secondary Actions: Send Reminder & Edit Collection */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleSendReminder(traveller)}
+                className="min-h-[44px] flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/20 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all active:scale-98 cursor-pointer"
+              >
+                <Bell className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="truncate">Send Reminder</span>
+              </button>
 
-          <button
-            onClick={() => setEditingBudgetTraveller(traveller)}
-            className="min-h-[44px] flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all active:scale-98 cursor-pointer"
-          >
-            <Edit2 className="w-4 h-4 text-indigo-500 shrink-0" />
-            <span className="truncate">Edit Collection</span>
-          </button>
-        </div>
+              <button
+                onClick={() => setEditingBudgetTraveller(traveller)}
+                className="min-h-[44px] flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all active:scale-98 cursor-pointer"
+              >
+                <Edit2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                <span className="truncate">Edit Collection</span>
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Communication Section */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">

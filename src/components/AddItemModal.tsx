@@ -43,7 +43,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <motion.div key="add-item-modal">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -137,7 +137,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               </div>
             </form>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

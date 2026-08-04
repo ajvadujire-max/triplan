@@ -65,14 +65,14 @@ export async function getCroppedImg(
     pixelCrop.height
   );
 
-  // set canvas width to final desired size (512x512 as requested)
-  canvas.width = 512;
-  canvas.height = 512;
+  // set canvas width to final desired size (384x384 for avatar thumbnail)
+  canvas.width = 384;
+  canvas.height = 384;
 
   // paste generated rotate image with correct offsets for x,y crop values.
   ctx.putImageData(data, 0, 0);
 
-  // However, putImageData doesn't scale. We need to scale to 512x512.
+  // However, putImageData doesn't scale. We need to scale to 384x384.
   // So we'll use a temporary canvas for the crop, then draw it to the final canvas.
   
   const tempCanvas = document.createElement("canvas");
@@ -81,11 +81,11 @@ export async function getCroppedImg(
   tempCanvas.height = pixelCrop.height;
   tempCtx?.putImageData(data, 0, 0);
 
-  ctx.clearRect(0, 0, 512, 512);
-  ctx.drawImage(tempCanvas, 0, 0, pixelCrop.width, pixelCrop.height, 0, 0, 512, 512);
+  ctx.clearRect(0, 0, 384, 384);
+  ctx.drawImage(tempCanvas, 0, 0, pixelCrop.width, pixelCrop.height, 0, 0, 384, 384);
 
   // return as base64
-  return canvas.toDataURL("image/jpeg", 0.9);
+  return canvas.toDataURL("image/jpeg", 0.75);
 }
 
 function rotateSize(width: number, height: number, rotation: number) {
@@ -102,27 +102,123 @@ function rotateSize(width: number, height: number, rotation: number) {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "./firebase";
 
-export async function uploadProfilePhotoToStorage(fileOrDataUrl: File | string, identifier: string): Promise<string> {
-  if (!storage) {
-    throw new Error("Firebase Storage is not initialized");
-  }
-
-  let blob: Blob;
+export async function compressAndResizeImage(fileOrDataUrl: File | string, maxDim = 1200, quality = 0.82): Promise<Blob> {
+  let imageSrc = "";
   if (typeof fileOrDataUrl === "string") {
-    if (fileOrDataUrl.startsWith("data:")) {
-      const res = await fetch(fileOrDataUrl);
-      blob = await res.blob();
-    } else {
-      return fileOrDataUrl; // Already a URL
-    }
+    imageSrc = fileOrDataUrl;
   } else {
-    blob = fileOrDataUrl;
+    imageSrc = URL.createObjectURL(fileOrDataUrl);
   }
 
-  const filename = `profile_photos/${identifier}_${Date.now()}.jpg`;
-  const storageRef = ref(storage, filename);
-  await uploadBytes(storageRef, blob);
-  const downloadUrl = await getDownloadURL(storageRef);
-  return downloadUrl;
+  let image: HTMLImageElement;
+  try {
+    image = await createImage(imageSrc);
+  } catch (err) {
+    if (typeof fileOrDataUrl === "string" && fileOrDataUrl.startsWith("data:")) {
+      const res = await fetch(fileOrDataUrl);
+      return await res.blob();
+    }
+    return typeof fileOrDataUrl === "string" ? new Blob() : fileOrDataUrl;
+  }
+
+  let { width, height } = image;
+
+  if (width > maxDim || height > maxDim) {
+    if (width > height) {
+      height = Math.round((height * maxDim) / width);
+      width = maxDim;
+    } else {
+      width = Math.round((width * maxDim) / height);
+      height = maxDim;
+    }
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    if (typeof fileOrDataUrl === "string" && fileOrDataUrl.startsWith("data:")) {
+      const res = await fetch(fileOrDataUrl);
+      return await res.blob();
+    }
+    return typeof fileOrDataUrl === "string" ? new Blob() : fileOrDataUrl;
+  }
+
+  ctx.drawImage(image, 0, 0, width, height);
+
+  return new Promise((resolve) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          fetch(canvas.toDataURL("image/jpeg", quality))
+            .then((res) => res.blob())
+            .then((b) => resolve(b))
+            .catch(() => resolve(new Blob()));
+        }
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
+export async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function uploadProfilePhotoToStorage(fileOrDataUrl: File | string, identifier: string): Promise<string> {
+  if (typeof fileOrDataUrl === "string" && (fileOrDataUrl.startsWith("http://") || fileOrDataUrl.startsWith("https://"))) {
+    return fileOrDataUrl;
+  }
+
+  // Compress avatar to 400px max dimension at 0.75 quality (~15-20KB)
+  const blob = await compressAndResizeImage(fileOrDataUrl, 400, 0.75);
+
+  if (!storage) {
+    return await blobToDataUrl(blob);
+  }
+
+  try {
+    const filename = `profile_photos/${identifier}_${Date.now()}.jpg`;
+    const storageRef = ref(storage, filename);
+
+    const uploadPromise = (async () => {
+      await uploadBytes(storageRef, blob);
+      return await getDownloadURL(storageRef);
+    })();
+
+    const timeoutPromise = new Promise<string>((_, reject) =>
+      setTimeout(() => reject(new Error("Storage upload timeout")), 4000)
+    );
+
+    return await Promise.race([uploadPromise, timeoutPromise]);
+  } catch (err) {
+    console.warn("Firebase Storage upload failed or timed out, falling back to compressed data URL:", err);
+    return await blobToDataUrl(blob);
+  }
+}
+
+export async function compressBase64Image(dataUrl: string, maxDim = 600, quality = 0.75): Promise<string> {
+  if (!dataUrl || !dataUrl.startsWith("data:image")) {
+    return dataUrl;
+  }
+  if (dataUrl.length < 35_000) {
+    return dataUrl;
+  }
+  try {
+    const blob = await compressAndResizeImage(dataUrl, maxDim, quality);
+    const compressed = await blobToDataUrl(blob);
+    return compressed.length < dataUrl.length ? compressed : dataUrl;
+  } catch {
+    return dataUrl;
+  }
 }
 

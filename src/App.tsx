@@ -194,56 +194,49 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     const unsubscribeAuth = initAuth(
       async (loggedInUser) => {
         setUser(loggedInUser);
+        // Sync in background without blocking UI
         setIsLoadingCloud(true);
         try {
           // Determine user role and details from /users/{uid}
-          const userDoc = await getDoc(doc(db, "users", loggedInUser.uid));
           let role: "traveller" | "organizer" | "super_admin" = "traveller";
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.role) {
-              const lowerRole = userData.role.toLowerCase();
-              const normalizedRole = lowerRole === "organizer" ? "organizer" : lowerRole === "super_admin" ? "super_admin" : "traveller";
-              role = normalizedRole;
-              setUserRole(normalizedRole);
+          try {
+            const userDoc = await getDoc(doc(db, "users", loggedInUser.uid));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (userData.role) {
+                const lowerRole = userData.role.toLowerCase();
+                const normalizedRole = lowerRole === "organizer" ? "organizer" : lowerRole === "super_admin" ? "super_admin" : "traveller";
+                role = normalizedRole;
+                setUserRole(normalizedRole);
+              }
             }
+          } catch (e) {
+            console.warn("Could not fetch user doc:", e);
           }
 
           // Check admin collection for backwards compatibility
-          const adminDoc = await getDoc(doc(db, "admins", loggedInUser.uid));
-          if (adminDoc.exists()) {
-            const adminRole = adminDoc.data().role || "organizer";
-            if (adminRole === "super_admin" || adminRole === "admin" || adminRole === "Admin") {
-              role = "super_admin";
-              setUserRole("super_admin");
-              if (!window.location.pathname.startsWith("/admin")) {
-                window.location.href = "/admin/dashboard";
-                return;
+          let orgId = `personal_${loggedInUser.uid}`;
+          try {
+            const adminDoc = await getDoc(doc(db, "admins", loggedInUser.uid));
+            if (adminDoc.exists()) {
+              const adminRole = adminDoc.data().role || "organizer";
+              if (adminRole === "super_admin" || adminRole === "admin" || adminRole === "Admin") {
+                role = "super_admin";
+                setUserRole("super_admin");
+                if (!window.location.pathname.startsWith("/admin")) {
+                  window.location.href = "/admin/dashboard";
+                  return;
+                }
+              }
+              if (adminDoc.data().organizationId) {
+                orgId = adminDoc.data().organizationId;
               }
             }
+          } catch (e) {
+            console.warn("Could not fetch admin doc:", e);
           }
 
-          let orgId = `personal_${loggedInUser.uid}`;
-          if (adminDoc.exists() && adminDoc.data().organizationId) {
-            orgId = adminDoc.data().organizationId;
-          }
           setOrganizationId(orgId);
-
-          // Migrate local storage once on sign-in
-          const savedTrips = localStorage.getItem("trippro_trips");
-          const savedAccounts = localStorage.getItem("trippro_accounts");
-          const savedCashbook = localStorage.getItem("trippro_cashbook");
-
-          const tripsToMigrate = savedTrips ? JSON.parse(savedTrips) : initialTrips;
-          const accountsToMigrate = savedAccounts ? JSON.parse(savedAccounts) : initialAccounts;
-          const cashbookToMigrate = savedCashbook ? JSON.parse(savedCashbook) : initialCashbookEntries;
-
-          await migrateLocalDataToFirestore(
-            orgId,
-            tripsToMigrate,
-            accountsToMigrate,
-            cashbookToMigrate
-          );
 
           // Real-time trips listener based on role
           const tripsRef = collection(db, "trips");
@@ -263,8 +256,10 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 return fetchedTrips[0].id;
               });
             }
+            setIsLoadingCloud(false);
           }, (err) => {
             console.error("Trips real-time subscription error:", err);
+            setIsLoadingCloud(false);
           });
 
           // Real-time accounts listener
@@ -295,10 +290,30 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             console.warn("Cashbook real-time subscription notice:", err?.message || err);
           });
 
+          // Migrate local storage in the background without blocking the UI
+          const savedTrips = localStorage.getItem("trippro_trips");
+          const savedAccounts = localStorage.getItem("trippro_accounts");
+          const savedCashbook = localStorage.getItem("trippro_cashbook");
+
+          const tripsToMigrate = savedTrips ? JSON.parse(savedTrips) : initialTrips;
+          const accountsToMigrate = savedAccounts ? JSON.parse(savedAccounts) : initialAccounts;
+          const cashbookToMigrate = savedCashbook ? JSON.parse(savedCashbook) : initialCashbookEntries;
+
+          migrateLocalDataToFirestore(
+            orgId,
+            tripsToMigrate,
+            accountsToMigrate,
+            cashbookToMigrate
+          ).catch((mErr) => console.warn("Background migration notice:", mErr));
+
         } catch (err) {
           console.error("Cloud initialization error:", err);
-        } finally {
           setIsLoadingCloud(false);
+        } finally {
+          // If local trips already exist, do not hold UI hostage
+          if (trips.length > 0) {
+            setIsLoadingCloud(false);
+          }
         }
       },
       async () => {
@@ -588,12 +603,10 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
       <ConnectivityIndicator />
       {isLoadingCloud && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4">
-            <div className="w-8 h-8 border-4 border-[#1AAB67] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              Syncing with TripPro Cloud...
-            </p>
+        <div className="fixed top-3 right-3 z-50 pointer-events-none">
+          <div className="bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg border border-slate-700/50 flex items-center gap-2 backdrop-blur-md transition-all">
+            <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+            <span>Syncing cloud data...</span>
           </div>
         </div>
       )}
@@ -653,6 +666,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 trip={activeTrip}
                 onUpdateTrip={handleUpdateTrip}
                 onNavigateTab={handleSelectTab}
+                isOrganizer={userRole === "organizer" || userRole === "admin"}
                 onEditTrip={() => {
                   setEditingTrip(activeTrip);
                   setIsCreateModalOpen(true);
@@ -666,6 +680,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 trip={activeTrip}
                 onUpdateTrip={handleUpdateTrip}
                 onNavigateTab={handleSelectTab}
+                isOrganizer={userRole === "organizer" || userRole === "admin"}
               />
             )}
 

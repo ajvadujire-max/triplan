@@ -71,12 +71,12 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const primaryTabsAll = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
-    { id: "collections", label: "Collections", icon: IndianRupee, organizerOnly: true },
+    { id: "collections", label: "Collections", icon: IndianRupee },
     { id: "expenses", label: "Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers", icon: Users },
   ];
 
-  const primaryTabs = primaryTabsAll.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
+  const primaryTabs = primaryTabsAll.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
 
   const moreTabsAll = [
     { id: "diary", label: "Travel Diary", icon: BookOpen, description: "Personal journey memories & photos" },
@@ -86,7 +86,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
     { id: "ai_insights", label: "AI Smart Insights", icon: Sparkles, description: "Predictive fuel & schedules" },
   ];
 
-  const moreTabs = moreTabsAll.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
+  const moreTabs = moreTabsAll.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
 
   const handleTabClick = (tabId: string) => {
     onSelectTab(tabId);
@@ -237,7 +237,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
       {/* 3. Slide-Up "More" Menu Drawer & Options */}
       <AnimatePresence>
         {isMoreDrawerOpen && (
-          <>
+          <motion.div key="more-drawer">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -443,7 +443,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 </div>
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

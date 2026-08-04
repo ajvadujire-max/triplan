@@ -746,7 +746,12 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
       {/* 4. CREATE / EDIT DIARY MODAL */}
       <AnimatePresence>
         {isEditorOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/50 backdrop-blur-xs overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/50 backdrop-blur-xs overflow-y-auto"
+          >
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -1010,14 +1015,19 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 </div>
               </form>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* 5. VIEW ENTRY DETAILS MODAL */}
       <AnimatePresence>
         {viewingEntry && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto"
+          >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1130,14 +1140,19 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* 6. DELETE CONFIRMATION DIALOG */}
       <AnimatePresence>
         {entryToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1171,14 +1186,19 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 </button>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* 7. FULL SCREEN LIGHTBOX */}
       <AnimatePresence>
         {lightboxImages && (
-          <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-4"
+          >
             {/* Top Bar */}
             <div className="w-full max-w-4xl flex items-center justify-between text-white py-2">
               <span className="text-xs font-bold text-slate-300">
@@ -1250,7 +1270,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

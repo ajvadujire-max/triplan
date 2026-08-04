@@ -42,8 +42,7 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
   const [confirmLeaveTripId, setConfirmLeaveTripId] = useState<string | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
 
-  if (!isOpen) return null;
-
+  // Note: AnimatePresence handles isOpen conditional rendering
   const filteredTrips = trips.filter(
     (t) =>
       t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,7 +73,13 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs">
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs"
+        >
         {/* Backdrop overlay */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -250,11 +255,17 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
             </button>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
+    )}
 
       {/* Confirm Leave Trip Modal */}
       {confirmLeaveTripId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+        >
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 bg-rose-100 dark:bg-rose-950/60 rounded-full flex items-center justify-center mx-auto text-rose-600 dark:text-rose-400">
               <AlertTriangle className="w-6 h-6" />
@@ -288,7 +299,7 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

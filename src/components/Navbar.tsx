@@ -66,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
     { id: "diary", label: "Travel Diary", icon: BookOpen },
-    { id: "collections", label: "Collections", icon: IndianRupee, organizerOnly: true },
+    { id: "collections", label: "Collections", icon: IndianRupee },
     { id: "expenses", label: "Split Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers & Budgets", icon: Users },
     { id: "vault", label: "Vault & Packing", icon: Calendar },
@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "ai_insights", label: "AI Insights", icon: Sparkles },
   ];
 
-  const tabs = allTabs.filter(tab => !tab.organizerOnly || role === "organizer" || role === "super_admin");
+  const tabs = allTabs.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
 
   return (
     <header className="hidden md:block sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 transition-colors">

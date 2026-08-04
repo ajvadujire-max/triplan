@@ -18,6 +18,7 @@ import {
 } from "../types";
 import { TrainDetailsModule } from "./TrainDetailsModule";
 import { StationAutocomplete } from "./StationAutocomplete";
+import { compressAndResizeImage, blobToDataUrl } from "../lib/image-utils";
 import {
   Luggage,
   Plus,
@@ -323,9 +324,18 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                 const file = e.dataTransfer.files[0];
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                   if (event.target?.result) {
-                    setTicketUrl(event.target.result as string);
+                    let res = event.target.result as string;
+                    if (file.type.startsWith("image/")) {
+                      try {
+                        const compressedBlob = await compressAndResizeImage(file, 800, 0.75);
+                        res = await blobToDataUrl(compressedBlob);
+                      } catch {
+                        // fallback
+                      }
+                    }
+                    setTicketUrl(res);
                   }
                 };
                 reader.readAsDataURL(file);
@@ -342,9 +352,18 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
                 if (e.target.files && e.target.files[0]) {
                   const file = e.target.files[0];
                   const reader = new FileReader();
-                  reader.onload = (event) => {
+                  reader.onload = async (event) => {
                     if (event.target?.result) {
-                      setTicketUrl(event.target.result as string);
+                      let res = event.target.result as string;
+                      if (file.type.startsWith("image/")) {
+                        try {
+                          const compressedBlob = await compressAndResizeImage(file, 800, 0.75);
+                          res = await blobToDataUrl(compressedBlob);
+                        } catch {
+                          // fallback
+                        }
+                      }
+                      setTicketUrl(res);
                     }
                   };
                   reader.readAsDataURL(file);

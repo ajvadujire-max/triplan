@@ -64,6 +64,7 @@ export interface PaymentRecord {
 export interface Traveller {
   id: string;
   profilePhoto?: string;
+  profilePhotoUrl?: string;
   fullName: string;
   age: number;
   gender: "Male" | "Female" | "Other";
@@ -362,6 +363,7 @@ export interface PendingTravellerRegistration {
   passportNumber?: string;
   drivingLicense?: string;
   profilePhoto?: string;
+  profilePhotoUrl?: string;
   accuracyConfirmed: boolean;
   status: "Pending" | "Approved" | "Rejected";
 }
@@ -413,6 +415,7 @@ export interface JoinRequest {
   gender?: string;
   emergencyContact?: string;
   profilePhoto?: string;
+  profilePhotoUrl?: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
 }

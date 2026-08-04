@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useAppNavigation } from "../hooks/useAppNavigation";
 import { Trip, DocumentItem, ChecklistItem } from "../types";
 import { fetchChecklistItems, saveChecklistItem, deleteChecklistItem } from "../lib/firestoreSync";
+import { compressAndResizeImage, blobToDataUrl } from "../lib/image-utils";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
 import { AddItemModal } from "./AddItemModal";
 import {
@@ -296,8 +297,17 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
       );
 
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setDocFileUrl(reader.result as string);
+      reader.onloadend = async () => {
+        let result = reader.result as string;
+        if (file.type.startsWith("image/")) {
+          try {
+            const compressedBlob = await compressAndResizeImage(file, 800, 0.75);
+            result = await blobToDataUrl(compressedBlob);
+          } catch {
+            // fallback
+          }
+        }
+        setDocFileUrl(result);
         if (!docTitle) {
           // Auto-fill title from filename
           const cleanName = file.name.split(".").slice(0, -1).join(".");
@@ -915,8 +925,11 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                     <div className="space-y-1.5 pl-1.5">
                       <AnimatePresence initial={false}>
                         {categoryItems.map((item, idx) => (
-                          <div
+                          <motion.div
                             key={item.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             draggable={!isMultiSelectMode}
                             onDragStart={() => handleDragStart(item.id)}
                             onDragOver={handleDragOver}
@@ -1033,7 +1046,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                                   </button>
                                 </div>
                               </motion.div>
-                            </div>
+                            </motion.div>
                         ))}
                       </AnimatePresence>
                     </div>

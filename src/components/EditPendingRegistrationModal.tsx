@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { PendingTravellerRegistration, TravellerRole } from "../types";
 import { ProfilePhotoUpload } from "./ProfilePhotoUpload";
+import { uploadProfilePhotoToStorage } from "../lib/image-utils";
 import { X, CheckCircle, AlertCircle, User, Phone, Mail, DollarSign, Shield, FileText } from "lucide-react";
 
 interface EditPendingRegistrationModalProps {
@@ -60,9 +61,18 @@ export const EditPendingRegistrationModal: React.FC<EditPendingRegistrationModal
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+
+    let finalPhotoUrl = profilePhoto.trim() || registration.profilePhoto || "";
+    if (finalPhotoUrl.startsWith("data:")) {
+      try {
+        finalPhotoUrl = await uploadProfilePhotoToStorage(finalPhotoUrl, registration.id || `reg_${Date.now()}`);
+      } catch (err) {
+        console.error("Profile photo upload failed:", err);
+      }
+    }
 
     const updated: PendingTravellerRegistration = {
       ...registration,
@@ -77,9 +87,8 @@ export const EditPendingRegistrationModal: React.FC<EditPendingRegistrationModal
       email: email.trim(),
       passportNumber: passportNumber.trim(),
       drivingLicense: drivingLicense.trim(),
-      profilePhoto:
-        profilePhoto.trim() ||
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop",
+      profilePhotoUrl: finalPhotoUrl,
+      profilePhoto: finalPhotoUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop",
     };
 
     onSaveAndApprove(updated);
