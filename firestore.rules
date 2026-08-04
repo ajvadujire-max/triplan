@@ -52,10 +52,17 @@ service cloud.firestore {
       allow delete: if isTripOrganizer(resource.data);
       allow update: if isAuthenticated() && (
         isTripOrganizer(resource.data) ||
+        request.auth.uid in request.resource.data.memberUids ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expenses', 'travellers', 'pendingRegistrations', 'memberUids', 'members', 'updatedAt'])
       );
 
       // Subcollections
+      match /registrations/{registrationId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && registrationId == request.auth.uid;
+        allow delete: if isAuthenticated() && (registrationId == request.auth.uid || isTripOrganizer(get(/databases/$(database)/documents/trips/$(tripId)).data));
+      }
+
       match /{subcollection=**} {
         allow read: if isAuthenticated();
         allow write: if isAuthenticated();

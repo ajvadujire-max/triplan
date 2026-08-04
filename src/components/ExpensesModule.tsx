@@ -47,6 +47,7 @@ import {
   Quote,
   RotateCcw,
   Lock,
+  Download,
 } from "lucide-react";
 
 interface ExpensesModuleProps {
@@ -127,6 +128,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   const [activeSection, setActiveSection] = useState<"trip" | "personal">("trip");
   const [personalExpenses, setPersonalExpenses] = useState<PersonalExpense[]>([]);
   const [isLoadingPersonal, setIsLoadingPersonal] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
 
   // Derive active view and modal state from path segments
   // segments: ["expenses", ...]
@@ -529,6 +531,55 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
         showToast("Invalid budget amount", "error");
       }
     }
+  };
+
+  const byCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    trip.expenses.forEach((e) => {
+      map[e.category] = (map[e.category] || 0) + e.amount;
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [trip.expenses]);
+
+  const handleExportCSV = () => {
+    const headers = [
+      "Date",
+      "Title / Description",
+      "Category",
+      "Amount",
+      "Paid By",
+      "Account / Method",
+      "Split Type",
+      "Travellers Involved",
+      "Notes"
+    ];
+
+    const rows = filteredExpenses.map((exp) => {
+      const payer = trip.travellers.find(t => t.id === exp.whoPaidId)?.fullName || "Unknown";
+      const account = accounts.find(a => a.id === exp.accountUsedId)?.name || "Cash";
+      const travellerNames = (exp.whoUsedIds || []).map(id => trip.travellers.find(t => t.id === id)?.fullName).filter(Boolean).join("; ");
+      return [
+        `"${exp.date || ""}"`,
+        `"${exp.description.replace(/"/g, '""')}"`,
+        `"${exp.category}"`,
+        exp.amount,
+        `"${payer}"`,
+        `"${account}"`,
+        `"${exp.splitType || "equal"}"`,
+        `"${travellerNames}"`,
+        `"${(exp.notes || "").replace(/"/g, '""')}"`
+      ].join(",");
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Trip_Expenses_${trip.name.replace(/\s+/g, "_")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Trip Expenses CSV exported successfully!");
   };
 
   // Filtered expenses list
@@ -1397,27 +1448,156 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {activeSection === "trip" && isOrganizer && (
-            <button
-              onClick={handleAddBudget}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold px-3 py-2 sm:py-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900"
-            >
-              <Wallet className="w-3.5 h-3.5" />
-              <span>Add Budget</span>
-            </button>
-          )}
-          {(activeSection === "personal" || isOrganizer) && (
+        {activeSection === "personal" && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleOpenAdd}
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-sm font-bold px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-md transition-all shrink-0"
             >
               <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>{activeSection === "personal" ? "Record Personal Expense" : "Record Expense"}</span>
+              <span>Record Personal Expense</span>
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* 2x2 Mobile Action Grid for Trip Expenses */}
+      {activeSection === "trip" && (
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (!isOrganizer) {
+                alert("Only trip organizers can update the trip budget.");
+                return;
+              }
+              handleAddBudget();
+            }}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+          >
+            <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="truncate">Add Budget</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isOrganizer) {
+                alert("Only trip organizers can record shared trip expenses.");
+                return;
+              }
+              handleOpenAdd();
+            }}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            <span className="truncate">Record Expense</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsReportsOpen(!isReportsOpen)}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+          >
+            <PieChart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="truncate">{isReportsOpen ? "Hide Reports" : "Reports"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="truncate">Export CSV</span>
+          </button>
+        </div>
+      )}
+
+      {/* Reports & Analytics Panel */}
+      {activeSection === "trip" && isReportsOpen && (
+        <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <PieChart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+                Trip Expenses Analytics & Financial Summary
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsReportsOpen(false)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+                Total Spent
+              </div>
+              <div className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {trip.currency}{totalExpenseAmount.toLocaleString()}
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+                Total Transactions
+              </div>
+              <div className="text-base font-black text-slate-900 dark:text-white mt-1">
+                {trip.expenses.length} Expenses
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+                Avg. Expense / Tx
+              </div>
+              <div className="text-base font-black text-slate-900 dark:text-white mt-1">
+                {trip.currency}{trip.expenses.length > 0 ? Math.round(totalExpenseAmount / trip.expenses.length).toLocaleString() : 0}
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+                Remaining Budget
+              </div>
+              <div className={`text-base font-black mt-1 ${trip.totalBudget - totalExpenseAmount < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                {trip.currency}{(trip.totalBudget - totalExpenseAmount).toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {byCategory.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Spending by Category
+              </span>
+              <div className="space-y-1.5">
+                {byCategory.map(([cat, amt]) => {
+                  const pct = totalExpenseAmount > 0 ? Math.round((amt / totalExpenseAmount) * 100) : 0;
+                  return (
+                    <div key={cat} className="space-y-1">
+                      <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          {getCategoryIcon(cat as any)} {cat}
+                        </span>
+                        <span>{trip.currency}{amt.toLocaleString()} ({pct}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Budget Warning Alert */}
       {activeSection === "trip" && (() => {

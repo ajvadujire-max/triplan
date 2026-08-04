@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { User, Phone, Mail, Calendar, Users, Shield, Camera, Upload, CheckCircle2, Lock, MapPin, UserCheck } from "lucide-react";
+import { User, Phone, Mail, Calendar, Users, Shield, Camera, Upload, CheckCircle2, Lock, MapPin, UserCheck, LogIn, UserPlus } from "lucide-react";
 import { cn } from "../lib/utils";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 import { Trip, Traveller } from "../types";
 import { auth, db } from "../lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { googleSignIn } from "../lib/googleAuth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function JoinTrip() {
@@ -17,10 +18,12 @@ export default function JoinTrip() {
   const [fetchingTrip, setFetchingTrip] = useState(true);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  const [authMode, setAuthMode] = useState<"signup" | "signin">("signup");
   
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -109,67 +112,33 @@ export default function JoinTrip() {
 
   const coverImage = trip?.coverPhoto || trip?.coverImage || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleJoin = async () => {
     setIsLoading(true);
     setErrorMsg(null);
-    
+    setShowSignInPrompt(false);
     try {
-      if (trip) {
-        let activeUid = currentUser?.uid;
-        let userEmail = formData.email.trim();
+      const res = await googleSignIn();
+      if (res && res.user && trip) {
+        const activeUid = res.user.uid;
+        const userEmail = res.user.email || formData.email || "";
+        const fullName = res.user.displayName || formData.fullName || "Traveller";
 
-        if (!activeUid) {
-          if (!password || password.length < 6) {
-            setErrorMsg("Password must be at least 6 characters.");
-            setIsLoading(false);
-            return;
-          }
+        // Create / merge user profile
+        await setDoc(doc(db, "users", activeUid), {
+          uid: activeUid,
+          fullName: fullName,
+          name: fullName,
+          email: userEmail,
+          phone: res.user.phoneNumber || formData.mobileNumber,
+          role: "traveller",
+          tripId: trip.id,
+          lastActiveTripId: trip.id,
+          tripCode: trip.inviteCode || tripCode,
+          status: "active",
+          createdAt: new Date().toISOString()
+        }, { merge: true });
 
-          if (password !== confirmPassword) {
-            setErrorMsg("Passwords do not match. Please verify your password.");
-            setIsLoading(false);
-            return;
-          }
-
-          if (!userEmail) {
-            // Generate fallback email if empty
-            userEmail = `${formData.mobileNumber.replace(/\D/g, "")}@trippro.app`;
-          }
-          
-          const cred = await createUserWithEmailAndPassword(auth, userEmail, password);
-          activeUid = cred.user.uid;
-
-          // Create user profile in /users/{uid}
-          await setDoc(doc(db, "users", activeUid), {
-            uid: activeUid,
-            fullName: formData.fullName,
-            name: formData.fullName,
-            email: userEmail,
-            phone: formData.mobileNumber,
-            role: "traveller",
-            tripId: trip.id,
-            lastActiveTripId: trip.id,
-            tripCode: trip.inviteCode || tripCode,
-            status: "active",
-            createdAt: new Date().toISOString()
-          }, { merge: true });
-        } else {
-          // Logged in user: update profile with trip link
-          await setDoc(doc(db, "users", activeUid), {
-            uid: activeUid,
-            role: "traveller",
-            tripId: trip.id,
-            lastActiveTripId: trip.id,
-            tripCode: trip.inviteCode || tripCode,
-            status: "active"
-          }, { merge: true });
-          if (!userEmail && currentUser.email) {
-            userEmail = currentUser.email;
-          }
-        }
-
-        // Save membership subcollection for user
+        // Save membership
         await setDoc(doc(db, "users", activeUid, "memberships", trip.id), {
           tripId: trip.id,
           tripName: trip.name,
@@ -179,23 +148,22 @@ export default function JoinTrip() {
           status: "active"
         }, { merge: true });
 
-        // Prepare new traveller record
+        // Prepare traveller record and update trip
         const newTraveller: Traveller = {
           id: activeUid,
-          fullName: formData.fullName,
+          fullName: fullName,
           age: Number(formData.age) || 25,
           gender: formData.gender,
-          phone: formData.mobileNumber,
+          phone: res.user.phoneNumber || formData.mobileNumber || "",
           email: userEmail,
           emergencyContact: formData.emergencyContact || "",
           bloodGroup: "O+",
           role: "Traveller",
           allocatedBudget: 0,
-          profilePhoto: formData.profilePhoto || "",
+          profilePhoto: res.user.photoURL || formData.profilePhoto || "",
           status: "active"
         };
-        
-        // Update trip document in Firestore directly
+
         const tripRef = doc(db, "trips", trip.id);
         const tripSnap = await getDoc(tripRef);
         let updatedTravellers: Traveller[] = trip.travellers ? [...trip.travellers] : [];
@@ -207,7 +175,6 @@ export default function JoinTrip() {
           if (tripData.memberUids) updatedMemberUids = tripData.memberUids;
         }
 
-        // Add or update traveller in list
         const existingIdx = updatedTravellers.findIndex(t => t.id === activeUid || t.email === userEmail);
         if (existingIdx >= 0) {
           updatedTravellers[existingIdx] = { ...updatedTravellers[existingIdx], ...newTraveller };
@@ -229,10 +196,182 @@ export default function JoinTrip() {
         const regRef = doc(db, "trips", trip.id, "registrations", activeUid);
         await setDoc(regRef, {
           id: activeUid,
-          fullName: formData.fullName,
+          fullName: fullName,
           age: Number(formData.age) || 25,
           gender: formData.gender,
-          phone: formData.mobileNumber,
+          phone: res.user.phoneNumber || formData.mobileNumber || "",
+          emergencyContact: formData.emergencyContact || "",
+          email: userEmail,
+          profilePhoto: res.user.photoURL || formData.profilePhoto || "",
+          status: "Approved",
+          submissionDate: new Date().toISOString(),
+          accuracyConfirmed: true,
+          role: "Traveller",
+          allocatedBudget: 0
+        }, { merge: true });
+
+        const updatedTripDoc: Trip = {
+          ...trip,
+          travellers: updatedTravellers,
+          memberUids: updatedMemberUids
+        };
+
+        const savedTrips = localStorage.getItem("trippro_trips");
+        const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
+        const idx = currentTrips.findIndex(t => t.id === trip.id);
+        if (idx >= 0) {
+          currentTrips[idx] = updatedTripDoc;
+        } else {
+          currentTrips.unshift(updatedTripDoc);
+        }
+        localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
+        localStorage.setItem("trippro_active_trip_id", trip.id);
+        window.dispatchEvent(new Event("trip_changed"));
+
+        setIsSuccess(true);
+      }
+    } catch (err: any) {
+      console.error("Google join error:", err);
+      setErrorMsg(err.message || "Google sign-in failed.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMsg(null);
+    setShowSignInPrompt(false);
+    
+    try {
+      if (trip) {
+        let activeUid = currentUser?.uid;
+        let userEmail = formData.email.trim();
+
+        if (!activeUid) {
+          if (!userEmail) {
+            setErrorMsg("Please enter your email address.");
+            setIsLoading(false);
+            return;
+          }
+
+          if (!password || password.length < 6) {
+            setErrorMsg("Password must be at least 6 characters.");
+            setIsLoading(false);
+            return;
+          }
+
+          if (authMode === "signin") {
+            const cred = await signInWithEmailAndPassword(auth, userEmail, password);
+            activeUid = cred.user.uid;
+
+            await setDoc(doc(db, "users", activeUid), {
+              uid: activeUid,
+              role: "traveller",
+              tripId: trip.id,
+              lastActiveTripId: trip.id,
+              tripCode: trip.inviteCode || tripCode,
+              status: "active"
+            }, { merge: true });
+          } else {
+            if (password !== confirmPassword) {
+              setErrorMsg("Passwords do not match. Please verify your password.");
+              setIsLoading(false);
+              return;
+            }
+
+            const cred = await createUserWithEmailAndPassword(auth, userEmail, password);
+            activeUid = cred.user.uid;
+
+            await setDoc(doc(db, "users", activeUid), {
+              uid: activeUid,
+              fullName: formData.fullName || userEmail.split("@")[0],
+              name: formData.fullName || userEmail.split("@")[0],
+              email: userEmail,
+              phone: formData.mobileNumber,
+              role: "traveller",
+              tripId: trip.id,
+              lastActiveTripId: trip.id,
+              tripCode: trip.inviteCode || tripCode,
+              status: "active",
+              createdAt: new Date().toISOString()
+            }, { merge: true });
+          }
+        } else {
+          await setDoc(doc(db, "users", activeUid), {
+            uid: activeUid,
+            role: "traveller",
+            tripId: trip.id,
+            lastActiveTripId: trip.id,
+            tripCode: trip.inviteCode || tripCode,
+            status: "active"
+          }, { merge: true });
+          if (!userEmail && currentUser.email) {
+            userEmail = currentUser.email;
+          }
+        }
+
+        await setDoc(doc(db, "users", activeUid, "memberships", trip.id), {
+          tripId: trip.id,
+          tripName: trip.name,
+          tripCode: trip.inviteCode || trip.tripCode || tripCode,
+          role: "traveller",
+          joinedAt: new Date().toISOString(),
+          status: "active"
+        }, { merge: true });
+
+        const resolvedName = formData.fullName || currentUser?.displayName || userEmail.split("@")[0] || "Traveller";
+        const newTraveller: Traveller = {
+          id: activeUid,
+          fullName: resolvedName,
+          age: Number(formData.age) || 25,
+          gender: formData.gender,
+          phone: formData.mobileNumber || currentUser?.phoneNumber || "",
+          email: userEmail,
+          emergencyContact: formData.emergencyContact || "",
+          bloodGroup: "O+",
+          role: "Traveller",
+          allocatedBudget: 0,
+          profilePhoto: formData.profilePhoto || currentUser?.photoURL || "",
+          status: "active"
+        };
+        
+        const tripRef = doc(db, "trips", trip.id);
+        const tripSnap = await getDoc(tripRef);
+        let updatedTravellers: Traveller[] = trip.travellers ? [...trip.travellers] : [];
+        let updatedMemberUids: string[] = trip.memberUids ? [...trip.memberUids] : [trip.organizerUid || ""];
+
+        if (tripSnap.exists()) {
+          const tripData = tripSnap.data();
+          if (tripData.travellers) updatedTravellers = tripData.travellers;
+          if (tripData.memberUids) updatedMemberUids = tripData.memberUids;
+        }
+
+        const existingIdx = updatedTravellers.findIndex(t => t.id === activeUid || t.email === userEmail);
+        if (existingIdx >= 0) {
+          updatedTravellers[existingIdx] = { ...updatedTravellers[existingIdx], ...newTraveller };
+        } else {
+          updatedTravellers.push(newTraveller);
+        }
+
+        if (!updatedMemberUids.includes(activeUid)) {
+          updatedMemberUids.push(activeUid);
+        }
+
+        await setDoc(tripRef, {
+          travellers: updatedTravellers,
+          memberUids: updatedMemberUids,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        const regRef = doc(db, "trips", trip.id, "registrations", activeUid);
+        await setDoc(regRef, {
+          id: activeUid,
+          fullName: resolvedName,
+          age: Number(formData.age) || 25,
+          gender: formData.gender,
+          phone: formData.mobileNumber || "",
           emergencyContact: formData.emergencyContact || "",
           email: userEmail,
           profilePhoto: formData.profilePhoto || "",
@@ -243,7 +382,6 @@ export default function JoinTrip() {
           allocatedBudget: 0
         }, { merge: true });
 
-        // Add to local storage
         const updatedTripDoc: Trip = {
           ...trip,
           travellers: updatedTravellers,
@@ -266,7 +404,15 @@ export default function JoinTrip() {
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || "An error occurred while joining the trip.");
+      if (err.code === "auth/email-already-in-use" || err.message?.includes("email-already-in-use")) {
+        setErrorMsg("An account already exists with this email.");
+        setShowSignInPrompt(true);
+        setAuthMode("signin");
+      } else if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
+        setErrorMsg("Invalid email or password. Please try again or create an account.");
+      } else {
+        setErrorMsg(err.message || "An error occurred while joining the trip.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -399,17 +545,85 @@ export default function JoinTrip() {
         </div>
 
         {errorMsg && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 font-semibold rounded-2xl text-sm">
-            {errorMsg}
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 font-semibold rounded-2xl text-sm flex flex-col gap-2">
+            <div>{errorMsg}</div>
+            {showSignInPrompt && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signin");
+                  setErrorMsg(null);
+                  setShowSignInPrompt(false);
+                }}
+                className="self-start text-xs font-bold px-3 py-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors cursor-pointer"
+              >
+                Sign In Instead
+              </button>
+            )}
           </div>
         )}
 
         {/* Join Trip Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100 space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-1">Traveller Registration</h2>
-            <p className="text-xs text-slate-500">Fill in your details to join {trip?.name} as a Traveller.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">
+                {authMode === "signin" ? "Sign In to Join Trip" : "Traveller Registration"}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {authMode === "signin" 
+                  ? `Enter your account password to join ${trip?.name}.` 
+                  : `Fill in your details to join ${trip?.name} as a Traveller.`}
+              </p>
+            </div>
+
+            {!currentUser && (
+              <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("signup"); setErrorMsg(null); }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    authMode === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  Create Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("signin"); setErrorMsg(null); }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    authMode === "signin" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
           </div>
+
+          {!currentUser && (
+            <button
+              type="button"
+              onClick={handleGoogleJoin}
+              className="w-full py-3 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.15C3.15 21.32 7.21 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.18C.43 8.13 0 9.84 0 12s.43 3.87 1.18 5.39l4.09-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.76 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.21 0 3.15 2.68 1.18 6.61l4.09 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+          )}
+
+          {!currentUser && (
+            <div className="flex items-center gap-3 my-2 text-slate-300 text-xs">
+              <div className="h-px bg-slate-200 flex-1" />
+              <span>OR EMAIL</span>
+              <div className="h-px bg-slate-200 flex-1" />
+            </div>
+          )}
 
           <div className="flex justify-center mb-4">
             <div className="relative group">
@@ -422,7 +636,7 @@ export default function JoinTrip() {
               </div>
               <button 
                 type="button"
-                className="absolute bottom-0 right-0 w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"
+                className="absolute bottom-0 right-0 w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg cursor-pointer"
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>
@@ -430,34 +644,39 @@ export default function JoinTrip() {
           </div>
 
           <div className="grid gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Full Name *</label>
-              <input 
-                required
-                type="text" 
-                value={formData.fullName}
-                onChange={(e) => setFormData(p => ({ ...p, fullName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {authMode === "signup" && (
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Mobile Number *</label>
+                <label className="text-xs font-bold text-slate-700">Full Name *</label>
                 <input 
                   required
-                  type="tel" 
-                  value={formData.mobileNumber}
-                  onChange={(e) => setFormData(p => ({ ...p, mobileNumber: e.target.value }))}
+                  type="text" 
+                  value={formData.fullName}
+                  onChange={(e) => setFormData(p => ({ ...p, fullName: e.target.value }))}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
-                  placeholder="+91 98765 43210"
+                  placeholder="Enter your full name"
                 />
               </div>
+            )}
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Email Address</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {authMode === "signup" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Mobile Number *</label>
+                  <input 
+                    required
+                    type="tel" 
+                    value={formData.mobileNumber}
+                    onChange={(e) => setFormData(p => ({ ...p, mobileNumber: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+              )}
+
+              <div className={`space-y-1.5 ${authMode === "signin" ? "sm:col-span-2" : ""}`}>
+                <label className="text-xs font-bold text-slate-700">Email Address *</label>
                 <input 
+                  required
                   type="email" 
                   value={formData.email}
                   onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
@@ -468,7 +687,7 @@ export default function JoinTrip() {
             </div>
 
             {!currentUser && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className={`grid ${authMode === "signup" ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"} gap-4 pt-2 border-t border-slate-100`}>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Password *</label>
                   <div className="relative">
@@ -484,62 +703,68 @@ export default function JoinTrip() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Confirm Password *</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-                    <input 
-                      required
-                      type="password" 
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
-                      placeholder="Repeat password"
-                    />
+                {authMode === "signup" && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Confirm Password *</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                      <input 
+                        required
+                        type="password" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                        placeholder="Repeat password"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Age (optional)</label>
-                <input 
-                  type="number" 
-                  value={formData.age}
-                  onChange={(e) => setFormData(p => ({ ...p, age: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
-                  placeholder="25"
-                />
-              </div>
+            {authMode === "signup" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Age (optional)</label>
+                    <input 
+                      type="number" 
+                      value={formData.age}
+                      onChange={(e) => setFormData(p => ({ ...p, age: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                      placeholder="25"
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Gender (optional)</label>
-                <select 
-                  value={formData.gender}
-                  onChange={(e) => setFormData(p => ({ ...p, gender: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all bg-white text-sm"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Gender (optional)</label>
+                    <select 
+                      value={formData.gender}
+                      onChange={(e) => setFormData(p => ({ ...p, gender: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all bg-white text-sm"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Emergency Contact (optional)</label>
-              <div className="relative">
-                <Phone className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-                <input 
-                  type="tel" 
-                  value={formData.emergencyContact}
-                  onChange={(e) => setFormData(p => ({ ...p, emergencyContact: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
-                  placeholder="Emergency phone number"
-                />
-              </div>
-            </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Emergency Contact (optional)</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="tel" 
+                      value={formData.emergencyContact}
+                      onChange={(e) => setFormData(p => ({ ...p, emergencyContact: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 outline-none transition-all text-sm"
+                      placeholder="Emergency phone number"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex gap-4 pt-4">
@@ -555,7 +780,11 @@ export default function JoinTrip() {
               disabled={isLoading}
               className="flex-[2] bg-indigo-600 text-white px-5 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50"
             >
-              {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Join Trip"}
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <span>{authMode === "signin" ? "Sign In & Join Trip" : "Join Trip"}</span>
+              )}
             </button>
           </div>
         </form>
