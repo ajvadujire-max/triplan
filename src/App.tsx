@@ -78,6 +78,35 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   }, [selectedTripId]);
 
   useEffect(() => {
+    const migrateTripCodes = async () => {
+        if (localStorage.getItem("trippro_codes_migrated")) return;
+        try {
+            const tripsSnap = await getDocs(collection(db, "trips"));
+            for (const docSnap of tripsSnap.docs) {
+                const data = docSnap.data();
+                let updateNeeded = false;
+                const updates: any = {};
+                if (data.tripCode && data.tripCode !== data.tripCode.toLowerCase()) {
+                    updates.tripCode = data.tripCode.toLowerCase();
+                    updateNeeded = true;
+                }
+                if (data.inviteCode && data.inviteCode !== data.inviteCode.toLowerCase()) {
+                    updates.inviteCode = data.inviteCode.toLowerCase();
+                    updateNeeded = true;
+                }
+                if (updateNeeded) {
+                    await updateDoc(doc(db, "trips", docSnap.id), updates);
+                }
+            }
+            localStorage.setItem("trippro_codes_migrated", "true");
+        } catch (err) {
+            console.error("Migration failed:", err);
+        }
+    };
+    migrateTripCodes();
+  }, []);
+
+  useEffect(() => {
     const syncActiveTrip = () => {
       const savedTripsStr = localStorage.getItem("trippro_trips");
       if (savedTripsStr) {

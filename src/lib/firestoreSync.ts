@@ -36,7 +36,7 @@ function sanitizeForFirestore<T>(obj: T): T {
 export async function fetchTripByInviteCode(code: string): Promise<Trip | null> {
   if (!code) return null;
   const cleanCode = code.trim();
-  const normalizedCode = cleanCode.toUpperCase();
+  const normalizedCode = cleanCode.toLowerCase();
   const path = `trips`;
 
   console.log("[Trip Lookup Debug] Starting trip lookup in Firestore collection:", path, {
@@ -48,7 +48,7 @@ export async function fetchTripByInviteCode(code: string): Promise<Trip | null> 
   try {
     const colRef = collection(db, path);
     
-    // First try querying by inviteCode (requires proper Firestore rules or indexing, but list is allowed if inviteCode is present)
+    // First try querying by inviteCode
     const inviteQuery = query(colRef, where("inviteCode", "==", normalizedCode));
     const inviteSnap = await getDocs(inviteQuery);
     if (!inviteSnap.empty) {
