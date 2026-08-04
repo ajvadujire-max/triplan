@@ -9,6 +9,7 @@ import { auth, db } from "../lib/firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { googleSignIn } from "../lib/googleAuth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import { ProfilePhotoUpload } from "../components/ProfilePhotoUpload";
 
 export default function JoinTrip() {
   const { tripCode } = useParams();
@@ -655,22 +656,13 @@ export default function JoinTrip() {
             </div>
           )}
 
-          <div className="flex justify-center mb-4">
-            <div className="relative group">
-              <div className="w-20 h-20 bg-slate-100 rounded-full border-2 border-slate-200 flex items-center justify-center overflow-hidden">
-                {formData.profilePhoto ? (
-                  <img src={formData.profilePhoto} className="w-full h-full object-cover" alt="Profile" />
-                ) : (
-                  <User className="w-8 h-8 text-slate-300" />
-                )}
-              </div>
-              <button 
-                type="button"
-                className="absolute bottom-0 right-0 w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg cursor-pointer"
-              >
-                <Camera className="w-3.5 h-3.5" />
-              </button>
-            </div>
+          <div className="mb-4">
+            <ProfilePhotoUpload
+              photoUrl={formData.profilePhoto || undefined}
+              fullName={formData.fullName}
+              onChangePhoto={(url) => setFormData(p => ({ ...p, profilePhoto: url }))}
+              onRemovePhoto={() => setFormData(p => ({ ...p, profilePhoto: null }))}
+            />
           </div>
 
           <div className="grid gap-4">

@@ -6,6 +6,7 @@
 import React from "react";
 import { User } from "firebase/auth";
 import { Trip } from "../types";
+import { Avatar } from "./Avatar";
 import {
   Compass,
   Plus,
@@ -186,18 +187,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {user ? (
             <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 py-1 pl-1.5 pr-2 sm:pr-3 rounded-xl shadow-xs transition-all">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || "User"}
-                  className="w-7 h-7 rounded-full object-cover border border-indigo-200 dark:border-indigo-850"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
-                  {user.displayName?.charAt(0) || "U"}
-                </div>
-              )}
+              <Avatar src={user.photoURL} name={user.displayName} size="w-7 h-7 text-[10px]" />
               <div className="hidden md:block text-left text-[11px] leading-tight">
                 <p className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
                   {user.displayName}

@@ -7,6 +7,8 @@ import React, { useRef, useState } from "react";
 import { Camera, Image as ImageIcon, Trash2, Upload, AlertCircle, Loader2, User } from "lucide-react";
 import { PhotoEditorModal } from "./PhotoEditorModal";
 import { AnimatePresence } from "motion/react";
+import { uploadProfilePhotoToStorage } from "../lib/image-utils";
+import { auth } from "../lib/firebase";
 
 interface ProfilePhotoUploadProps {
   photoUrl?: string;
@@ -67,7 +69,14 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
     setErrorMsg(null);
     setIsProcessing(true);
     try {
-      onChangePhoto(croppedDataUrl);
+      const uid = auth.currentUser?.uid || `user_${Date.now()}`;
+      let downloadUrl = croppedDataUrl;
+      try {
+        downloadUrl = await uploadProfilePhotoToStorage(croppedDataUrl, uid);
+      } catch (uploadErr) {
+        console.warn("Storage upload failed, using dataUrl fallback:", uploadErr);
+      }
+      onChangePhoto(downloadUrl);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to save photo.");
     } finally {

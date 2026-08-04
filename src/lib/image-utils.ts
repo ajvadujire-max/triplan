@@ -98,3 +98,31 @@ function rotateSize(width: number, height: number, rotation: number) {
       Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height),
   };
 }
+
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "./firebase";
+
+export async function uploadProfilePhotoToStorage(fileOrDataUrl: File | string, identifier: string): Promise<string> {
+  if (!storage) {
+    throw new Error("Firebase Storage is not initialized");
+  }
+
+  let blob: Blob;
+  if (typeof fileOrDataUrl === "string") {
+    if (fileOrDataUrl.startsWith("data:")) {
+      const res = await fetch(fileOrDataUrl);
+      blob = await res.blob();
+    } else {
+      return fileOrDataUrl; // Already a URL
+    }
+  } else {
+    blob = fileOrDataUrl;
+  }
+
+  const filename = `profile_photos/${identifier}_${Date.now()}.jpg`;
+  const storageRef = ref(storage, filename);
+  await uploadBytes(storageRef, blob);
+  const downloadUrl = await getDownloadURL(storageRef);
+  return downloadUrl;
+}
+

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { User } from "firebase/auth";
 import { motion, AnimatePresence } from "motion/react";
+import { Avatar } from "./Avatar";
 import { useModalBack } from "../hooks/useModalBack";
 import {
   Compass,
@@ -138,22 +139,11 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
           {user ? (
             <button
               onClick={() => setIsMoreDrawerOpen(true)}
-              className="relative w-8 h-8 rounded-full border border-indigo-200 dark:border-indigo-800 overflow-hidden active:scale-95 transition-transform"
+              className="relative rounded-full border border-indigo-200 dark:border-indigo-800 overflow-hidden active:scale-95 transition-transform"
             >
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || "User"}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-full h-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
-                  {user.displayName?.charAt(0) || "U"}
-                </div>
-              )}
+              <Avatar src={user.photoURL} name={user.displayName} size="w-8 h-8 text-[10px]" />
               {/* Online indicator dot */}
-              <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-white dark:border-slate-900 rounded-full" />
+              <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-white dark:border-slate-900 rounded-full z-10" />
             </button>
           ) : (
             <button
@@ -290,18 +280,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 <div className="flex items-center gap-3">
                   {user ? (
                     <>
-                      {user.photoURL ? (
-                        <img
-                          src={user.photoURL}
-                          alt={user.displayName || "User"}
-                          className="w-10 h-10 rounded-full border border-indigo-200 dark:border-indigo-850"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
-                          {user.displayName?.charAt(0) || "U"}
-                        </div>
-                      )}
+                      <Avatar src={user.photoURL} name={user.displayName} size="md" />
                       <div>
                         <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200">
                           {user.displayName}

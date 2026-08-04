@@ -12,6 +12,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { GoogleFormCollectModal } from "./GoogleFormCollectModal";
 import { EditPendingRegistrationModal } from "./EditPendingRegistrationModal";
 import { ProfilePhotoUpload, getInitials } from "./ProfilePhotoUpload";
+import { Avatar, getTravellerPhoto } from "./Avatar";
 import { ContactPhoneButton } from "./ContactOptionsBottomSheet";
 import {
   Users,
@@ -438,17 +439,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           {/* Header Hero Card */}
           <div className="bg-white dark:bg-slate-900 p-5 sm:p-7 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left">
-              {selectedTraveller.profilePhoto ? (
-                <img
-                  src={selectedTraveller.profilePhoto}
-                  alt={selectedTraveller.fullName}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-indigo-500/20 dark:border-indigo-500/30 shadow-md shrink-0"
-                />
-              ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-800 text-white font-black text-xl sm:text-2xl flex items-center justify-center shrink-0 border-4 border-indigo-400/30 shadow-md">
-                  {getInitials(selectedTraveller.fullName)}
-                </div>
-              )}
+              <Avatar src={getTravellerPhoto(selectedTraveller)} name={selectedTraveller.fullName} size="xl" className="border-4 border-indigo-500/20 dark:border-indigo-500/30 shadow-md" />
 
               <div className="flex-1 space-y-2">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -994,18 +985,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] sm:min-h-[105px]"
           >
             <div className="flex items-center gap-3.5 min-w-0">
-              {t.profilePhoto ? (
-                <img
-                  src={t.profilePhoto}
-                  alt={t.fullName}
-                  loading="lazy"
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-indigo-500/30 shrink-0"
-                />
-              ) : (
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center shrink-0 border-2 border-indigo-400/30">
-                  {getInitials(t.fullName)}
-                </div>
-              )}
+              <Avatar src={getTravellerPhoto(t)} name={t.fullName} size="lg" className="border-2 border-indigo-500/30 shadow-xs" />
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5 leading-tight">
