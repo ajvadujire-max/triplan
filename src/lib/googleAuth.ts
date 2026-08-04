@@ -33,7 +33,7 @@ export const initAuth = (
 export const googleSignIn = async (): Promise<{
   user: User;
   accessToken: string;
-} | null> => {
+}> => {
   if (signInPromise) {
     console.log("Google sign-in already in progress, reusing ongoing request.");
     return signInPromise;
@@ -58,8 +58,8 @@ export const googleSignIn = async (): Promise<{
       }
       return { user: result.user, accessToken: token };
     } catch (error: any) {
-      console.warn("Google sign-in popup notice:", error?.message || error);
-      return null;
+      console.error("Google sign-in error:", error);
+      throw error;
     } finally {
       isSigningIn = false;
       signInPromise = null;

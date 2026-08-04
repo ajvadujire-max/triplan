@@ -236,7 +236,15 @@ export default function JoinTrip() {
       }
     } catch (err: any) {
       console.error("Google join error:", err);
-      setErrorMsg(err.message || "Google sign-in failed.");
+      const code = err?.code || "";
+      const msg = err?.message || String(err);
+      if (code === "auth/popup-closed-by-user") {
+        setErrorMsg("Google Sign-In was cancelled. Please try again when ready.");
+      } else if (msg.includes("access_denied") || msg.includes("403") || code === "auth/unauthorized-domain") {
+        setErrorMsg("Google Sign-In is currently in testing mode in the Google Cloud Console. To allow all travellers to sign in without adding them as test users, please set the OAuth consent screen publishing status to 'In Production' in the Google Cloud Console (APIs & Services > OAuth consent screen). Alternatively, please use Email and Password sign-in below.");
+      } else {
+        setErrorMsg("Google Sign-In could not be completed. Please check your network connection or use Email and Password sign-in.");
+      }
     } finally {
       setIsLoading(false);
     }
