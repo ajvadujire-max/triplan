@@ -86,7 +86,7 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
   const activeTravellersForDashboard: Traveller[] = [];
   (trip.travellers || []).forEach((t) => {
     if (!t) return;
-    if (t.status === "Cancelled" || t.status === "Rejected" || t.status === "Inactive") return;
+    if (t.status === "Cancelled" || t.status === "Rejected" || t.status === "Inactive" || t.status === "left") return;
     const key = t.id || `${t.fullName}_${t.phone || t.email}`;
     if (seenDashboardKeys.has(key)) return;
     seenDashboardKeys.add(key);
@@ -305,10 +305,10 @@ export const TripDashboard: React.FC<TripDashboardProps> = ({
           </p>
           <div className="flex items-baseline gap-1 sm:gap-2 mt-0.5 sm:mt-1">
             <h2 className="text-base sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">
-              {(trip.travellers || []).length}
+              {activeTravellersForDashboard.length}
             </h2>
             <span className="text-[8px] sm:text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold px-1 sm:px-1.5 py-0.5 rounded-md">
-              {(trip.travellers || []).length === 1 ? "1 member" : `${(trip.travellers || []).length} members`}
+              {activeTravellersForDashboard.length === 1 ? "1 member" : `${activeTravellersForDashboard.length} members`}
             </span>
           </div>
           <p className="text-[9px] sm:text-[10px] mt-2.5 sm:mt-4 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1 sm:gap-1.5">

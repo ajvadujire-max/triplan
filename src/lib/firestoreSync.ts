@@ -558,23 +558,15 @@ export async function verifyTripMembership(uid: string, tripId: string): Promise
   }
 }
 
-export async function leaveTrip(arg1: string, arg2: string): Promise<void> {
+export async function removeTravellerFromTrip(params: {
+  tripId: string;
+  travellerId: string;
+  userId: string; // The user making the request
+  reason: "left" | "removed_by_admin";
+}): Promise<void> {
   try {
-    console.log("LEAVE_TRIP_CALLED", { arg1, arg2 });
-    let tripId = arg1;
-    let uid = arg2;
-
-    // Smart detection in case arguments were passed as (uid, tripId) or (tripId, uid)
-    const tripRef1 = doc(db, "trips", arg1);
-    const snap1 = await getDoc(tripRef1);
-    if (!snap1.exists()) {
-      const tripRef2 = doc(db, "trips", arg2);
-      const snap2 = await getDoc(tripRef2);
-      if (snap2.exists()) {
-        tripId = arg2;
-        uid = arg1;
-      }
-    }
+    const { tripId, travellerId, userId, reason } = params;
+    console.log("REMOVE_TRAVELLER_CALLED", params);
 
     const tripRef = doc(db, "trips", tripId);
     const tripSnap = await getDoc(tripRef);
@@ -583,17 +575,35 @@ export async function leaveTrip(arg1: string, arg2: string): Promise<void> {
     }
 
     const tripData = tripSnap.data() as Trip;
-    const isOrganizer = tripData.organizerUid === uid || tripData.organizerId === uid;
+    
+    // Determine roles
+    const isOrganizer = tripData.organizerUid === travellerId || tripData.organizerId === travellerId;
     if (isOrganizer) {
       throw new Error("You are the organizer of this trip. Transfer ownership or delete the trip instead.");
     }
+    
+    if (reason === "removed_by_admin") {
+      const requesterIsOrganizer = tripData.organizerUid === userId || tripData.organizerId === userId;
+      if (!requesterIsOrganizer) {
+         throw new Error("Only the organizer can remove other travellers.");
+      }
+    } else {
+      if (userId !== travellerId) {
+         throw new Error("You can only leave the trip yourself.");
+      }
+    }
 
-    // 1. Remove traveller completely from travellers list and memberUids
-    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== uid);
-    const updatedTravellers = (tripData.travellers || []).filter(t => t.id !== uid);
+    // 1. Remove traveller from memberUids, but keep in travellers with status "left" for historical data
+    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== travellerId);
+    const updatedTravellers = (tripData.travellers || []).map(t => {
+      if (t.id === travellerId) {
+        return { ...t, status: "left" as const };
+      }
+      return t;
+    });
 
     // 2. Query other memberships for the leaving user to find next active trip
-    const membershipsRef = collection(db, "users", uid, "memberships");
+    const membershipsRef = collection(db, "users", travellerId, "memberships");
     const membershipsSnap = await getDocs(membershipsRef);
     const remainingMemberships = membershipsSnap.docs
       .map(doc => doc.data())
@@ -617,15 +627,15 @@ export async function leaveTrip(arg1: string, arg2: string): Promise<void> {
     });
 
     // Delete registration document in trip subcollection
-    const regRef = doc(db, "trips", tripId, "registrations", uid);
+    const regRef = doc(db, "trips", tripId, "registrations", travellerId);
     batch.delete(regRef);
 
     // Delete membership document in user subcollection
-    const userMembershipRef = doc(db, "users", uid, "memberships", tripId);
+    const userMembershipRef = doc(db, "users", travellerId, "memberships", tripId);
     batch.delete(userMembershipRef);
 
     // Check if the user document exists. If so, update it atomically.
-    const userRef = doc(db, "users", uid);
+    const userRef = doc(db, "users", travellerId);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
       batch.update(userRef, {
@@ -638,9 +648,9 @@ export async function leaveTrip(arg1: string, arg2: string): Promise<void> {
 
     // Commit the entire atomic batch!
     await batch.commit();
-    console.log("LEAVE_TRIP_ATOMIC_SUCCESS", { tripId, uid });
+    console.log("REMOVE_TRAVELLER_ATOMIC_SUCCESS", { tripId, travellerId });
   } catch (error) {
-    console.error("Error leaving trip:", error);
+    console.error("Error removing traveller:", error);
     throw error;
   }
 }

@@ -206,9 +206,9 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   const [amount, setAmount] = useState<number | "">("");
   const [amountMode, setAmountMode] = useState<"per_person" | "total">("total");
   const [category, setCategory] = useState<ExpenseCategory>("Food");
-  const [whoPaidId, setWhoPaidId] = useState<string>(trip.travellers[0]?.id || "");
+  const [whoPaidId, setWhoPaidId] = useState<string>(trip.travellers.filter(t => t.status !== "left")[0]?.id || "");
   const [whoUsedIds, setWhoUsedIds] = useState<string[]>(
-    trip.travellers.map((t) => t.id)
+    trip.travellers.filter(t => t.status !== "left").map((t) => t.id)
   );
   const [splitType, setSplitType] = useState<SplitType>("equal");
   const [customSplits, setCustomSplits] = useState<Record<string, number>>({});
@@ -233,7 +233,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       }
       setCategory(editingExpense.category);
       setWhoPaidId(editingExpense.whoPaidId);
-      setWhoUsedIds(editingExpense.whoUsedIds || trip.travellers.map((t) => t.id));
+      setWhoUsedIds(editingExpense.whoUsedIds || trip.travellers.filter(t => t.status !== "left").map((t) => t.id));
       setSplitType(editingExpense.splitType || "equal");
       setAccountUsedId(editingExpense.accountUsedId || accounts[0]?.id || "acc_hdfc");
       setReceiptUrl(editingExpense.receiptUrl || "");
@@ -254,8 +254,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       setAmount("");
       setAmountMode("total");
       setCategory("Food");
-      setWhoPaidId(trip.travellers[0]?.id || "");
-      setWhoUsedIds(trip.travellers.map((t) => t.id));
+      setWhoPaidId(trip.travellers.filter(t => t.status !== "left")[0]?.id || "");
+      setWhoUsedIds(trip.travellers.filter(t => t.status !== "left").map((t) => t.id));
       setSplitType("equal");
       setCustomSplits({});
       setCustomPercentages({});
@@ -1190,7 +1190,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     onChange={(e) => setWhoPaidId(e.target.value)}
                     className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
-                    {trip.travellers.map((t, idx) => (
+                    {trip.travellers.filter(t => t.status !== "left").map((t, idx) => (
                       <option key={t.id ? `${t.id}_${idx}` : `trv_${idx}`} value={t.id}>
                         {t.fullName} ({t.role})
                       </option>
@@ -1203,7 +1203,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     Split Between
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {trip.travellers.map((t, idx) => {
+                    {trip.travellers.filter(t => t.status !== "left").map((t, idx) => {
                       const isSelected = whoUsedIds.includes(t.id);
                       return (
                         <button
@@ -1915,7 +1915,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       onChange={(e) => setWhoPaidId(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
-                      {trip.travellers.map((t, idx) => (
+                      {trip.travellers.filter(t => t.status !== "left").map((t, idx) => (
                         <option key={t.id ? `${t.id}_${idx}` : `trv_${idx}`} value={t.id}>
                           {t.fullName} ({t.role})
                         </option>
@@ -1928,7 +1928,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       Split Between
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {trip.travellers.map((t, idx) => {
+                      {trip.travellers.filter(t => t.status !== "left").map((t, idx) => {
                         const isSelected = whoUsedIds.includes(t.id);
                         return (
                           <button

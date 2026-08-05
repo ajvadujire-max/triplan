@@ -50,7 +50,7 @@ import {
   deleteUserCashbookEntry,
   migrateLocalDataToFirestore,
   fetchTripById,
-  leaveTrip,
+  removeTravellerFromTrip,
   verifyTripMembership,
 } from "./lib/firestoreSync";
 
@@ -144,12 +144,48 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
   const activeTrip = trips.find((t) => t.id === selectedTripId) || trips[0];
 
+  // Ref to track if we just explicitly left the trip ourselves
+  const justLeftRef = React.useRef(false);
+
   useEffect(() => {
     if (!isAuthLoading && !isLoadingCloud && trips.length === 0 && user) {
       console.log("No trips found for user, navigating to /join");
+      if (!justLeftRef.current) {
+        // They were probably removed if they had trips before
+        const hadTripsBefore = localStorage.getItem("trippro_trips") && JSON.parse(localStorage.getItem("trippro_trips") || "[]").length > 0;
+        if (hadTripsBefore) {
+          alert("You have been removed from this trip by the organizer.");
+        }
+      }
       navigate("/join");
+      justLeftRef.current = false;
     }
   }, [isAuthLoading, isLoadingCloud, trips.length, user, navigate]);
+
+  const prevTripsRef = React.useRef<Trip[]>([]);
+  useEffect(() => {
+    if (isLoadingCloud) return;
+
+    if (prevTripsRef.current.length > 0 && selectedTripId) {
+      const wasInPrev = prevTripsRef.current.some(t => t.id === selectedTripId);
+      const isInCurrent = trips.some(t => t.id === selectedTripId);
+      
+      if (wasInPrev && !isInCurrent) {
+        if (!justLeftRef.current) {
+          alert("You have been removed from this trip by the organizer.");
+        }
+        if (trips.length > 0) {
+          setSelectedTripId(trips[0].id);
+        } else {
+          navigate("/join");
+        }
+        // Reset the flag
+        justLeftRef.current = false;
+      }
+    }
+    
+    prevTripsRef.current = trips;
+  }, [trips, selectedTripId, isLoadingCloud, navigate]);
 
   useEffect(() => {
     if (activeTrip && user && userRole !== "super_admin") {
@@ -839,7 +875,13 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             uid: user.uid
           });
           try {
-            await leaveTrip(tripId, user.uid);
+            justLeftRef.current = true;
+            await removeTravellerFromTrip({
+              tripId: tripId,
+              travellerId: user.uid,
+              userId: user.uid,
+              reason: "left"
+            });
             
             const remainingTrips = trips.filter(t => t.id !== tripId);
             setTrips(remainingTrips);

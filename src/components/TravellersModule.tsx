@@ -16,6 +16,7 @@ import { Avatar, getTravellerPhoto } from "./Avatar";
 import { uploadProfilePhotoToStorage } from "../lib/image-utils";
 import { ContactPhoneButton } from "./ContactOptionsBottomSheet";
 import { CollectionsModule } from "./CollectionsModule";
+import { removeTravellerFromTrip } from "../lib/firestoreSync";
 import {
   Users,
   UserPlus,
@@ -781,7 +782,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       userId: currentUser?.uid,
       isOrganizer,
     });
-    if (trip.travellers.length <= 1) {
+    if (trip.travellers.filter(t => t.status !== "left").length <= 1) {
       alert("At least one traveller is required for a trip.");
       return;
     }
@@ -805,15 +806,15 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       return;
     }
 
-    const updatedTravellers = trip.travellers.filter((t) => t.id !== travellerToDeleteId);
-    const updatedMemberUids = (trip.memberUids || []).filter(id => id !== travellerToDeleteId);
-    
-    console.log("[REMOVE] Updating trip:", { updatedTravellers, updatedMemberUids });
-    
     setIsRemoving(true);
     try {
-        await onUpdateTrip({ ...trip, travellers: updatedTravellers, memberUids: updatedMemberUids });
-        console.log("[REMOVE] onUpdateTrip called and finished");
+        await removeTravellerFromTrip({
+          tripId: trip.id,
+          travellerId: travellerToDeleteId,
+          userId: currentUser?.uid || "",
+          reason: "removed_by_admin"
+        });
+        console.log("[REMOVE] removeTravellerFromTrip called and finished");
         setTravellerToDeleteId(null);
         showToast("Traveller removed successfully");
         navigate(`${basePath}/travellers`);
@@ -828,7 +829,8 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   };
 
   // Compute spending per traveller across all trip expenses
-  const travellerStats = trip.travellers.map((traveller) => {
+  const activeTravellers = trip.travellers.filter(t => t.status !== "left");
+  const travellerStats = activeTravellers.map((traveller) => {
     let moneySpent = 0;
     const history: { description: string; amount: number; date: string }[] = [];
 

@@ -138,7 +138,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     const list: Traveller[] = [];
     (trip.travellers || []).forEach((trv) => {
       if (!trv) return;
-      if (trv.status === "Cancelled" || trv.status === "Rejected" || trv.status === "Inactive") {
+      if (trv.status === "Cancelled" || trv.status === "Rejected" || trv.status === "Inactive" || trv.status === "left") {
         return;
       }
       const key = trv.id || `${trv.fullName}_${trv.phone || trv.email}`;
@@ -808,7 +808,7 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
             <span>
-              Showing {filteredTravellers.length} of {trip.travellers.length}{" "}
+              Showing {filteredTravellers.length} of {uniqueTravellers.length}{" "}
               travellers
             </span>
           </div>
