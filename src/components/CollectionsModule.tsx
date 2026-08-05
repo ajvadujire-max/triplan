@@ -81,10 +81,13 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
   }
 
   const relativePath = location.pathname.substring(basePath.length);
-  const segments = relativePath.split("/").filter(Boolean); // ["collections", "trv_123", "receive-payment"]
+  const segments = relativePath.split("/").filter(Boolean); // ["collections", "trv_123", "receive-payment"] or ["travellers", "collections", "trv_123", "receive-payment"]
 
-  const selectedTravellerId = segments[0] === "collections" && segments[1] ? segments[1] : null;
-  const currentAction = segments[0] === "collections" ? segments[2] : null;
+  const collectionsIdx = segments.indexOf("collections");
+  const selectedTravellerId = collectionsIdx !== -1 && segments[collectionsIdx + 1] ? segments[collectionsIdx + 1] : null;
+  const currentAction = collectionsIdx !== -1 ? segments[collectionsIdx + 2] : null;
+
+  const navBase = collectionsIdx === 0 ? `${basePath}/collections` : `${basePath}/travellers/collections`;
 
   const selectedTraveller = useMemo(() => {
     if (!selectedTravellerId) return null;
@@ -321,21 +324,21 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     setPaymentNotes("");
 
     if (selectedTravellerId) {
-      navigate(`${basePath}/collections/${selectedTravellerId}`, { replace: true });
+      navigate(`${navBase}/${selectedTravellerId}`, { replace: true });
     } else {
-      navigate(`${basePath}/collections`, { replace: true });
+      navigate(`${navBase}`, { replace: true });
     }
   };
 
   const handleSelectTraveller = (id: string) => {
-    navigate(`${basePath}/collections/${id}`);
+    navigate(`${navBase}/${id}`);
   };
 
   const handleBackToCollections = () => {
     if (window.history.length > 1 && location.key !== "default") {
       navigate(-1);
     } else {
-      navigate(`${basePath}/collections`);
+      navigate(`${navBase}`);
     }
   };
 
@@ -348,44 +351,44 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
     setPaymentNotes("");
     setEditingPaymentRecord(null);
 
-    navigate(`${basePath}/collections/${traveller.id}/receive-payment`);
+    navigate(`${navBase}/${traveller.id}/receive-payment`);
   };
 
   const handleCloseReceivePayment = () => {
     if (window.history.length > 1 && location.key !== "default") {
       navigate(-1);
     } else if (selectedTravellerId) {
-      navigate(`${basePath}/collections/${selectedTravellerId}`);
+      navigate(`${navBase}/${selectedTravellerId}`);
     } else {
-      navigate(`${basePath}/collections`);
+      navigate(`${navBase}`);
     }
   };
 
   const openHistory = (traveller: Traveller) => {
-    navigate(`${basePath}/collections/${traveller.id}/history`);
+    navigate(`${navBase}/${traveller.id}/history`);
   };
 
   const handleCloseHistory = () => {
     if (window.history.length > 1 && location.key !== "default") {
       navigate(-1);
     } else if (selectedTravellerId) {
-      navigate(`${basePath}/collections/${selectedTravellerId}`);
+      navigate(`${navBase}/${selectedTravellerId}`);
     } else {
-      navigate(`${basePath}/collections`);
+      navigate(`${navBase}`);
     }
   };
 
   const openEditBudget = (traveller: Traveller) => {
-    navigate(`${basePath}/collections/${traveller.id}/edit-budget`);
+    navigate(`${navBase}/${traveller.id}/edit-budget`);
   };
 
   const handleCloseEditBudget = () => {
     if (window.history.length > 1 && location.key !== "default") {
       navigate(-1);
     } else if (selectedTravellerId) {
-      navigate(`${basePath}/collections/${selectedTravellerId}`);
+      navigate(`${navBase}/${selectedTravellerId}`);
     } else {
-      navigate(`${basePath}/collections`);
+      navigate(`${navBase}`);
     }
   };
 
@@ -444,9 +447,9 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
       travellers: updatedTravellers,
     });
     if (selectedTravellerId) {
-      navigate(`${basePath}/collections/${selectedTravellerId}`, { replace: true });
+      navigate(`${navBase}/${selectedTravellerId}`, { replace: true });
     } else {
-      navigate(`${basePath}/collections`, { replace: true });
+      navigate(`${navBase}`, { replace: true });
     }
   };
 

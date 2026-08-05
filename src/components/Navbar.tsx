@@ -66,7 +66,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
     { id: "diary", label: "Travel Diary", icon: BookOpen },
-    { id: "collections", label: "Collections", icon: IndianRupee },
     { id: "expenses", label: "Split Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers & Budgets", icon: Users },
     { id: "vault", label: "Vault & Packing", icon: Calendar },

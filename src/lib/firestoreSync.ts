@@ -36,27 +36,30 @@ function sanitizeForFirestore<T>(obj: T): T {
 export async function fetchTripByInviteCode(code: string): Promise<Trip | null> {
   if (!code) return null;
   const cleanCode = code.trim();
-  const normalizedCode = cleanCode.toLowerCase();
+  const upperCode = cleanCode.toUpperCase();
+  const lowerCode = cleanCode.toLowerCase();
   const path = `trips`;
 
   console.log("[Trip Lookup Debug] Starting trip lookup in Firestore collection:", path, {
     firebaseProjectId: firebaseConfig.projectId,
     enteredCode: code,
-    normalizedTripCode: normalizedCode,
+    upperCode: upperCode,
+    lowerCode: lowerCode,
   });
 
   try {
     const colRef = collection(db, path);
     
-    // First try querying by inviteCode
-    const inviteQuery = query(colRef, where("inviteCode", "==", normalizedCode));
+    // Search both inviteCode and tripCode for both upper and lower cases
+    const codesToSearch = [upperCode, lowerCode];
+    
+    const inviteQuery = query(colRef, where("inviteCode", "in", codesToSearch));
     const inviteSnap = await getDocs(inviteQuery);
     if (!inviteSnap.empty) {
       return inviteSnap.docs[0].data() as Trip;
     }
 
-    // Next try querying by tripCode
-    const tripCodeQuery = query(colRef, where("tripCode", "==", normalizedCode));
+    const tripCodeQuery = query(colRef, where("tripCode", "in", codesToSearch));
     const tripCodeSnap = await getDocs(tripCodeQuery);
     if (!tripCodeSnap.empty) {
       return tripCodeSnap.docs[0].data() as Trip;
@@ -64,7 +67,7 @@ export async function fetchTripByInviteCode(code: string): Promise<Trip | null> 
 
     // Finally try checking if the code is actually a tripId directly
     try {
-      const docSnap = await getDoc(doc(db, path, normalizedCode));
+      const docSnap = await getDoc(doc(db, path, upperCode));
       if (docSnap.exists()) {
         return docSnap.data() as Trip;
       }
@@ -72,7 +75,7 @@ export async function fetchTripByInviteCode(code: string): Promise<Trip | null> 
       // Ignore if document not found
     }
 
-    console.warn("[Trip Lookup Debug] Zero documents found in Firestore matching tripCode or inviteCode:", normalizedCode);
+    console.warn("[Trip Lookup Debug] Zero documents found in Firestore matching tripCode or inviteCode:", upperCode);
   } catch (error) {
     console.error("[Trip Lookup Debug] Firestore query error during trip lookup:", error);
   }

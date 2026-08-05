@@ -46,12 +46,10 @@ service cloud.firestore {
       
       // Enforce ownership/membership (No client-side only hiding)
       // Allow read if user is member OR if it has an invite code (which allows lookup by code)
-      allow read: if isAuthenticated() && (
+      allow read: if (isAuthenticated() && (
         isTripOrganizer(resource.data) ||
-        (resource.data.memberUids != null && request.auth.uid in resource.data.memberUids) ||
-        resource.data.inviteCode != null ||
-        resource.data.tripCode != null
-      );
+        (resource.data.memberUids != null && request.auth.uid in resource.data.memberUids)
+      )) || resource.data.inviteCode != null || resource.data.tripCode != null;
       
       // Full update/delete restricted to Trip Organizer or Super Admin
       // Travellers can update expenses, travellers array, pendingRegistrations, memberUids, members, or updatedAt when joining/adding expenses or editing profile
@@ -60,7 +58,7 @@ service cloud.firestore {
         isTripOrganizer(resource.data) ||
         (resource.data.memberUids != null && request.auth.uid in resource.data.memberUids)
       )) || (resource.data.inviteCode != null || resource.data.tripCode != null);
-      allow list: if isAuthenticated();
+      allow list: if (resource.data.inviteCode != null || resource.data.tripCode != null) || isAuthenticated();
       allow update: if isAuthenticated() && (
         isTripOrganizer(resource.data) ||
         request.auth.uid in request.resource.data.memberUids ||

@@ -71,7 +71,6 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const primaryTabsAll = [
     { id: "dashboard", label: "Dashboard", icon: Compass },
     { id: "planner", label: "Planner", icon: Luggage },
-    { id: "collections", label: "Collections", icon: IndianRupee },
     { id: "expenses", label: "Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers", icon: Users },
   ];

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { User } from "firebase/auth";
-import { getDoc, setDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { getDoc, getDocs, updateDoc, setDoc, doc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "./lib/firebase";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
@@ -81,23 +81,23 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     const migrateTripCodes = async () => {
         if (localStorage.getItem("trippro_codes_migrated")) return;
         try {
-            const tripsSnap = await getDocs(collection(db, "trips"));
-            for (const docSnap of tripsSnap.docs) {
-                const data = docSnap.data();
-                let updateNeeded = false;
-                const updates: any = {};
-                if (data.tripCode && data.tripCode !== data.tripCode.toLowerCase()) {
-                    updates.tripCode = data.tripCode.toLowerCase();
-                    updateNeeded = true;
-                }
-                if (data.inviteCode && data.inviteCode !== data.inviteCode.toLowerCase()) {
-                    updates.inviteCode = data.inviteCode.toLowerCase();
-                    updateNeeded = true;
-                }
-                if (updateNeeded) {
-                    await updateDoc(doc(db, "trips", docSnap.id), updates);
-                }
-            }
+            // const tripsSnap = await getDocs(collection(db, "trips"));
+            // for (const docSnap of tripsSnap.docs) {
+            //     const data = docSnap.data();
+            //     let updateNeeded = false;
+            //     const updates: any = {};
+            //     if (data.tripCode && data.tripCode !== data.tripCode.toUpperCase()) {
+            //         updates.tripCode = data.tripCode.toUpperCase();
+            //         updateNeeded = true;
+            //     }
+            //     if (data.inviteCode && data.inviteCode !== data.inviteCode.toUpperCase()) {
+            //         updates.inviteCode = data.inviteCode.toUpperCase();
+            //         updateNeeded = true;
+            //     }
+            //     if (updateNeeded) {
+            //         await updateDoc(doc(db, "trips", docSnap.id), updates);
+            //     }
+            // }
             localStorage.setItem("trippro_codes_migrated", "true");
         } catch (err) {
             console.error("Migration failed:", err);
@@ -482,10 +482,16 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     }
   };
 
-  const handleUpdateTrip = (updatedTrip: Trip) => {
+  const handleUpdateTrip = async (updatedTrip: Trip) => {
+    console.log("[REMOVE] handleUpdateTrip called in App.tsx", updatedTrip);
     setTrips((prev) => prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t)));
     if (user && organizationId) {
-      saveUserTrip(organizationId, updatedTrip);
+      try {
+        await saveUserTrip(organizationId, updatedTrip);
+        console.log("[REMOVE] saveUserTrip finished in App.tsx");
+      } catch (err) {
+        console.error("[REMOVE] saveUserTrip failed in App.tsx", err);
+      }
     }
   };
 
@@ -721,17 +727,14 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
               />
             )}
 
-            {activeTab === "collections" && (
-              <CollectionsModule
+            {(activeTab === "travellers" || activeTab === "collections") && (
+              <TravellersModule
                 trip={activeTrip}
                 onUpdateTrip={handleUpdateTrip}
+                appRole={userRole}
+                currentUser={user}
                 onNavigateTab={handleSelectTab}
-                isOrganizer={userRole === "organizer" || userRole === "admin"}
               />
-            )}
-
-            {activeTab === "travellers" && (
-              <TravellersModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} appRole={userRole} currentUser={user} />
             )}
             
             {activeTab === "planner" && (

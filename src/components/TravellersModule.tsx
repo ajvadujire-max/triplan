@@ -15,6 +15,7 @@ import { ProfilePhotoUpload, getInitials } from "./ProfilePhotoUpload";
 import { Avatar, getTravellerPhoto } from "./Avatar";
 import { uploadProfilePhotoToStorage } from "../lib/image-utils";
 import { ContactPhoneButton } from "./ContactOptionsBottomSheet";
+import { CollectionsModule } from "./CollectionsModule";
 import {
   Users,
   UserPlus,
@@ -37,6 +38,7 @@ import {
   Trash2,
   Droplet,
   Loader2,
+  IndianRupee,
 } from "lucide-react";
 
 interface EditTravellerModalProps {
@@ -500,9 +502,10 @@ const EditTravellerModal: React.FC<EditTravellerModalProps> = ({
 
 interface TravellersModuleProps {
   trip: Trip;
-  onUpdateTrip: (updatedTrip: Trip) => void;
+  onUpdateTrip: (updatedTrip: Trip) => Promise<void>;
   appRole?: "traveller" | "organizer" | "super_admin";
   currentUser?: any;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const TravellersModule: React.FC<TravellersModuleProps> = ({
@@ -510,13 +513,37 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   onUpdateTrip,
   appRole = "traveller",
   currentUser,
+  onNavigateTab,
 }) => {
   const isOrganizer = appRole === "organizer" || appRole === "super_admin";
   const { basePath, relativePath, navigate, goBack } = useAppNavigation();
   const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
 
+  const isCollectionsSubTab = useMemo(() => {
+    if (relativePath.includes("/collections") || relativePath.startsWith("/collections")) {
+      return true;
+    }
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get("tab") === "collections") {
+        return true;
+      }
+    }
+    return false;
+  }, [relativePath]);
+
+  const activeSubTab = isCollectionsSubTab ? "collections" : "travellers";
+
+  const handleSubTabChange = (tab: "travellers" | "collections") => {
+    if (tab === "collections") {
+      navigate(`${basePath}/travellers/collections`);
+    } else {
+      navigate(`${basePath}/travellers`);
+    }
+  };
+
   const selectedTravellerId = useMemo(() => {
-    if (pathSegments[1] && !["add", "collect-form", "pending"].includes(pathSegments[1])) {
+    if (pathSegments[1] && !["add", "collect-form", "pending", "collections"].includes(pathSegments[1])) {
       return pathSegments[1];
     }
     return null;
@@ -547,7 +574,15 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   // UI States
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
   const [travellerToDeleteId, setTravellerToDeleteId] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const isMounted = React.useRef(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+        isMounted.current = false;
+    };
+  }, []);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -723,6 +758,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   };
 
   const handleDeleteTraveller = (id: string) => {
+    console.log("[REMOVE] handleDeleteTraveller called with id:", id);
     if (trip.travellers.length <= 1) {
       alert("At least one traveller is required for a trip.");
       return;
@@ -730,24 +766,46 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     setTravellerToDeleteId(id);
   };
 
-  const confirmDeleteTraveller = () => {
+  const confirmDeleteTraveller = async () => {
+    console.log("[REMOVE] confirmDeleteTraveller called with id:", travellerToDeleteId);
     if (!travellerToDeleteId) return;
     
+    // Check if trying to remove self
+    if (travellerToDeleteId === currentUser?.uid) {
+        showToast("You cannot remove yourself from the trip.", "error");
+        setTravellerToDeleteId(null);
+        return;
+    }
+
     if (trip.travellers.length <= 1) {
       alert("At least one traveller is required for a trip.");
       setTravellerToDeleteId(null);
       return;
     }
 
-    const updatedList = trip.travellers.filter((t) => t.id !== travellerToDeleteId);
+    const updatedTravellers = trip.travellers.filter((t) => t.id !== travellerToDeleteId);
+    const updatedMemberUids = (trip.memberUids || []).filter(id => id !== travellerToDeleteId);
     
-    if (selectedTraveller?.id === travellerToDeleteId) {
-      goBack();
+    console.log("[REMOVE] Updating trip:", { updatedTravellers, updatedMemberUids });
+    
+    setIsRemoving(true);
+    try {
+        if (selectedTraveller?.id === travellerToDeleteId) {
+          goBack();
+        }
+        
+        await onUpdateTrip({ ...trip, travellers: updatedTravellers, memberUids: updatedMemberUids });
+        console.log("[REMOVE] onUpdateTrip called and finished");
+        setTravellerToDeleteId(null);
+        showToast("Traveller removed successfully");
+    } catch (err) {
+        console.error("[REMOVE] Firestore removal FAILED:", err);
+        showToast("Failed to remove traveller. Please try again.", "error");
+    } finally {
+        if (isMounted.current) {
+            setIsRemoving(false);
+        }
     }
-    
-    onUpdateTrip({ ...trip, travellers: updatedList });
-    setTravellerToDeleteId(null);
-    showToast("Traveller removed successfully");
   };
 
   // Compute spending per traveller across all trip expenses
@@ -791,10 +849,51 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     (selectedTraveller.email && selectedTraveller.email.toLowerCase() === currentUser.email?.toLowerCase())
   ));
 
-  if (selectedTraveller) {
-    return (
-      <div className="space-y-4 sm:space-y-6">
-        {/* Navigation Bar */}
+  const totalIndividualAllocated = travellerStats.reduce(
+    (acc, t) => acc + t.allocatedBudget,
+    0
+  );
+
+  return (
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+      {/* Top Segmented Tab Switcher matching Expenses page design */}
+      <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <button
+          type="button"
+          onClick={() => handleSubTabChange("travellers")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeSubTab === "travellers"
+              ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-800/80"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Travellers</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSubTabChange("collections")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeSubTab === "collections"
+              ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-800/80"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+          }`}
+        >
+          <IndianRupee className="w-4 h-4" />
+          <span>Collections</span>
+        </button>
+      </div>
+
+      {activeSubTab === "collections" ? (
+        <CollectionsModule
+          trip={trip}
+          onUpdateTrip={onUpdateTrip as any}
+          onNavigateTab={onNavigateTab}
+          isOrganizer={isOrganizer}
+        />
+      ) : selectedTraveller ? (
+        <div className="space-y-4 sm:space-y-6">
+          {/* Navigation Bar */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
             onClick={() => goBack()}
@@ -1029,7 +1128,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
               >
                 <Edit className="w-4 h-4" /> Edit Traveller
               </button>
-              {isOrganizer && (
+              {isOrganizer && selectedTraveller.id !== currentUser?.uid && (
                 <button
                   type="button"
                   onClick={() => handleDeleteTraveller(selectedTraveller.id)}
@@ -1041,48 +1140,9 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
             </div>
           )}
         </motion.div>
-
-        {/* Edit Traveller Profile Modal */}
-        <EditTravellerModal
-          isOpen={isAddModalOpen}
-          editingTraveller={editingTraveller}
-          isOrganizer={isOrganizer}
-          currency={trip.currency}
-          currentUser={currentUser}
-          onClose={handleCloseEditModal}
-          onSave={handleSaveTraveller}
-          showToast={showToast}
-        />
-
-        {/* Global Toast Notification */}
-        <AnimatePresence>
-          {toast && (
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 50, opacity: 0 }}
-              className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
-                toast.type === "success"
-                  ? "bg-emerald-600 text-white border-emerald-500"
-                  : "bg-rose-600 text-white border-rose-500"
-              }`}
-            >
-              {toast.type === "success" ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-              <span className="text-sm font-bold">{toast.message}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
-    );
-  }
-
-  const totalIndividualAllocated = travellerStats.reduce(
-    (acc, t) => acc + t.allocatedBudget,
-    0
-  );
-
-  return (
-    <>
+    ) : (
+      <>
       {/* Travellers List & Individual Budget Progress */}
       {isOrganizer && (
         <div className="mb-3">
@@ -1261,22 +1321,26 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
                 <button
                   type="button"
                   onClick={() => setTravellerToDeleteId(null)}
-                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 cursor-pointer"
+                  disabled={isRemoving}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={confirmDeleteTraveller}
-                  className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20 cursor-pointer"
+                  disabled={isRemoving}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20 cursor-pointer disabled:opacity-50"
                 >
-                  Remove Now
+                  {isRemoving ? "Removing..." : "Remove Now"}
                 </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+      </>
+      )}
+    </div>
   );
 };
