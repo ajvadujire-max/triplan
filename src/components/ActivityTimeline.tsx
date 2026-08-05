@@ -878,8 +878,8 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
               className="bg-transparent text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
             >
               <option value="all">All Travellers</option>
-              {trip.travellers.map((trv) => (
-                <option key={trv.id} value={trv.id}>
+              {trip.travellers.map((trv, idx) => (
+                <option key={trv.id ? `${trv.id}_${idx}` : `trv_${idx}`} value={trv.id}>
                   {trv.fullName}
                 </option>
               ))}

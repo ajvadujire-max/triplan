@@ -7,7 +7,8 @@ import {
   getDoc,
   query,
   where,
-  getDocFromServer
+  getDocFromServer,
+  writeBatch
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType, firebaseConfig } from "./firebase";
 import { Trip, FinanceAccount, CashbookEntry, PersonalExpense, DiaryEntry, ChecklistItem } from "../types";
@@ -557,33 +558,87 @@ export async function verifyTripMembership(uid: string, tripId: string): Promise
   }
 }
 
-export async function leaveTrip(uid: string, tripId: string): Promise<void> {
+export async function leaveTrip(arg1: string, arg2: string): Promise<void> {
   try {
+    console.log("LEAVE_TRIP_CALLED", { arg1, arg2 });
+    let tripId = arg1;
+    let uid = arg2;
+
+    // Smart detection in case arguments were passed as (uid, tripId) or (tripId, uid)
+    const tripRef1 = doc(db, "trips", arg1);
+    const snap1 = await getDoc(tripRef1);
+    if (!snap1.exists()) {
+      const tripRef2 = doc(db, "trips", arg2);
+      const snap2 = await getDoc(tripRef2);
+      if (snap2.exists()) {
+        tripId = arg2;
+        uid = arg1;
+      }
+    }
+
     const tripRef = doc(db, "trips", tripId);
     const tripSnap = await getDoc(tripRef);
-    if (!tripSnap.exists()) return;
+    if (!tripSnap.exists()) {
+      throw new Error("Trip not found");
+    }
 
     const tripData = tripSnap.data() as Trip;
-    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== uid);
-    const updatedTravellers = (tripData.travellers || []).map(t => {
-      if (t.id === uid) {
-        return { ...t, status: "left" as const };
-      }
-      return t;
-    });
+    const isOrganizer = tripData.organizerUid === uid || tripData.organizerId === uid;
+    if (isOrganizer) {
+      throw new Error("You are the organizer of this trip. Transfer ownership or delete the trip instead.");
+    }
 
-    await setDoc(tripRef, {
+    // 1. Remove traveller completely from travellers list and memberUids
+    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== uid);
+    const updatedTravellers = (tripData.travellers || []).filter(t => t.id !== uid);
+
+    // 2. Query other memberships for the leaving user to find next active trip
+    const membershipsRef = collection(db, "users", uid, "memberships");
+    const membershipsSnap = await getDocs(membershipsRef);
+    const remainingMemberships = membershipsSnap.docs
+      .map(doc => doc.data())
+      .filter(m => m.tripId !== tripId);
+
+    let nextTripId = "";
+    let nextTripCode = "";
+    if (remainingMemberships.length > 0) {
+      nextTripId = remainingMemberships[0].tripId || "";
+      nextTripCode = remainingMemberships[0].tripCode || "";
+    }
+
+    // 3. Create a WriteBatch to make this operation atomic
+    const batch = writeBatch(db);
+
+    // Update the trip document: remove user from memberUids & travellers
+    batch.update(tripRef, {
       memberUids: updatedMemberUids,
       travellers: updatedTravellers,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    });
 
-    // Remove user subcollection membership doc if present
-    try {
-      await deleteDoc(doc(db, "users", uid, "memberships", tripId));
-    } catch {
-      // ignore
+    // Delete registration document in trip subcollection
+    const regRef = doc(db, "trips", tripId, "registrations", uid);
+    batch.delete(regRef);
+
+    // Delete membership document in user subcollection
+    const userMembershipRef = doc(db, "users", uid, "memberships", tripId);
+    batch.delete(userMembershipRef);
+
+    // Check if the user document exists. If so, update it atomically.
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      batch.update(userRef, {
+        tripId: nextTripId,
+        lastActiveTripId: nextTripId,
+        tripCode: nextTripCode,
+        updatedAt: new Date().toISOString()
+      });
     }
+
+    // Commit the entire atomic batch!
+    await batch.commit();
+    console.log("LEAVE_TRIP_ATOMIC_SUCCESS", { tripId, uid });
   } catch (error) {
     console.error("Error leaving trip:", error);
     throw error;

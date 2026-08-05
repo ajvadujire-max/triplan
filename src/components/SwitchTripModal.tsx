@@ -61,9 +61,7 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
     try {
       await onLeaveTrip(confirmLeaveTripId);
       setConfirmLeaveTripId(null);
-      if (trips.length <= 1) {
-        onClose();
-      }
+      onClose();
     } catch (err) {
       console.error("Failed to leave trip:", err);
     } finally {

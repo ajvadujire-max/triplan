@@ -73,12 +73,12 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
     { id: "planner", label: "Planner", icon: Luggage },
     { id: "expenses", label: "Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers", icon: Users },
+    { id: "diary", label: "Diary", icon: BookOpen },
   ];
 
   const primaryTabs = primaryTabsAll.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
 
   const moreTabsAll = [
-    { id: "diary", label: "Travel Diary", icon: BookOpen, description: "Personal journey memories & photos" },
     { id: "vault", label: "Vault & Packing", icon: Calendar, description: "Checklists & essential files" },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun, description: "Live climate & route views" },
     { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync", organizerOnly: true },
@@ -169,7 +169,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
       </header>
 
       {/* 2. Fixed Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-100 dark:border-slate-800/80 px-2 pb-safe pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] flex justify-around items-center transition-colors">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-100 dark:border-slate-800/80 px-1 pb-safe pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] flex justify-around items-center transition-colors">
         {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id && !isMoreDrawerOpen;
@@ -177,12 +177,12 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
-              className="flex flex-col items-center justify-center flex-1 py-1 px-2 h-12 rounded-xl transition-all relative"
+              className="flex flex-col items-center justify-center flex-1 py-1 px-1 h-12 rounded-xl transition-all relative"
             >
               {isActive && (
                 <motion.div
                   layoutId="activeTabGlow"
-                  className="absolute inset-x-3 inset-y-1 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl"
+                  className="absolute inset-x-1 inset-y-1 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl"
                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
@@ -194,7 +194,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 }`}
               />
               <span
-                className={`text-[9px] font-extrabold tracking-tight mt-1 transition-colors ${
+                className={`text-[9px] font-extrabold tracking-tight mt-1 transition-colors whitespace-nowrap ${
                   isActive
                     ? "text-indigo-600 dark:text-indigo-400"
                     : "text-slate-400 dark:text-slate-500"
@@ -209,10 +209,10 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
         {/* More Menu Drawer Trigger */}
         <button
           onClick={() => setIsMoreDrawerOpen(true)}
-          className="flex flex-col items-center justify-center flex-1 py-1 px-2 h-12 rounded-xl transition-all relative"
+          className="flex flex-col items-center justify-center flex-1 py-1 px-1 h-12 rounded-xl transition-all relative"
         >
           {isMoreDrawerOpen && (
-            <div className="absolute inset-x-3 inset-y-1 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl" />
+            <div className="absolute inset-x-1 inset-y-1 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl" />
           )}
           <Menu
             className={`w-5 h-5 transition-transform duration-200 active:scale-75 ${
@@ -222,7 +222,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
             }`}
           />
           <span
-            className={`text-[9px] font-extrabold tracking-tight mt-1 transition-colors ${
+            className={`text-[9px] font-extrabold tracking-tight mt-1 transition-colors whitespace-nowrap ${
               isMoreDrawerOpen
                 ? "text-indigo-600 dark:text-indigo-400"
                 : "text-slate-400 dark:text-slate-500"

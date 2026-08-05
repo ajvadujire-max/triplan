@@ -8,20 +8,31 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden flex flex-col justify-start">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 h-14 md:h-16 flex items-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="flex justify-between items-center">
+      <nav 
+        style={{ height: "clamp(64px, 8dvh, 78px)" }}
+        className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center"
+      >
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center w-full" style={{ paddingLeft: "clamp(4px, 1vw, 12px)", paddingRight: "clamp(4px, 1vw, 12px)" }}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl overflow-hidden shadow-md md:shadow-lg shadow-indigo-100">
+              <div 
+                style={{ width: "clamp(44px, 12vw, 56px)", height: "clamp(44px, 12vw, 56px)" }}
+                className="rounded-lg md:rounded-xl overflow-hidden shadow-md md:shadow-lg shadow-indigo-100 shrink-0"
+              >
                 <img
                   src="/triplan_logo.png"
                   alt="TripPro Logo"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-lg md:text-xl font-bold tracking-tight">TripPro</span>
+              <span 
+                style={{ fontSize: "clamp(22px, 6vw, 28px)" }}
+                className="font-bold tracking-tight text-slate-900"
+              >
+                TripPro
+              </span>
             </div>
 
             <div className="hidden md:flex items-center gap-8">
@@ -45,7 +56,8 @@ export default function LandingPage() {
       <motion.div
         initial={false}
         animate={isMenuOpen ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
-        className="fixed top-16 w-full bg-white z-40 md:hidden overflow-hidden border-b border-slate-200"
+        style={{ top: "clamp(64px, 8dvh, 78px)" }}
+        className="fixed w-full bg-white z-40 md:hidden overflow-hidden border-b border-slate-200"
       >
         <div className="px-4 py-6 space-y-4">
           <a href="#features" className="block text-lg font-medium">Features</a>
@@ -59,43 +71,93 @@ export default function LandingPage() {
       </motion.div>
 
       {/* Hero Section */}
-      <section className="pt-24 md:pt-32 pb-8 md:pb-20 px-4 sm:px-6">
-        <div className="flex flex-col items-center text-center">
+      <section 
+        className="w-full flex flex-col items-center shrink-0"
+        style={{
+          paddingTop: "clamp(80px, 10dvh, 110px)",
+          paddingBottom: "max(24px, env(safe-area-inset-bottom))"
+        }}
+      >
+        <div className="w-full max-w-[640px] md:max-w-4xl px-4 flex flex-col items-center flex-1 justify-between min-h-[calc(100dvh-120px)] md:min-h-0">
+          
+          {/* Text & Buttons block */}
+          <div className="w-full flex flex-col items-center justify-center flex-1">
+            
+            {/* Title & Desc */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center w-full flex flex-col items-center"
+            >
+              <h1 
+                style={{ 
+                  fontSize: "clamp(36px, 10vw, 58px)", 
+                  lineHeight: 1.02,
+                  maxWidth: "540px",
+                  marginTop: "clamp(12px, 2.5dvh, 24px)",
+                  marginBottom: "clamp(20px, 4dvh, 38px)"
+                }}
+                className="font-extrabold text-slate-900 tracking-tight text-center"
+              >
+                Plan Trips Like <span className="text-indigo-600">Professionals</span>
+              </h1>
+              
+              {/* Description */}
+              <p 
+                style={{ 
+                  fontSize: "clamp(15px, 4.2vw, 20px)",
+                  lineHeight: 1.45,
+                  maxWidth: "480px",
+                  marginBottom: "clamp(24px, 4dvh, 42px)"
+                }}
+                className="text-slate-600 text-center"
+              >
+                Plan together, track expenses, organize schedules, and keep everything in one place.
+              </p>
+
+              {/* Buttons */}
+              <div 
+                className="flex flex-col gap-3 w-full max-w-[360px] mx-auto"
+                style={{ marginBottom: "clamp(24px, 4dvh, 42px)" }}
+              >
+                <Link 
+                  to="/onboarding" 
+                  style={{ height: "clamp(54px, 7dvh, 64px)", borderRadius: "18px" }}
+                  className="w-full bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center text-[15px] sm:text-[16px]"
+                >
+                  Create New Trip
+                </Link>
+                <Link 
+                  to="/join" 
+                  style={{ height: "clamp(54px, 7dvh, 64px)", borderRadius: "18px" }}
+                  className="w-full bg-white text-slate-900 border border-slate-200 font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center text-[15px] sm:text-[16px]"
+                >
+                  Join Existing Trip
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Travel Image block */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col items-center w-full"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="w-full max-w-[480px] md:max-w-2xl mx-auto overflow-hidden shadow-xl border border-slate-200"
+            style={{
+              aspectRatio: "16 / 9",
+              maxHeight: "clamp(190px, 30dvh, 330px)",
+              borderRadius: "20px"
+            }}
           >
-            <h1 className="text-[clamp(34px,9vw,42px)] font-extrabold text-slate-900 tracking-tight mb-4" style={{lineHeight: 1.02}}>
-              Plan Trips Like <span className="text-indigo-600">Professionals</span>
-            </h1>
-            <p className="text-[14px] md:text-xl text-slate-600 max-w-[360px] md:max-w-2xl mx-auto mb-6 leading-[1.45]">
-              Plan together, track expenses, organize schedules, and keep everything in one place.
-            </p>
-            <div className="flex flex-col gap-2 w-full max-w-[360px] mx-auto">
-              <Link to="/onboarding" className="w-full bg-indigo-600 text-white h-[50px] rounded-[16px] text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center">
-                Create New Trip
-              </Link>
-              <Link to="/join" className="w-full bg-white text-slate-900 border border-slate-200 h-[50px] rounded-[16px] text-sm font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center">
-                Join Existing Trip
-              </Link>
-            </div>
+            <img
+              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
+              alt="App Dashboard Preview"
+              className="w-full h-full object-cover object-center"
+            />
           </motion.div>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="w-full mt-[22px] max-w-[360px] mx-auto"
-        >
-          <img
-            src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
-            alt="App Dashboard Preview"
-            className="rounded-[20px] shadow-xl border border-slate-200 w-full h-[190px] object-cover"
-          />
-        </motion.div>
       </section>
 
       {/* Features */}

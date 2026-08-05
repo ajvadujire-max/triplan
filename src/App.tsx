@@ -145,6 +145,13 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const activeTrip = trips.find((t) => t.id === selectedTripId) || trips[0];
 
   useEffect(() => {
+    if (!isAuthLoading && !isLoadingCloud && trips.length === 0 && user) {
+      console.log("No trips found for user, navigating to /join");
+      navigate("/join");
+    }
+  }, [isAuthLoading, isLoadingCloud, trips.length, user, navigate]);
+
+  useEffect(() => {
     if (activeTrip && user && userRole !== "super_admin") {
       const isOrganizer = activeTrip.organizerUid === user.uid || activeTrip.organizerId === user.uid;
       setUserRole(isOrganizer ? "organizer" : "traveller");
@@ -642,6 +649,19 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   };
 
   if (!activeTrip) {
+    if (trips.length === 0 && !isLoadingCloud) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <p className="text-slate-400 font-medium">You don't belong to any trips yet.</p>
+          <button 
+            onClick={() => navigate("/join")}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all"
+          >
+            Join or Create a Trip
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
         <p>Loading TripPro system...</p>
@@ -789,19 +809,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         </AnimatePresence>
       </main>
 
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-auto print:hidden">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> GPS Tracking Active
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
-            Connected to Personal Finance Pro Ecosystem v4.22.8
-          </div>
-        </div>
-        <div className="text-[10px] font-medium text-slate-400 italic">
-          Secured by 256-bit AES Encryption • TripPro Treasury Sync
-        </div>
-      </footer>
+
 
       <TripCreateModal
         isOpen={isCreateModalOpen}
@@ -825,18 +833,36 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         }}
         onLeaveTrip={async (tripId) => {
           if (!user) return;
+          console.log("CONFIRM_LEAVE_CLICKED", {
+            selectedTripId,
+            currentTripId: tripId,
+            uid: user.uid
+          });
           try {
             await leaveTrip(tripId, user.uid);
-            // Assuming leaveTrip removes them from backend, 
-            // the onSnapshot listener will update trips automatically
+            
+            const remainingTrips = trips.filter(t => t.id !== tripId);
+            setTrips(remainingTrips);
+            localStorage.setItem("trippro_trips", JSON.stringify(remainingTrips));
+            
             if (tripId === selectedTripId) {
-              const remainingTrips = trips.filter(t => t.id !== tripId);
               if (remainingTrips.length > 0) {
                 setSelectedTripId(remainingTrips[0].id);
+                localStorage.setItem("trippro_active_trip_id", remainingTrips[0].id);
+              } else {
+                setSelectedTripId("");
+                localStorage.removeItem("trippro_active_trip_id");
               }
             }
-          } catch (err) {
-            console.error("Failed to leave trip", err);
+            
+            alert("You left the trip successfully.");
+            
+            if (remainingTrips.length === 0) {
+              navigate("/join");
+            }
+          } catch (err: any) {
+            console.error("LEAVE TRIP FAILED:", err);
+            alert("Unable to leave trip. Please try again.");
           }
         }}
         currentUserId={user?.uid}

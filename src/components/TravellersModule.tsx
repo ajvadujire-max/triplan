@@ -515,7 +515,10 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   currentUser,
   onNavigateTab,
 }) => {
-  const isOrganizer = appRole === "organizer" || appRole === "super_admin";
+  const isOrganizer =
+    appRole === "organizer" ||
+    appRole === "super_admin" ||
+    !!(currentUser && trip && (trip.organizerUid === currentUser.uid || trip.organizerId === currentUser.uid));
   const { basePath, relativePath, navigate, goBack } = useAppNavigation();
   const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
 
@@ -544,7 +547,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
   const selectedTravellerId = useMemo(() => {
     if (pathSegments[1] && !["add", "collect-form", "pending", "collections"].includes(pathSegments[1])) {
-      return pathSegments[1];
+      return decodeURIComponent(pathSegments[1]);
     }
     return null;
   }, [pathSegments]);
@@ -566,7 +569,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
   const editingTraveller = useMemo(() => {
     if (selectedTravellerId && pathSegments[2] === "edit") {
-      return trip.travellers.find((t) => t.id === selectedTravellerId) || null;
+      return trip.travellers.find((t) => t.id === selectedTravellerId || t.id?.trim() === selectedTravellerId?.trim()) || null;
     }
     return null;
   }, [selectedTravellerId, pathSegments, trip.travellers]);
@@ -694,6 +697,13 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   };
 
   const handleOpenEdit = (t: Traveller) => {
+    console.log("EDIT_TRAVELLER_CLICKED", {
+      traveller: t,
+      travellerId: t?.id,
+      currentTripId: trip?.id,
+      userId: currentUser?.uid,
+      isOrganizer,
+    });
     navigate(`${basePath}/travellers/${t.id}/edit`);
   };
 
@@ -710,7 +720,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 
     if (isEditMode) {
       updatedList = trip.travellers.map((t) =>
-        t.id === updatedTraveller.id
+        t.id === updatedTraveller.id || t.id?.trim() === updatedTraveller.id?.trim()
           ? {
               ...t,
               ...updatedTraveller,
@@ -753,12 +763,24 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       updatedList = [...trip.travellers, updatedTraveller];
     }
 
-    onUpdateTrip({ ...trip, travellers: updatedList });
-    showToast(isEditMode ? "Traveller updated successfully" : "Traveller added successfully", "success");
+    try {
+      await onUpdateTrip({ ...trip, travellers: updatedList });
+      showToast(isEditMode ? "Traveller updated successfully" : "Traveller added successfully", "success");
+    } catch (err) {
+      console.error("Failed to save traveller:", err);
+      showToast("Unable to update traveller. Please try again.", "error");
+    }
   };
 
   const handleDeleteTraveller = (id: string) => {
-    console.log("[REMOVE] handleDeleteTraveller called with id:", id);
+    const targetTraveller = trip.travellers.find((t) => t.id === id);
+    console.log("REMOVE_TRAVELLER_CLICKED", {
+      traveller: targetTraveller,
+      travellerId: id,
+      currentTripId: trip?.id,
+      userId: currentUser?.uid,
+      isOrganizer,
+    });
     if (trip.travellers.length <= 1) {
       alert("At least one traveller is required for a trip.");
       return;
@@ -790,17 +812,14 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     
     setIsRemoving(true);
     try {
-        if (selectedTraveller?.id === travellerToDeleteId) {
-          goBack();
-        }
-        
         await onUpdateTrip({ ...trip, travellers: updatedTravellers, memberUids: updatedMemberUids });
         console.log("[REMOVE] onUpdateTrip called and finished");
         setTravellerToDeleteId(null);
         showToast("Traveller removed successfully");
+        navigate(`${basePath}/travellers`);
     } catch (err) {
         console.error("[REMOVE] Firestore removal FAILED:", err);
-        showToast("Failed to remove traveller. Please try again.", "error");
+        showToast("Unable to remove traveller. Please try again.", "error");
     } finally {
         if (isMounted.current) {
             setIsRemoving(false);
@@ -1156,9 +1175,9 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         </div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {travellerStats.map((t) => (
+        {travellerStats.map((t, idx) => (
           <div
-            key={t.id}
+            key={t.id ? `${t.id}_${idx}` : `traveller_${idx}`}
             onClick={() => navigate(`${basePath}/travellers/${t.id}`)}
             className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] sm:min-h-[105px]"
           >

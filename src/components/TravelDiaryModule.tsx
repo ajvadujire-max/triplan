@@ -29,10 +29,13 @@ import {
   Eye,
   Check,
   RotateCcw,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Download
 } from "lucide-react";
 import { Trip, DiaryEntry, DiaryMood } from "../types";
 import { fetchDiaryEntries, saveDiaryEntry, deleteDiaryEntry } from "../lib/firestoreSync";
+import { TravelDiaryPdfModal } from "./TravelDiaryPdfModal";
 
 interface TravelDiaryModuleProps {
   trip: Trip;
@@ -74,6 +77,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>("All");
 
   const [entryToDelete, setEntryToDelete] = useState<DiaryEntry | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   // Route states
   const viewingEntry = useMemo(() => {
@@ -473,13 +477,22 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={handleOpenCreate}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1AAB67] hover:bg-#159257 active:scale-95 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-all cursor-pointer min-h-[44px]"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ New Diary Entry</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsPdfModalOpen(true)}
+              className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl shadow-xs transition-all cursor-pointer min-h-[44px] border border-slate-200 dark:border-slate-700"
+            >
+              <FileText className="w-4 h-4 text-[#1AAB67]" />
+              <span>Create Travel Diary PDF</span>
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className="flex items-center justify-center gap-2 bg-[#1AAB67] hover:bg-[#159257] active:scale-95 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-all cursor-pointer min-h-[44px]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ New Diary Entry</span>
+            </button>
+          </div>
         </div>
 
         {/* COMPACT PERSONAL DIARY STATS */}
@@ -717,9 +730,9 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
                       <div className="flex flex-wrap gap-1.5">
                         {entry.tags &&
-                          entry.tags.map((tag) => (
+                          entry.tags.map((tag, idx) => (
                             <span
-                              key={tag}
+                              key={`${tag}_${idx}`}
                               className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md"
                             >
                               #{tag}
@@ -1021,7 +1034,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
 
       {/* 5. VIEW ENTRY DETAILS MODAL */}
       <AnimatePresence>
-        {viewingEntry && (
+        {viewingEntry && !isEditorOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1106,9 +1119,9 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                 {viewingEntry.tags && viewingEntry.tags.length > 0 && (
                   <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex flex-wrap gap-1.5">
-                      {viewingEntry.tags.map((tag) => (
+                      {viewingEntry.tags.map((tag, idx) => (
                         <span
-                          key={tag}
+                          key={`${tag}_${idx}`}
                           className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl"
                         >
                           #{tag}
@@ -1273,6 +1286,15 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* PDF Generation Modal */}
+      {isPdfModalOpen && (
+        <TravelDiaryPdfModal
+          trip={trip}
+          entries={entries}
+          onClose={() => setIsPdfModalOpen(false)}
+        />
+      )}
     </motion.div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Ticket, AlertCircle, ArrowLeft, Compass } from "lucide-react";
+import { ArrowRight, Ticket, AlertCircle, ArrowLeft } from "lucide-react";
 import { motion } from "motion/react";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
 
@@ -9,9 +9,6 @@ export default function JoinTripByCode() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-
-  const lastJoinedCode = localStorage.getItem("trippro_last_trip_code");
-  const activeTripId = localStorage.getItem("trippro_active_trip_id");
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,12 +49,20 @@ export default function JoinTripByCode() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start p-4 sm:p-6 overflow-y-auto overflow-x-hidden">
+    <div 
+      className="min-h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden"
+      style={{
+        paddingTop: "max(16px, env(safe-area-inset-top))",
+        paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+        paddingLeft: "12px",
+        paddingRight: "12px"
+      }}
+    >
       {/* Top Navigation */}
-      <div className="w-full max-w-[430px] pt-1 sm:pt-2 mb-3 sm:mb-4">
+      <div className="w-full max-w-[520px] pt-2 sm:pt-4 mb-4 shrink-0">
         <button 
           onClick={() => navigate("/")} 
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-[15px] sm:text-[16px] text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Home
         </button>
@@ -68,116 +73,103 @@ export default function JoinTripByCode() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-[20px] shadow-xl shadow-slate-200/50 dark:shadow-none p-6 border border-slate-100 dark:border-slate-800"
+        className="w-full max-w-[520px] bg-white dark:bg-slate-900 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.015)] dark:shadow-none p-6 sm:p-8 border border-slate-100 dark:border-slate-800 flex flex-col flex-1"
+        style={{
+          minHeight: "calc(100dvh - 120px)"
+        }}
       >
-        {/* Ticket Icon Container */}
-        <div className="w-[64px] h-[64px] bg-blue-50 dark:bg-blue-950/40 rounded-[16px] flex items-center justify-center mx-auto mb-[clamp(10px,1.5vh,16px)]">
-          <Ticket className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-        </div>
-
-        {/* Heading & Description */}
-        <h2 className="text-[28px] sm:text-[30px] font-bold text-slate-900 dark:text-white text-center leading-[1.15] mb-[clamp(4px,0.8vh,8px)]">
-          Join a Trip
-        </h2>
-        <p className="text-[15px] sm:text-[16px] text-slate-500 dark:text-slate-400 text-center leading-[1.5] mb-[clamp(16px,2.2vh,24px)]">
-          Enter the trip code shared by your organizer.
-        </p>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {activeTripId && (
-          <div className="mb-4 p-3.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                <Compass className="w-4 h-4" />
+        <div className="flex flex-col justify-between flex-1 h-full gap-6">
+          
+          {/* Main Content (Hero & Form) */}
+          <div className="flex-1 flex flex-col justify-center py-2 sm:py-4 space-y-6 sm:space-y-8">
+            
+            {/* Ticket Icon Container & Headings */}
+            <div className="text-center space-y-3 shrink-0">
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/40 rounded-[14px] flex items-center justify-center mx-auto">
+                <Ticket className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div className="min-w-0 text-left">
-                <div className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">
-                  Active Session
-                </div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
-                  Resume Trip Dashboard
-                </div>
-              </div>
+              
+              <h2 className="text-[24px] sm:text-[26px] font-bold text-slate-900 dark:text-white leading-tight">
+                Join a Trip
+              </h2>
+              
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-[280px] sm:max-w-[340px] mx-auto leading-relaxed">
+                Enter the trip code shared by your organizer.
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard")}
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
-            >
-              Open Dashboard
-            </button>
-          </div>
-        )}
 
-        {/* Form */}
-        <form onSubmit={handleJoin} className="space-y-[clamp(12px,1.8vh,16px)]">
-          <div>
-            <label className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-              Trip Code *
-            </label>
-            <input 
-              type="text"
-              required
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value.toUpperCase().trim());
-                setError(null);
-              }}
-              placeholder="GOA8F3A"
-              className="w-full h-[56px] px-4 rounded-[14px] border border-slate-200 dark:border-slate-700 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition-all text-center text-[18px] font-mono font-bold tracking-[0.15em] uppercase bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white"
-            />
-          </div>
-
-          <button 
-            type="submit"
-            disabled={!code.trim() || isLoading}
-            className="w-full h-[52px] sm:h-[54px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] font-bold text-sm sm:text-base transition-all shadow-lg shadow-indigo-200/50 dark:shadow-none flex items-center justify-center gap-2 disabled:bg-indigo-200 dark:disabled:bg-indigo-950/60 disabled:text-indigo-400 dark:disabled:text-indigo-500/50 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                Continue <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-              </>
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span className="flex-1 text-left">{error}</span>
+              </div>
             )}
-          </button>
-        </form>
-        
-        {/* Divider */}
-        <div className="my-[clamp(14px,2vh,20px)]">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+
+            {/* Input Form */}
+            <form onSubmit={handleJoin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">
+                  Trip Code *
+                </label>
+                <input 
+                  type="text"
+                  required
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.toUpperCase());
+                    setError(null);
+                  }}
+                  placeholder="GOA8F3A"
+                  className="w-full h-[58px] px-4 rounded-[16px] border border-slate-200 dark:border-slate-700 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition-all text-center text-[20px] font-mono font-bold tracking-[0.2em] uppercase bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <button 
+                type="submit"
+                disabled={!code.trim() || isLoading}
+                className="w-full h-[56px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-[16px] font-bold text-sm sm:text-base transition-all shadow-md shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2 disabled:bg-indigo-200 dark:disabled:bg-indigo-950/60 disabled:text-indigo-400 dark:disabled:text-indigo-500/50 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <span className="flex items-center gap-1.5 justify-center">
+                    Continue <ArrowRight className="w-4 h-4" />
+                  </span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Organizer Bottom Section */}
+          <div className="space-y-4 pt-4 mt-auto">
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-100 dark:border-slate-800"></div>
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
+                <span className="px-3 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500">
+                  OR
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-[11px] uppercase">
-              <span className="px-3 bg-white dark:bg-slate-900 text-slate-400 font-bold tracking-wider">
-                OR
-              </span>
+
+            <div className="text-center space-y-2">
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+                Organizer?
+              </p>
+              <button 
+                onClick={() => navigate("/admin/login")}
+                className="w-full h-[50px] bg-transparent text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-[16px] font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Sign in as Organizer
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Organizer Section */}
-        <div className="text-center">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">
-            Organizer?
-          </p>
-          <button 
-            onClick={() => navigate("/admin/login")}
-            className="w-full h-[50px] sm:h-[52px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-[14px] font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-750 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            Sign in as Organizer
-          </button>
         </div>
       </motion.div>
     </div>
   );
 }
-
-

@@ -1190,8 +1190,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     onChange={(e) => setWhoPaidId(e.target.value)}
                     className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
-                    {trip.travellers.map((t) => (
-                      <option key={t.id} value={t.id}>
+                    {trip.travellers.map((t, idx) => (
+                      <option key={t.id ? `${t.id}_${idx}` : `trv_${idx}`} value={t.id}>
                         {t.fullName} ({t.role})
                       </option>
                     ))}
@@ -1203,11 +1203,11 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     Split Between
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {trip.travellers.map((t) => {
+                    {trip.travellers.map((t, idx) => {
                       const isSelected = whoUsedIds.includes(t.id);
                       return (
                         <button
-                          key={t.id}
+                          key={t.id ? `${t.id}_${idx}` : `trv_${idx}`}
                           type="button"
                           onClick={() => toggleUserSelection(t.id)}
                           className={`flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-all text-left ${
@@ -1915,8 +1915,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       onChange={(e) => setWhoPaidId(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
-                      {trip.travellers.map((t) => (
-                        <option key={t.id} value={t.id}>
+                      {trip.travellers.map((t, idx) => (
+                        <option key={t.id ? `${t.id}_${idx}` : `trv_${idx}`} value={t.id}>
                           {t.fullName} ({t.role})
                         </option>
                       ))}
@@ -1928,11 +1928,11 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       Split Between
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {trip.travellers.map((t) => {
+                      {trip.travellers.map((t, idx) => {
                         const isSelected = whoUsedIds.includes(t.id);
                         return (
                           <button
-                            key={t.id}
+                            key={t.id ? `${t.id}_${idx}` : `trv_${idx}`}
                             type="button"
                             onClick={() => toggleUserSelection(t.id)}
                             className={`flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-all text-left ${

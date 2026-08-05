@@ -5,6 +5,8 @@
 
 import React, { useState, useMemo } from "react";
 import { Trip, FinanceAccount, CashbookEntry } from "../types";
+import { writeBatch, doc } from "firebase/firestore";
+import { db, auth } from "../lib/firebase";
 import {
   Wallet,
   Building2,
@@ -96,7 +98,19 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<FinanceAccount | null>(null);
-  const [viewingHistoryAccountId, setViewingHistoryAccountId] = useState<string | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [viewingHistoryAccountId, setViewingHistoryAccountId] = useState<string | null>(() => {
+    return localStorage.getItem("trippro_viewing_account_id") || null;
+  });
+
+  React.useEffect(() => {
+    if (viewingHistoryAccountId) {
+      localStorage.setItem("trippro_viewing_account_id", viewingHistoryAccountId);
+    } else {
+      localStorage.removeItem("trippro_viewing_account_id");
+    }
+  }, [viewingHistoryAccountId]);
   
   // Notification Toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -594,10 +608,52 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
     return Array.from(new Set(filtered.map((e) => e.category)));
   }, [viewingHistoryAccountId, cashbookEntries]);
 
-  const handleResetCashbook = () => {
-    if (confirm("Are you sure you want to scrub ALL transaction history? This will clear the cashbook but preserve account balances.")) {
-      cashbookEntries.forEach(entry => onDeleteCashbookEntry(entry.id));
-      showToast("Cashbook has been reset successfully");
+  const handleResetCashbook = async () => {
+    setIsResetting(true);
+    try {
+      if (auth.currentUser) {
+        const batch = writeBatch(db);
+
+        // 1. Delete all cashbook entries in firestore
+        cashbookEntries.forEach((entry) => {
+          const entryRef = doc(db, "cashbook", entry.id);
+          batch.delete(entryRef);
+        });
+
+        // 2. Reset account balances to opening balances in firestore
+        accounts.forEach((acc) => {
+          const accRef = doc(db, "accounts", acc.id);
+          const initialBal = acc.openingBalance !== undefined ? acc.openingBalance : acc.balance;
+          batch.update(accRef, {
+            balance: initialBal,
+            currentBalance: initialBal,
+          });
+        });
+
+        await batch.commit();
+      }
+
+      // 3. Keep local states and localStorage updated in the parent
+      cashbookEntries.forEach((entry) => {
+        onDeleteCashbookEntry(entry.id);
+      });
+
+      accounts.forEach((acc) => {
+        const initialBal = acc.openingBalance !== undefined ? acc.openingBalance : acc.balance;
+        onSaveAccount({
+          ...acc,
+          balance: initialBal,
+          currentBalance: initialBal,
+        });
+      });
+
+      showToast("Cashbook has been reset successfully and balances restored to opening balances.");
+    } catch (error) {
+      console.error("Error resetting cashbook:", error);
+      showToast("Failed to reset cashbook: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsResetting(false);
+      setIsResetConfirmOpen(false);
     }
   };
 
@@ -691,7 +747,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
 
         <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
           <button
-            onClick={handleResetCashbook}
+            onClick={() => setIsResetConfirmOpen(true)}
             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold px-4 py-2.5 rounded-xl border border-rose-100 dark:border-rose-900 transition-all"
           >
             <RotateCcw className="w-4 h-4" /> Reset Cashbook
@@ -732,303 +788,126 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
         </div>
       </div>
 
-      {/* Account Dashboard Summaries (Requirement 8, 9) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3.5">
-        <div className="p-3 sm:p-4 rounded-xl bg-emerald-50/55 dark:bg-emerald-950/20 border border-emerald-100/80 dark:border-emerald-900/40">
-          <span className="text-[10px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300">
-            Total Cash
-          </span>
-          <p className="text-base sm:text-lg font-extrabold text-emerald-950 dark:text-emerald-100 mt-1 truncate">
-            {trip.currency}
-            {stats.totalCash.toLocaleString()}
-          </p>
-        </div>
 
-        <div className="p-3 sm:p-4 rounded-xl bg-blue-50/55 dark:bg-blue-950/20 border border-blue-100/80 dark:border-blue-900/40">
-          <span className="text-[10px] sm:text-xs font-bold text-blue-800 dark:text-blue-300">
-            Bank Balance
-          </span>
-          <p className="text-base sm:text-lg font-extrabold text-blue-950 dark:text-blue-100 mt-1 truncate">
-            {trip.currency}
-            {stats.totalBankBalance.toLocaleString()}
-          </p>
-        </div>
 
-        <div className="p-3 sm:p-4 rounded-xl bg-purple-50/55 dark:bg-purple-950/20 border border-purple-100/80 dark:border-purple-900/40">
-          <span className="text-[10px] sm:text-xs font-bold text-purple-800 dark:text-purple-300">
-            Wallet Balance
-          </span>
-          <p className="text-base sm:text-lg font-extrabold text-purple-950 dark:text-purple-100 mt-1 truncate">
-            {trip.currency}
-            {stats.totalWalletBalance.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="p-3 sm:p-4 rounded-xl bg-amber-50/55 dark:bg-amber-950/20 border border-amber-100/80 dark:border-amber-900/40">
-          <span className="text-[10px] sm:text-xs font-bold text-amber-800 dark:text-amber-300">
-            Credit Used
-          </span>
-          <p className="text-base sm:text-lg font-extrabold text-amber-950 dark:text-amber-100 mt-1 truncate">
-            {trip.currency}
-            {stats.totalCreditUsed.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100/80 dark:border-indigo-900/40">
-          <span className="text-[10px] sm:text-xs font-bold text-indigo-800 dark:text-indigo-300">
-            Total Net Assets
-          </span>
-          <p className="text-base sm:text-lg font-extrabold text-indigo-950 dark:text-indigo-100 mt-1 truncate">
-            {trip.currency}
-            {stats.totalAssets.toLocaleString()}
-          </p>
-        </div>
-      </div>
-
-      {/* Main split-screen UI layout: Accounts List (Left) & Ledger Details (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Active Accounts Grid (Requirement 7) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Active Portfolios ({groupedAccounts.active.length})
-            </h3>
-            {groupedAccounts.archived.length > 0 && (
-              <span className="text-[10px] font-semibold text-slate-400">
-                {groupedAccounts.archived.length} archived
-              </span>
-            )}
+      {viewingHistoryAccountId ? (
+        // DEDICATED ACCOUNT DETAILS PAGE
+        !activeHistoryAccount ? (
+          <div className="space-y-6 max-w-4xl mx-auto py-6">
+            <button
+              onClick={() => setViewingHistoryAccountId(null)}
+              className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 cursor-pointer"
+            >
+              ← Back to Financial Accounts
+            </button>
+            <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
+              <h3 className="text-base font-black text-slate-900 dark:text-white">Account not found</h3>
+              <p className="text-xs text-slate-500">The requested financial account could not be found or has been deleted.</p>
+              <button
+                onClick={() => setViewingHistoryAccountId(null)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 cursor-pointer"
+              >
+                Back to Financial Accounts
+              </button>
+            </div>
           </div>
+        ) : (
+          <div className="space-y-6 max-w-5xl mx-auto py-2">
+            {/* Back navigation & header actions */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setViewingHistoryAccountId(null)}
+                className="flex items-center gap-2 text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer min-h-[44px]"
+              >
+                ← Financial Accounts
+              </button>
 
-          <div className="space-y-2.5 max-h-[580px] overflow-y-auto pr-1">
-            {groupedAccounts.active.length === 0 ? (
-              <div className="text-center p-8 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No active accounts found.</p>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleOpenAddAccount}
-                  className="mt-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold"
+                  onClick={() => handleExportAccountCSV(activeHistoryAccount)}
+                  className="px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  Create one now
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  onClick={() => handlePrintPDF()}
+                  className="px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Print</span>
+                </button>
+                <button
+                  onClick={() => handleOpenEditAccount(activeHistoryAccount)}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Account</span>
                 </button>
               </div>
-            ) : (
-              groupedAccounts.active.map((acc) => {
-                const IconComponent = getAccountIconComponent(acc.iconName);
-                const isSelected = viewingHistoryAccountId === acc.id;
-                return (
-                  <div
-                    key={acc.id}
-                    onClick={() => {
-                      setViewingHistoryAccountId(acc.id);
-                      setHistoryPage(1);
-                    }}
-                    className={`p-3 rounded-xl bg-white dark:bg-slate-900 border transition-all cursor-pointer flex flex-col justify-between h-36 ${
-                      isSelected
-                        ? "border-indigo-500 shadow-md ring-2 ring-indigo-500/10"
-                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs"
-                    }`}
-                  >
-                    {/* Card Top Block */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                          style={{ backgroundColor: acc.color }}
-                        >
-                          <IconComponent className="w-4 h-4" />
-                        </div>
-                        <div className="max-w-[140px] sm:max-w-[180px]">
-                          <h4 className="text-xs font-black text-slate-900 dark:text-white truncate">
-                            {acc.name}
-                          </h4>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">
-                            {acc.type} {acc.accountNumber ? `• ${acc.accountNumber.slice(-4)}` : ""}
-                          </span>
-                        </div>
-                      </div>
+            </div>
 
-                      {/*⋮ Three dot menu trigger */}
-                      <div className="relative">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveMenuAccountId(activeMenuAccountId === acc.id ? null : acc.id);
-                          }}
-                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-
-                        {/* Dropdown options (Requirement 1) */}
-                        {activeMenuAccountId === acc.id && (
-                          <div
-                            className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-50 py-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => handleOpenEditAccount(acc)}
-                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2"
-                            >
-                              <Edit2 className="w-3.5 h-3.5 text-indigo-500" /> Edit Details
-                            </button>
-                            <button
-                              onClick={() => handleOpenTransfer(acc.id)}
-                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2"
-                            >
-                              <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-500" /> Transfer Money
-                            </button>
-                            <button
-                              onClick={() => {
-                                setViewingHistoryAccountId(acc.id);
-                                setHistoryPage(1);
-                                setActiveMenuAccountId(null);
-                              }}
-                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2"
-                            >
-                              <History className="w-3.5 h-3.5 text-blue-500" /> View History
-                            </button>
-                            <button
-                              onClick={() => handleDuplicateAccount(acc)}
-                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2"
-                            >
-                              <Copy className="w-3.5 h-3.5 text-amber-500" /> Duplicate Account
-                            </button>
-                            <button
-                              onClick={() => handleToggleArchiveAccount(acc)}
-                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2"
-                            >
-                              <Archive className="w-3.5 h-3.5 text-slate-500" /> Archive Account
-                            </button>
-                            <div className="border-t border-slate-100 dark:border-slate-800/80 my-1" />
-                            <button
-                              onClick={() => {
-                                setDeleteConfirmationId(acc.id);
-                                setDeleteHistoryToo(false);
-                                setActiveMenuAccountId(null);
-                              }}
-                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-rose-50 dark:hover:bg-rose-950/25 text-rose-600 dark:text-rose-400 flex items-center gap-2 font-semibold"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Delete Account
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Card Balance Block */}
-                    <div className="flex items-baseline justify-between mt-1">
-                      <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                        {acc.currency || trip.currency}
-                        {acc.balance.toLocaleString()}
-                      </p>
-                      
-                      {acc.isDefaultPayment && (
-                        <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
-                          Default
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Card Footer Block */}
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold border-t border-slate-50 dark:border-slate-800/50 pt-1.5">
-                      <div className="flex items-center gap-1">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            acc.autoDeductExpenses ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
-                          }`}
-                        />
-                        <span>{acc.autoDeductExpenses ? "Auto-Deduct Active" : "No Auto-Deduct"}</span>
-                      </div>
-                      <span className="text-[9px] font-medium text-slate-400">
-                        {acc.branch ? `Branch: ${acc.branch}` : "Internal Ledger"}
+            {/* Account Summary Banner */}
+            <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0"
+                  style={{ backgroundColor: activeHistoryAccount.color }}
+                >
+                  {React.createElement(getAccountIconComponent(activeHistoryAccount.iconName), {
+                    className: "w-7 h-7",
+                  })}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                      {activeHistoryAccount.name}
+                    </h2>
+                    {activeHistoryAccount.isDefaultPayment && (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
+                        Default Account
                       </span>
-                    </div>
+                    )}
                   </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Archived accounts expandable */}
-          {groupedAccounts.archived.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Archived Portfolios ({groupedAccounts.archived.length})
-              </h4>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/40 dark:bg-slate-900/40 rounded-xl overflow-hidden">
-                {groupedAccounts.archived.map((acc) => (
-                  <div
-                    key={acc.id}
-                    className="p-2.5 flex items-center justify-between text-xs opacity-60 hover:opacity-100 transition-opacity"
-                  >
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
-                      {acc.name} ({acc.type})
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">
+                    {activeHistoryAccount.type} {activeHistoryAccount.accountNumber ? `• Account #${activeHistoryAccount.accountNumber}` : ""}
+                  </p>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium pt-1">
+                    <span className="flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${activeHistoryAccount.autoDeductExpenses ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
+                      {activeHistoryAccount.autoDeductExpenses ? "Auto-Deduct Active" : "No Auto-Deduct"}
                     </span>
-                    <button
-                      onClick={() => handleToggleArchiveAccount(acc)}
-                      className="text-[10px] text-indigo-600 dark:text-indigo-400 font-black hover:underline"
-                    >
-                      Restore Account
-                    </button>
+                    <span>•</span>
+                    <span>{activeHistoryAccount.branch ? `Branch: ${activeHistoryAccount.branch}` : "Internal Ledger"}</span>
                   </div>
-                ))}
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800 w-full sm:w-auto">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Balance</p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+                  {activeHistoryAccount.currency || trip.currency}
+                  {activeHistoryAccount.balance.toLocaleString()}
+                </p>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Ledger Transaction History Details Panel (Requirement 6) */}
-        <div className="lg:col-span-7">
-          {activeHistoryAccount ? (
+            {/* Transaction History & Filters */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-              {/* Ledger Header */}
               <div className="p-4 bg-slate-50/50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
-                    style={{ backgroundColor: activeHistoryAccount.color }}
-                  >
-                    {React.createElement(getAccountIconComponent(activeHistoryAccount.iconName), {
-                      className: "w-5 h-5",
-                    })}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
-                      {activeHistoryAccount.name}
-                    </h3>
-                    <p className="text-[10px] text-slate-500 font-semibold uppercase">
-                      Current balance: {activeHistoryAccount.currency || trip.currency}
-                      {activeHistoryAccount.balance.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleExportAccountCSV(activeHistoryAccount)}
-                    className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
-                    title="Export Ledger"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handlePrintPDF()}
-                    className="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
-                    title="Print Ledger"
-                  >
-                    <Printer className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewingHistoryAccountId(null)}
-                    className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                  Transaction History ({ledgerData.length})
+                </h3>
+                <button
+                  onClick={() => handleOpenTransfer(activeHistoryAccount.id)}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  + Transfer Money
+                </button>
               </div>
 
-              {/* Ledger Filters Block */}
+              {/* Filters */}
               <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
@@ -1045,7 +924,6 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                 </div>
 
                 <div className="flex gap-2">
-                  {/* Category Filter */}
                   <select
                     value={historyCategoryFilter}
                     onChange={(e) => {
@@ -1062,7 +940,6 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                     ))}
                   </select>
 
-                  {/* Type Filter */}
                   <select
                     value={historyTypeFilter}
                     onChange={(e) => {
@@ -1078,8 +955,8 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                 </div>
               </div>
 
-              {/* Transactions Ledger Entries (Requirement 6, 12) */}
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[420px] overflow-y-auto">
+              {/* Ledger Entries */}
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[500px] overflow-y-auto">
                 {paginatedLedger.length === 0 ? (
                   <div className="p-12 text-center text-slate-400 text-xs font-semibold">
                     No ledger transactions matching filters.
@@ -1147,31 +1024,205 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                 )}
               </div>
 
-              {/* Ledger pagination */}
               {hasMoreLedger && (
                 <div className="p-3 border-t border-slate-100 dark:border-slate-800 text-center bg-slate-50/20">
                   <button
                     onClick={handleLoadMoreLedger}
-                    className="text-xs font-black text-indigo-600 hover:text-indigo-500 hover:underline"
+                    className="text-xs font-black text-indigo-600 hover:text-indigo-500 hover:underline cursor-pointer"
                   >
                     Load Older Transactions
                   </button>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="h-full min-h-[300px] flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center shadow-xs">
-              <History className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-2.5 animate-pulse" />
-              <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                Click an Account to view Ledger History
-              </h3>
-              <p className="text-[10px] text-slate-400 mt-1 max-w-xs">
-                Review complete double-entry logs, search, apply category filters, and export financial audit sheets.
-              </p>
+          </div>
+        )
+      ) : (
+        // FINANCIAL ACCOUNT REGISTRY VIEW (Compact, no expanded ledger underneath)
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Active Portfolios ({groupedAccounts.active.length})
+            </h3>
+            {groupedAccounts.archived.length > 0 && (
+              <span className="text-[10px] font-semibold text-slate-400">
+                {groupedAccounts.archived.length} archived
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {groupedAccounts.active.length === 0 ? (
+              <div className="col-span-full text-center p-8 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No active accounts found.</p>
+                <button
+                  onClick={handleOpenAddAccount}
+                  className="mt-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer"
+                >
+                  Create one now
+                </button>
+              </div>
+            ) : (
+              groupedAccounts.active.map((acc) => {
+                const IconComponent = getAccountIconComponent(acc.iconName);
+                return (
+                  <div
+                    key={acc.id}
+                    onClick={() => {
+                      setViewingHistoryAccountId(acc.id);
+                      setHistoryPage(1);
+                    }}
+                    className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-36 relative group"
+                  >
+                    {/* Card Top Block */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs"
+                          style={{ backgroundColor: acc.color }}
+                        >
+                          <IconComponent className="w-4 h-4" />
+                        </div>
+                        <div className="max-w-[150px] sm:max-w-[180px]">
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white truncate group-hover:text-indigo-600 transition-colors">
+                            {acc.name}
+                          </h4>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">
+                            {acc.type} {acc.accountNumber ? `• ${acc.accountNumber.slice(-4)}` : ""}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Three dot menu trigger */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuAccountId(activeMenuAccountId === acc.id ? null : acc.id);
+                          }}
+                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+
+                        {activeMenuAccountId === acc.id && (
+                          <div
+                            className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-50 py-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => handleOpenEditAccount(acc)}
+                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Edit2 className="w-3.5 h-3.5 text-indigo-500" /> Edit Details
+                            </button>
+                            <button
+                              onClick={() => handleOpenTransfer(acc.id)}
+                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer"
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-500" /> Transfer Money
+                            </button>
+                            <button
+                              onClick={() => {
+                                setViewingHistoryAccountId(acc.id);
+                                setHistoryPage(1);
+                                setActiveMenuAccountId(null);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer"
+                            >
+                              <History className="w-3.5 h-3.5 text-blue-500" /> View History
+                            </button>
+                            <button
+                              onClick={() => handleDuplicateAccount(acc)}
+                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Copy className="w-3.5 h-3.5 text-amber-500" /> Duplicate Account
+                            </button>
+                            <button
+                              onClick={() => handleToggleArchiveAccount(acc)}
+                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Archive className="w-3.5 h-3.5 text-slate-500" /> Archive Account
+                            </button>
+                            <div className="border-t border-slate-100 dark:border-slate-800/80 my-1" />
+                            <button
+                              onClick={() => {
+                                setDeleteConfirmationId(acc.id);
+                                setDeleteHistoryToo(false);
+                                setActiveMenuAccountId(null);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-xs hover:bg-rose-50 dark:hover:bg-rose-950/25 text-rose-600 dark:text-rose-400 flex items-center gap-2 font-semibold cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete Account
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card Balance Block */}
+                    <div className="flex items-baseline justify-between mt-1">
+                      <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                        {acc.currency || trip.currency}
+                        {acc.balance.toLocaleString()}
+                      </p>
+                      
+                      {acc.isDefaultPayment && (
+                        <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
+                          Default
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Card Footer Block */}
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold border-t border-slate-50 dark:border-slate-800/50 pt-2">
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            acc.autoDeductExpenses ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+                          }`}
+                        />
+                        <span>{acc.autoDeductExpenses ? "Auto-Deduct Active" : "No Auto-Deduct"}</span>
+                      </div>
+                      <span className="text-[9px] font-medium text-slate-400">
+                        {acc.branch ? `Branch: ${acc.branch}` : "Internal Ledger"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Archived accounts expandable */}
+          {groupedAccounts.archived.length > 0 && (
+            <div className="space-y-2 pt-4">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Archived Portfolios ({groupedAccounts.archived.length})
+              </h4>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/40 dark:bg-slate-900/40 rounded-xl overflow-hidden">
+                {groupedAccounts.archived.map((acc) => (
+                  <div
+                    key={acc.id}
+                    className="p-3 flex items-center justify-between text-xs opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[220px]">
+                      {acc.name} ({acc.type})
+                    </span>
+                    <button
+                      onClick={() => handleToggleArchiveAccount(acc)}
+                      className="text-[10px] text-indigo-600 dark:text-indigo-400 font-black hover:underline cursor-pointer"
+                    >
+                      Restore Account
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Account Creation & Editing Bottom Sheet / Modal (Requirement 3, 4, 9) */}
       {isAccountModalOpen && (
@@ -1874,6 +1925,67 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
           </div>
         </div>
       )}
+      {/* Reset Confirmation Modal */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-500 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
+                  Reset Cashbook?
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  This action is permanent and cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Are you sure you want to scrub <strong>ALL transaction history</strong>?
+              </p>
+              <ul className="text-xs text-slate-500 dark:text-slate-400 list-disc list-inside space-y-1 bg-slate-50 dark:bg-slate-800/55 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                <li>Clears {cashbookEntries.length} transaction entries from ledger history</li>
+                <li>Restores all {accounts.length} active account balances back to their original opening balances</li>
+                <li><strong>Safe:</strong> Does not touch trips, diary entries, or other modular travel data</li>
+              </ul>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleResetCashbook}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isResetting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  "Yes, Reset Cashbook"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 dark:bg-slate-950/95 text-white text-xs font-black py-2.5 px-4 rounded-xl shadow-xl border border-slate-800 flex items-center gap-2 animate-fadeIn">

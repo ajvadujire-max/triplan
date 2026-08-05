@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Trip, TripPurpose, TripStatus } from "../types";
-import { X, Image as ImageIcon, Palette, Compass } from "lucide-react";
+import { X, Image as ImageIcon, Palette, Compass, Loader2 } from "lucide-react";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
 import { auth } from "../lib/firebase";
 import { useModalBack } from "../hooks/useModalBack";
@@ -13,7 +13,7 @@ import { useModalBack } from "../hooks/useModalBack";
 interface TripCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveTrip: (trip: Trip) => void;
+  onSaveTrip: (trip: Trip) => void | Promise<void>;
   initialTrip?: Trip | null;
 }
 
@@ -25,97 +25,214 @@ const defaultCovers = [
   "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000&auto=format&fit=crop", // Road trip
 ];
 
+const getTodayYMD = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getSevenDaysLaterYMD = () => {
+  const later = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const year = later.getFullYear();
+  const month = String(later.getMonth() + 1).padStart(2, "0");
+  const day = String(later.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateForInput = (dateVal: any, fallback: string = ""): string => {
+  if (!dateVal) return fallback;
+
+  if (typeof dateVal === "string") {
+    const trimmed = dateVal.trim();
+    const ymdMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (ymdMatch) {
+      return ymdMatch[1];
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, "0");
+      const day = String(parsed.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    return fallback;
+  }
+
+  if (typeof dateVal === "object") {
+    let d: Date | null = null;
+    if (typeof dateVal.toDate === "function") {
+      d = dateVal.toDate();
+    } else if (typeof dateVal.seconds === "number") {
+      d = new Date(dateVal.seconds * 1000);
+    } else if (dateVal instanceof Date) {
+      d = dateVal;
+    }
+    if (d && !isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return fallback;
+};
+
 export const TripCreateModal: React.FC<TripCreateModalProps> = ({
   isOpen,
   onClose,
   onSaveTrip,
   initialTrip,
 }) => {
-  const [name, setName] = useState(initialTrip?.name || "");
-  const [destination, setDestination] = useState(initialTrip?.destination || "");
-  const [purpose, setPurpose] = useState<TripPurpose>(initialTrip?.purpose || "Vacation");
-  const [startDate, setStartDate] = useState(initialTrip?.startDate || "2026-08-01");
-  const [endDate, setEndDate] = useState(initialTrip?.endDate || "2026-08-07");
-  const [color, setColor] = useState(initialTrip?.color || "#06b6d4");
-  const [coverPhoto, setCoverPhoto] = useState(initialTrip?.coverPhoto || defaultCovers[0]);
-  const [notes, setNotes] = useState(initialTrip?.notes || "");
-  const [status, setStatus] = useState<TripStatus>(initialTrip?.status || "Upcoming");
-  const [currency, setCurrency] = useState(initialTrip?.currency || "₹");
-  const [travelCategory, setTravelCategory] = useState(initialTrip?.travelCategory || "Family Vacation");
-  const [totalBudget, setTotalBudget] = useState(initialTrip?.totalBudget || 30000);
+  const [name, setName] = useState("");
+  const [destination, setDestination] = useState("");
+  const [purpose, setPurpose] = useState<TripPurpose>("Vacation");
+  const [startDate, setStartDate] = useState(getTodayYMD());
+  const [endDate, setEndDate] = useState(getSevenDaysLaterYMD());
+  const [color, setColor] = useState("#06b6d4");
+  const [coverPhoto, setCoverPhoto] = useState(defaultCovers[0]);
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<TripStatus>("Upcoming");
+  const [currency, setCurrency] = useState("₹");
+  const [travelCategory, setTravelCategory] = useState("Family Vacation");
+  const [totalBudget, setTotalBudget] = useState<number | "">(30000);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useModalBack(isOpen, onClose);
 
+  useEffect(() => {
+    if (isOpen) {
+      if (initialTrip) {
+        setName(initialTrip.name || (initialTrip as any).tripName || "");
+        setDestination(initialTrip.destination || (initialTrip as any).location || "");
+        setPurpose(initialTrip.purpose || (initialTrip as any).type || "Vacation");
+        setStartDate(formatDateForInput(initialTrip.startDate, getTodayYMD()));
+        setEndDate(formatDateForInput(initialTrip.endDate, getSevenDaysLaterYMD()));
+        setColor(initialTrip.color || "#06b6d4");
+        setCoverPhoto(initialTrip.coverPhoto || initialTrip.coverImage || defaultCovers[0]);
+        setNotes(initialTrip.notes || "");
+        setStatus(initialTrip.status || "Upcoming");
+        setCurrency(initialTrip.currency || "₹");
+        setTravelCategory(initialTrip.travelCategory || "Family Vacation");
+        setTotalBudget(initialTrip.totalBudget ?? initialTrip.expectedBudget ?? 30000);
+      } else {
+        setName("");
+        setDestination("");
+        setPurpose("Vacation");
+        setStartDate(getTodayYMD());
+        setEndDate(getSevenDaysLaterYMD());
+        setColor("#06b6d4");
+        setCoverPhoto(defaultCovers[0]);
+        setNotes("");
+        setStatus("Upcoming");
+        setCurrency("₹");
+        setTravelCategory("Family Vacation");
+        setTotalBudget(30000);
+      }
+    }
+  }, [isOpen, initialTrip]);
+
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !destination.trim() || !startDate || !endDate) return;
 
-    const currentUser = auth.currentUser;
-    const orgUid = currentUser?.uid || initialTrip?.organizerId || "trv_ajva";
-    const orgName = currentUser?.displayName || "Primary Organizer";
-    const orgEmail = currentUser?.email || "organizer@example.com";
+    setIsSubmitting(true);
+    try {
+      const currentUser = auth.currentUser;
+      const orgUid = currentUser?.uid || initialTrip?.organizerId || "trv_ajva";
+      const orgName = currentUser?.displayName || "Primary Organizer";
+      const orgEmail = currentUser?.email || "organizer@example.com";
+      const numBudget = Number(totalBudget) || 0;
 
-    const newTrip: Trip = {
-      id: initialTrip?.id || `trip_${Date.now()}`,
-      name,
-      destination,
-      type: (purpose as string) || "Friends",
-      startDate,
-      endDate,
-      coverImage: coverPhoto,
-      organizerId: orgUid,
-      organizationId: initialTrip?.organizationId || `personal_${orgUid}`,
-      expectedTravellers: initialTrip?.expectedTravellers || 1,
-      expectedBudget: Number(totalBudget) || 0,
-      currency,
-      defaultExpenseSplit: initialTrip?.defaultExpenseSplit || "Equal",
-      approvalRequired: initialTrip?.approvalRequired || false,
-      inviteCode: initialTrip?.inviteCode || initialTrip?.tripCode || `TRIP${Date.now().toString(36).toUpperCase()}`,
-      tripCode: initialTrip?.tripCode || initialTrip?.inviteCode || `TRIP${Date.now().toString(36).toUpperCase()}`,
-      createdAt: initialTrip?.createdAt || new Date().toISOString(),
-      purpose,
-      color,
-      coverPhoto,
-      notes,
-      status,
-      travelCategory,
-      totalBudget: Number(totalBudget) || 0,
-      totalSpent: initialTrip?.totalSpent || 0,
-      remainingBudget: (Number(totalBudget) || 0) - (initialTrip?.totalSpent || 0),
-      totalDistanceKm: initialTrip?.totalDistanceKm || 350,
-      totalDuration: initialTrip?.totalDuration || "7 Days",
-      currentJourneyStatus: initialTrip?.currentJourneyStatus || "Planning & Booking",
-      travellers: initialTrip?.travellers || [
-        {
-          id: orgUid,
-          fullName: orgName,
-          age: 30,
-          gender: "Male",
-          phone: "+91 98765 00000",
-          email: orgEmail,
-          emergencyContact: "+91 98765 11111",
-          bloodGroup: "O+",
-          role: "Organizer",
-          allocatedBudget: Number(totalBudget) || 30000,
-        },
-      ],
-      segments: initialTrip?.segments || [],
-      vehicles: initialTrip?.vehicles || [],
-      fuelLogs: initialTrip?.fuelLogs || [],
-      flights: initialTrip?.flights || [],
-      trains: initialTrip?.trains || [],
-      buses: initialTrip?.buses || [],
-      hotels: initialTrip?.hotels || [],
-      expenses: initialTrip?.expenses || [],
-      documents: initialTrip?.documents || [],
-      checklist: initialTrip?.checklist || getRichDefaultChecklist(initialTrip?.id || `trip_${Date.now()}`),
-      timeline: initialTrip?.timeline || [],
-    };
+      const tripToSave: Trip = initialTrip
+        ? {
+            ...initialTrip,
+            name: name.trim(),
+            destination: destination.trim(),
+            purpose,
+            type: (purpose as string) || initialTrip.type || "Friends",
+            startDate,
+            endDate,
+            totalBudget: numBudget,
+            expectedBudget: numBudget,
+            remainingBudget: numBudget - (initialTrip.totalSpent || 0),
+            currency,
+            status,
+            color,
+            coverPhoto,
+            coverImage: coverPhoto,
+            notes: notes.trim(),
+            travelCategory: travelCategory.trim(),
+          }
+        : {
+            id: `trip_${Date.now()}`,
+            name: name.trim(),
+            destination: destination.trim(),
+            type: (purpose as string) || "Friends",
+            startDate,
+            endDate,
+            coverImage: coverPhoto,
+            organizerId: orgUid,
+            organizerUid: orgUid,
+            organizationId: `personal_${orgUid}`,
+            expectedTravellers: 1,
+            expectedBudget: numBudget,
+            currency,
+            defaultExpenseSplit: "Equal",
+            approvalRequired: false,
+            inviteCode: `TRIP${Date.now().toString(36).toUpperCase()}`,
+            tripCode: `TRIP${Date.now().toString(36).toUpperCase()}`,
+            createdAt: new Date().toISOString(),
+            purpose,
+            color,
+            coverPhoto,
+            notes: notes.trim(),
+            status,
+            travelCategory: travelCategory.trim(),
+            totalBudget: numBudget,
+            totalSpent: 0,
+            remainingBudget: numBudget,
+            totalDistanceKm: 350,
+            totalDuration: "7 Days",
+            currentJourneyStatus: "Planning & Booking",
+            travellers: [
+              {
+                id: orgUid,
+                fullName: orgName,
+                age: 30,
+                gender: "Male",
+                phone: "+91 98765 00000",
+                email: orgEmail,
+                emergencyContact: "+91 98765 11111",
+                bloodGroup: "O+",
+                role: "Organizer",
+                allocatedBudget: numBudget,
+              },
+            ],
+            segments: [],
+            vehicles: [],
+            fuelLogs: [],
+            flights: [],
+            trains: [],
+            buses: [],
+            hotels: [],
+            expenses: [],
+            documents: [],
+            checklist: getRichDefaultChecklist(`trip_${Date.now()}`),
+            timeline: [],
+          };
 
-    onSaveTrip(newTrip);
-    onClose();
+      await onSaveTrip(tripToSave);
+      onClose();
+    } catch (err) {
+      console.error("Error saving trip:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -124,14 +241,15 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-#1AAB67 dark:text-#34D399" />
+            <Compass className="w-5 h-5 text-[#1AAB67] dark:text-[#34D399]" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               {initialTrip ? "Edit Trip Details" : "Create New Trip"}
             </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -151,7 +269,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 placeholder="e.g. Goa Coastal Road Trip"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               />
             </div>
 
@@ -165,7 +283,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 placeholder="e.g. Goa, India or Tokyo, Japan"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               />
             </div>
           </div>
@@ -179,7 +297,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <select
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value as TripPurpose)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               >
                 <option value="Vacation">Vacation</option>
                 <option value="Business">Business</option>
@@ -200,7 +318,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 placeholder="e.g. Group Road Trip, Office Tour"
                 value={travelCategory}
                 onChange={(e) => setTravelCategory(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               />
             </div>
           </div>
@@ -216,7 +334,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               />
             </div>
 
@@ -229,7 +347,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               />
             </div>
           </div>
@@ -243,8 +361,8 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <input
                 type="number"
                 value={totalBudget}
-                onChange={(e) => setTotalBudget(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                onChange={(e) => setTotalBudget(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               />
             </div>
 
@@ -255,7 +373,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               >
                 <option value="₹">₹ INR (Rupee)</option>
                 <option value="$">$ USD (Dollar)</option>
@@ -273,7 +391,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TripStatus)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
               >
                 <option value="Upcoming">Upcoming</option>
                 <option value="Ongoing">Ongoing</option>
@@ -294,7 +412,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                  className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
                     color === c ? "scale-125 border-slate-900 dark:border-white" : "border-transparent"
                   }`}
                   style={{ backgroundColor: c }}
@@ -313,7 +431,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               value={coverPhoto}
               onChange={(e) => setCoverPhoto(e.target.value)}
               placeholder="Paste image URL or pick from presets below"
-              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67 mb-2"
+              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67] mb-2"
             />
             <div className="flex items-center gap-2 overflow-x-auto py-1">
               {defaultCovers.map((img, idx) => (
@@ -323,7 +441,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
                   alt="cover preset"
                   onClick={() => setCoverPhoto(img)}
                   className={`w-16 h-12 object-cover rounded-lg cursor-pointer border-2 transition-all ${
-                    coverPhoto === img ? "border-#1AAB67 scale-105" : "border-transparent opacity-70"
+                    coverPhoto === img ? "border-[#1AAB67] scale-105" : "border-transparent opacity-70"
                   }`}
                 />
               ))}
@@ -340,7 +458,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Key objectives, hotel references, emergency contacts..."
-              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-#1AAB67"
+              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
             />
           </div>
 
@@ -349,15 +467,26 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs sm:text-sm font-bold bg-#1AAB67 hover:bg-#1AAB67 text-white rounded-lg shadow-md transition-all"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 text-xs sm:text-sm font-bold bg-[#1AAB67] hover:bg-[#158f55] active:scale-95 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {initialTrip ? "Update Trip" : "Save Trip"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span className="text-white font-bold">Saving...</span>
+                </>
+              ) : (
+                <span className="text-white font-bold">
+                  {initialTrip ? "Save Changes" : "Save Trip"}
+                </span>
+              )}
             </button>
           </div>
         </form>

@@ -825,10 +825,10 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
         </div>
 
         {filteredTravellers.length > 0 ? (
-          filteredTravellers.map(({ traveller, stats }) => {
+          filteredTravellers.map(({ traveller, stats }, idx) => {
             return (
               <div
-                key={traveller.id}
+                key={traveller.id ? `${traveller.id}_${idx}` : `traveller_${idx}`}
                 onClick={() => handleSelectTraveller(traveller.id)}
                 className="group relative bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer active:scale-[0.99]"
               >
