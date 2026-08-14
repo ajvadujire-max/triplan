@@ -54,19 +54,20 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-x-auto no-scrollbar">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm w-full sm:w-80">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                   activeSubTab === tab.id
-                    ? "bg-white dark:bg-slate-700 text-[#1AAB67] dark:text-[#1AAB67] shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                    ? "bg-white dark:bg-slate-900 text-[#1AAB67] dark:text-[#1AAB67] shadow-sm border border-slate-200 dark:border-slate-800/80"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                 }`}
               >
-                <tab.icon className={`w-3.5 h-3.5 ${activeSubTab === tab.id ? "text-[#1AAB67]" : ""}`} />
-                {tab.label}
+                <tab.icon className={`w-4 h-4 ${activeSubTab === tab.id ? "text-[#1AAB67]" : ""}`} />
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
