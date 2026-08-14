@@ -225,13 +225,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
       name: "",
       type: "Savings Account",
       bankName: "",
-      nickname: "",
       accountHolderName: "",
-      accountNumber: "",
-      ifscCode: "",
-      branch: "",
-      upiId: "",
-      swiftCode: "",
       balance: "",
       openingBalance: "",
       currency: trip.currency || "₹",
@@ -257,13 +251,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
       name: acc.name,
       type: acc.type,
       bankName: acc.bankName || "",
-      nickname: acc.nickname || "",
       accountHolderName: acc.accountHolderName || "",
-      accountNumber: acc.accountNumber || "",
-      ifscCode: acc.ifscCode || "",
-      branch: acc.branch || "",
-      upiId: acc.upiId || "",
-      swiftCode: acc.swiftCode || "",
       balance: acc.balance.toString(),
       openingBalance: (acc.openingBalance !== undefined ? acc.openingBalance : acc.balance).toString(),
       currency: acc.currency || trip.currency || "₹",
@@ -307,43 +295,13 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
     setActiveMenuAccountId(null);
   };
 
-  // Validate account form (Requirement 11)
+  // Validate account form
   const validateAccountForm = () => {
     const errors: Record<string, string> = {};
 
     if (!accountForm.name.trim()) errors.name = "Account Name is required";
     if (!accountForm.type) errors.type = "Account Type is required";
     if (accountForm.balance === "") errors.balance = "Current Balance is required";
-
-    // Duplicate account number check
-    if (accountForm.accountNumber.trim()) {
-      const isDuplicate = accounts.some(
-        (a) =>
-          a.id !== editingAccount?.id &&
-          a.accountNumber &&
-          a.accountNumber.trim() === accountForm.accountNumber.trim()
-      );
-      if (isDuplicate) errors.accountNumber = "Duplicate account number already exists";
-    }
-
-    // Duplicate UPI ID check
-    if (accountForm.upiId.trim()) {
-      const isDuplicate = accounts.some(
-        (a) =>
-          a.id !== editingAccount?.id &&
-          a.upiId &&
-          a.upiId.trim().toLowerCase() === accountForm.upiId.trim().toLowerCase()
-      );
-      if (isDuplicate) errors.upiId = "Duplicate UPI ID already exists";
-    }
-
-    // Invalid IFSC check (format: 4 letters, 0, 6 alpha-numeric)
-    if (accountForm.ifscCode.trim()) {
-      const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/i;
-      if (!ifscRegex.test(accountForm.ifscCode.trim())) {
-        errors.ifscCode = "Invalid IFSC Code format (e.g. HDFC0000213)";
-      }
-    }
 
     // Negative balance check unless credit card
     const balNum = Number(accountForm.balance) || 0;
@@ -381,13 +339,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
       openingBalance,
       currentBalance,
       bankName: accountForm.bankName.trim() || undefined,
-      nickname: accountForm.nickname.trim() || undefined,
       accountHolderName: accountForm.accountHolderName.trim() || undefined,
-      accountNumber: accountForm.accountNumber.trim() || undefined,
-      ifscCode: accountForm.ifscCode.trim().toUpperCase() || undefined,
-      branch: accountForm.branch.trim() || undefined,
-      upiId: accountForm.upiId.trim() || undefined,
-      swiftCode: accountForm.swiftCode.trim().toUpperCase() || undefined,
       currency: accountForm.currency,
       creditLimit: accountForm.creditLimit ? Number(accountForm.creditLimit) : undefined,
       minimumBalance: accountForm.minimumBalance ? Number(accountForm.minimumBalance) : undefined,
@@ -1055,12 +1007,12 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
             {groupedAccounts.active.length === 0 ? (
               <div className="col-span-full text-center p-8 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
                 <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No active accounts found.</p>
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Financial accounts not configured</p>
                 <button
                   onClick={handleOpenAddAccount}
-                  className="mt-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer"
+                  className="mt-2 text-[#1AAB67] dark:text-[#34D399] text-xs font-bold cursor-pointer hover:underline"
                 >
-                  Create one now
+                  Set Up Accounts
                 </button>
               </div>
             ) : (
@@ -1286,7 +1238,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
                       Bank Name
@@ -1296,19 +1248,6 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       value={accountForm.bankName}
                       onChange={(e) => setAccountForm({ ...accountForm, bankName: e.target.value })}
                       placeholder="e.g. HDFC Bank"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
-                      Nickname
-                    </label>
-                    <input
-                      type="text"
-                      value={accountForm.nickname}
-                      onChange={(e) => setAccountForm({ ...accountForm, nickname: e.target.value })}
-                      placeholder="e.g. Salary Reserve"
                       className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
@@ -1328,94 +1267,10 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                 </div>
               </div>
 
-              {/* Category section: Banking Info */}
-              <div className="space-y-3 pt-1">
-                <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                  2. Banking Information
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
-                      Account Number
-                    </label>
-                    <input
-                      type="text"
-                      value={accountForm.accountNumber}
-                      onChange={(e) => setAccountForm({ ...accountForm, accountNumber: e.target.value })}
-                      placeholder="e.g. 50100234123411"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    />
-                    {formErrors.accountNumber && (
-                      <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.accountNumber}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
-                      UPI ID
-                    </label>
-                    <input
-                      type="text"
-                      value={accountForm.upiId}
-                      onChange={(e) => setAccountForm({ ...accountForm, upiId: e.target.value })}
-                      placeholder="e.g. ajva@okhdfc"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    />
-                    {formErrors.upiId && (
-                      <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.upiId}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
-                      IFSC Code
-                    </label>
-                    <input
-                      type="text"
-                      value={accountForm.ifscCode}
-                      onChange={(e) => setAccountForm({ ...accountForm, ifscCode: e.target.value })}
-                      placeholder="e.g. HDFC0000104"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    />
-                    {formErrors.ifscCode && (
-                      <p className="text-[10px] text-rose-500 font-bold mt-0.5">{formErrors.ifscCode}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
-                      Branch
-                    </label>
-                    <input
-                      type="text"
-                      value={accountForm.branch}
-                      onChange={(e) => setAccountForm({ ...accountForm, branch: e.target.value })}
-                      placeholder="e.g. Bandra West"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wide mb-1">
-                      SWIFT Code
-                    </label>
-                    <input
-                      type="text"
-                      value={accountForm.swiftCode}
-                      onChange={(e) => setAccountForm({ ...accountForm, swiftCode: e.target.value })}
-                      placeholder="e.g. HDFCCINBB"
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800/80 rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Category section: Financial Info */}
               <div className="space-y-3 pt-1">
                 <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                  3. Financial Details
+                  2. Financial Details
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
@@ -1508,7 +1363,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
               {/* Customization: Presets & Icons */}
               <div className="space-y-3 pt-1">
                 <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                  4. Customization & Note
+                  3. Customization & Note
                 </h4>
 
                 {/* Color choices */}
@@ -1584,7 +1439,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
               {/* Category section: Settings */}
               <div className="space-y-2.5 pt-1 border-t border-slate-100 dark:border-slate-800/60 mt-2">
                 <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                  5. Settings
+                  4. Settings
                 </h4>
 
                 <div className="grid grid-cols-2 gap-3">

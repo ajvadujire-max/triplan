@@ -1191,7 +1191,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                     className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                   >
                     {trip.travellers.filter(t => t.status !== "left").map((t, idx) => (
-                      <option key={t.id ? `${t.id}_${idx}` : `trv_${idx}`} value={t.id}>
+                      <option key={t.id ? `${t.id}_paid_${idx}` : `trv_paid_${idx}`} value={t.id}>
                         {t.fullName} ({t.role})
                       </option>
                     ))}
@@ -1207,7 +1207,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       const isSelected = whoUsedIds.includes(t.id);
                       return (
                         <button
-                          key={t.id ? `${t.id}_${idx}` : `trv_${idx}`}
+                          key={t.id ? `${t.id}_split_${idx}` : `trv_split_${idx}`}
                           type="button"
                           onClick={() => toggleUserSelection(t.id)}
                           className={`flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-all text-left ${
@@ -1910,7 +1910,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                       className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
                     >
                       {trip.travellers.filter(t => t.status !== "left").map((t, idx) => (
-                        <option key={t.id ? `${t.id}_${idx}` : `trv_${idx}`} value={t.id}>
+                        <option key={t.id ? `${t.id}_paid2_${idx}` : `trv_paid2_${idx}`} value={t.id}>
                           {t.fullName} ({t.role})
                         </option>
                       ))}
@@ -1926,7 +1926,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                         const isSelected = whoUsedIds.includes(t.id);
                         return (
                           <button
-                            key={t.id ? `${t.id}_${idx}` : `trv_${idx}`}
+                            key={t.id ? `${t.id}_split2_${idx}` : `trv_split2_${idx}`}
                             type="button"
                             onClick={() => toggleUserSelection(t.id)}
                             className={`flex items-center gap-2 p-2 rounded-lg text-xs font-semibold border transition-all text-left ${

@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Trip, TripPurpose, TripStatus } from "../types";
-import { X, Image as ImageIcon, Palette, Compass, Loader2 } from "lucide-react";
+import { Trip, TripPurpose, TripStatus, FinanceAccount } from "../types";
+import { X, Image as ImageIcon, Palette, Compass, Loader2, Wallet } from "lucide-react";
 import { getRichDefaultChecklist } from "../utils/checklistDefaults";
 import { auth } from "../lib/firebase";
 import { useModalBack } from "../hooks/useModalBack";
@@ -14,6 +14,7 @@ interface TripCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveTrip: (trip: Trip) => void | Promise<void>;
+  onSaveAccount?: (account: FinanceAccount) => void;
   initialTrip?: Trip | null;
 }
 
@@ -84,8 +85,10 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
   isOpen,
   onClose,
   onSaveTrip,
+  onSaveAccount,
   initialTrip,
 }) => {
+  const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
   const [purpose, setPurpose] = useState<TripPurpose>("Vacation");
@@ -98,12 +101,24 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
   const [currency, setCurrency] = useState("₹");
   const [travelCategory, setTravelCategory] = useState("Family Vacation");
   const [totalBudget, setTotalBudget] = useState<number | "">(30000);
+  const [modalAccounts, setModalAccounts] = useState<Array<{
+    name: string;
+    type: string;
+    balance: number | "";
+    color: string;
+    iconName: string;
+    isDefaultPayment: boolean;
+  }>>([
+    { name: "Cash in Hand", type: "cash", balance: 10000, color: "#10b981", iconName: "Wallet", isDefaultPayment: true },
+    { name: "Primary Bank Account", type: "bank", balance: 50000, color: "#2563eb", iconName: "Building2", isDefaultPayment: false },
+  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useModalBack(isOpen, onClose);
 
   useEffect(() => {
     if (isOpen) {
+      setStep(1);
       if (initialTrip) {
         setName(initialTrip.name || (initialTrip as any).tripName || "");
         setDestination(initialTrip.destination || (initialTrip as any).location || "");
@@ -136,8 +151,7 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeSaveTrip = async (setupAccounts: boolean) => {
     if (!name.trim() || !destination.trim() || !startDate || !endDate) return;
 
     setIsSubmitting(true);
@@ -227,11 +241,42 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
           };
 
       await onSaveTrip(tripToSave);
+      if (setupAccounts && onSaveAccount) {
+        for (const acc of modalAccounts) {
+          if (acc.name.trim()) {
+            const newAcc: FinanceAccount = {
+              id: `acc_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              tripId: tripToSave.id,
+              name: acc.name.trim(),
+              type: acc.type,
+              balance: Number(acc.balance) || 0,
+              openingBalance: Number(acc.balance) || 0,
+              currentBalance: Number(acc.balance) || 0,
+              currency: tripToSave.currency,
+              color: acc.color,
+              iconName: acc.iconName,
+              active: true,
+              isDefaultPayment: acc.isDefaultPayment,
+            };
+            onSaveAccount(newAcc);
+          }
+        }
+      }
       onClose();
     } catch (err) {
       console.error("Error saving trip:", err);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !destination.trim() || !startDate || !endDate) return;
+    if (initialTrip) {
+      executeSaveTrip(false);
+    } else {
+      setStep(2);
     }
   };
 
@@ -255,240 +300,349 @@ export const TripCreateModal: React.FC<TripCreateModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          {/* Trip Name & Destination */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Trip Name *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Goa Coastal Road Trip"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              />
-            </div>
+        {/* Form Body / Step Content */}
+        <form onSubmit={step === 1 ? handleNextStep : (e) => { e.preventDefault(); executeSaveTrip(true); }} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {step === 1 ? (
+            <>
+              {/* Trip Name & Destination */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Trip Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Goa Coastal Road Trip"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Destination *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Goa, India or Tokyo, Japan"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Destination *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Goa, India or Tokyo, Japan"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  />
+                </div>
+              </div>
 
-          {/* Purpose & Travel Category */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Purpose
-              </label>
-              <select
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value as TripPurpose)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              >
-                <option value="Vacation">Vacation</option>
-                <option value="Business">Business</option>
-                <option value="Pilgrimage">Pilgrimage</option>
-                <option value="Education">Education</option>
-                <option value="Family">Family</option>
-                <option value="Adventure">Adventure</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+              {/* Purpose & Travel Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Purpose
+                  </label>
+                  <select
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value as TripPurpose)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  >
+                    <option value="Vacation">Vacation</option>
+                    <option value="Business">Business</option>
+                    <option value="Pilgrimage">Pilgrimage</option>
+                    <option value="Education">Education</option>
+                    <option value="Family">Family</option>
+                    <option value="Adventure">Adventure</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Travel Category
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Group Road Trip, Office Tour"
-                value={travelCategory}
-                onChange={(e) => setTravelCategory(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Travel Category
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Group Road Trip, Office Tour"
+                    value={travelCategory}
+                    onChange={(e) => setTravelCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  />
+                </div>
+              </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              />
-            </div>
+              {/* Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                End Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  />
+                </div>
+              </div>
 
-          {/* Budget, Currency & Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Total Budget
-              </label>
-              <input
-                type="number"
-                value={totalBudget}
-                onChange={(e) => setTotalBudget(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              />
-            </div>
+              {/* Budget, Currency & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Total Budget
+                  </label>
+                  <input
+                    type="number"
+                    value={totalBudget}
+                    onChange={(e) => setTotalBudget(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Currency Symbol
-              </label>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              >
-                <option value="₹">₹ INR (Rupee)</option>
-                <option value="$">$ USD (Dollar)</option>
-                <option value="€">€ EUR (Euro)</option>
-                <option value="£">£ GBP (Pound)</option>
-                <option value="AED">AED (Dirham)</option>
-                <option value="SAR">SAR (Riyal)</option>
-              </select>
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Currency Symbol
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  >
+                    <option value="₹">₹ INR (Rupee)</option>
+                    <option value="$">$ USD (Dollar)</option>
+                    <option value="€">€ EUR (Euro)</option>
+                    <option value="£">£ GBP (Pound)</option>
+                    <option value="AED">AED (Dirham)</option>
+                    <option value="SAR">SAR (Riyal)</option>
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Trip Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TripStatus)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-              >
-                <option value="Upcoming">Upcoming</option>
-                <option value="Ongoing">Ongoing</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Trip Status
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as TripStatus)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Ongoing">Ongoing</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
 
-          {/* Theme Color */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-              <Palette className="w-3.5 h-3.5" /> Trip Color Accent
-            </label>
-            <div className="flex items-center gap-3">
-              {["#06b6d4", "#2563eb", "#10b981", "#8b5cf6", "#f59e0b", "#e11d48"].map((c) => (
+              {/* Theme Color */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <Palette className="w-3.5 h-3.5" /> Trip Color Accent
+                </label>
+                <div className="flex items-center gap-3">
+                  {["#06b6d4", "#2563eb", "#10b981", "#8b5cf6", "#f59e0b", "#e11d48"].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
+                        color === c ? "scale-125 border-slate-900 dark:border-white" : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Cover Photo Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <ImageIcon className="w-3.5 h-3.5" /> Cover Photo URL
+                </label>
+                <input
+                  type="text"
+                  value={coverPhoto}
+                  onChange={(e) => setCoverPhoto(e.target.value)}
+                  placeholder="Paste image URL or pick from presets below"
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67] mb-2"
+                />
+                <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  {defaultCovers.map((img, idx) => (
+                    <img
+                      key={img + idx}
+                      src={img}
+                      alt="cover preset"
+                      onClick={() => setCoverPhoto(img)}
+                      className={`w-16 h-12 object-cover rounded-lg cursor-pointer border-2 transition-all ${
+                        coverPhoto === img ? "border-[#1AAB67] scale-105" : "border-transparent opacity-70"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Notes & Highlights
+                </label>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Key objectives, hotel references, emergency contacts..."
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
+                />
+              </div>
+
+              {/* Step 1 Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
-                  key={c}
                   type="button"
-                  onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
-                    color === c ? "scale-125 border-slate-900 dark:border-white" : "border-transparent"
-                  }`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 text-xs sm:text-sm font-bold bg-[#1AAB67] hover:bg-[#158f55] active:scale-95 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <span>{initialTrip ? "Save Changes" : "Continue to Financial Accounts"}</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Step 2: Set Up Financial Accounts */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+                    <Wallet className="w-5 h-5 text-[#1AAB67]" /> Set Up Financial Accounts
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Add cash and bank accounts for this trip. You can also skip this and configure them later.
+                  </p>
+                </div>
 
-          {/* Cover Photo Selection */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-              <ImageIcon className="w-3.5 h-3.5" /> Cover Photo URL
-            </label>
-            <input
-              type="text"
-              value={coverPhoto}
-              onChange={(e) => setCoverPhoto(e.target.value)}
-              placeholder="Paste image URL or pick from presets below"
-              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67] mb-2"
-            />
-            <div className="flex items-center gap-2 overflow-x-auto py-1">
-              {defaultCovers.map((img, idx) => (
-                <img
-                  key={img + idx}
-                  src={img}
-                  alt="cover preset"
-                  onClick={() => setCoverPhoto(img)}
-                  className={`w-16 h-12 object-cover rounded-lg cursor-pointer border-2 transition-all ${
-                    coverPhoto === img ? "border-[#1AAB67] scale-105" : "border-transparent opacity-70"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                  {modalAccounts.map((acc, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <input
+                        type="text"
+                        placeholder="Account Name (e.g. Cash, HDFC)"
+                        value={acc.name}
+                        onChange={(e) => {
+                          const updated = [...modalAccounts];
+                          updated[index].name = e.target.value;
+                          setModalAccounts(updated);
+                        }}
+                        className="flex-1 px-2.5 py-1.5 text-xs rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      />
+                      <select
+                        value={acc.type}
+                        onChange={(e) => {
+                          const updated = [...modalAccounts];
+                          updated[index].type = e.target.value;
+                          setModalAccounts(updated);
+                        }}
+                        className="w-28 px-2 py-1.5 text-xs rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      >
+                        <option value="cash">Cash in Hand</option>
+                        <option value="bank">Bank Account</option>
+                        <option value="credit_card">Credit Card</option>
+                        <option value="wallet">Wallet</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Balance"
+                        value={acc.balance}
+                        onChange={(e) => {
+                          const updated = [...modalAccounts];
+                          updated[index].balance = e.target.value === "" ? "" : Number(e.target.value);
+                          setModalAccounts(updated);
+                        }}
+                        className="w-24 px-2.5 py-1.5 text-xs rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalAccounts(modalAccounts.filter((_, i) => i !== index));
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 cursor-pointer text-xs font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalAccounts([
+                        ...modalAccounts,
+                        { name: "", type: "bank", balance: 0, color: "#2563eb", iconName: "Building2", isDefaultPayment: modalAccounts.length === 0 },
+                      ]);
+                    }}
+                    className="text-xs font-bold text-[#1AAB67] dark:text-[#34D399] hover:underline cursor-pointer inline-flex items-center gap-1"
+                  >
+                    + Add Another Account
+                  </button>
+                </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Notes & Highlights
-            </label>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Key objectives, hotel references, emergency contacts..."
-              className="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1AAB67]"
-            />
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 text-xs sm:text-sm font-bold bg-[#1AAB67] hover:bg-[#158f55] active:scale-95 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span className="text-white font-bold">Saving...</span>
-                </>
-              ) : (
-                <span className="text-white font-bold">
-                  {initialTrip ? "Save Changes" : "Save Trip"}
-                </span>
-              )}
-            </button>
-          </div>
+                {/* Step 2 Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => executeSaveTrip(false)}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer"
+                    >
+                      Skip & Set Later
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-6 py-2.5 text-xs sm:text-sm font-bold bg-[#1AAB67] hover:bg-[#158f55] active:scale-95 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <span className="text-white font-bold">Saving...</span>
+                        </>
+                      ) : (
+                        <span className="text-white font-bold">Set Up Now</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </form>
       </div>
     </div>

@@ -299,6 +299,7 @@ export interface TimelineActivity {
 
 export interface FinanceAccount {
   id: string;
+  tripId?: string;
   name: string;
   type: "bank" | "cash" | "credit_card" | "wallet" | "Cash in Hand" | "Bank Account" | "Savings Account" | "Current Account" | "Credit Card" | "Debit Card" | "Wallet" | "UPI Account" | "Foreign Currency Account" | "Investment Account" | "Other" | string;
   balance: number;

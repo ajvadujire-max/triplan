@@ -838,7 +838,11 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             {activeTab === "finance" && (
               <FinanceIntegration
                 trip={activeTrip}
-                accounts={accounts}
+                accounts={accounts.filter((a) => {
+                  if (!activeTrip) return true;
+                  if (a.tripId) return a.tripId === activeTrip.id;
+                  return activeTrip.id === "trip_1";
+                })}
                 cashbookEntries={cashbook}
                 onSaveAccount={handleSaveAccount}
                 onDeleteAccount={handleDeleteAccount}
@@ -859,6 +863,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           setEditingTrip(null);
         }}
         onSaveTrip={handleSaveTrip}
+        onSaveAccount={handleSaveAccount}
         initialTrip={editingTrip}
       />
 
