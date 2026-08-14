@@ -507,3 +507,24 @@ export interface DiaryEntry {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RouteSession {
+  id: string;
+  tripId: string;
+  userId: string;
+  startTime: string;
+  endTime?: string;
+  status: "active" | "paused" | "ended";
+  totalDistance: number;
+  totalDuration: number;
+}
+
+export interface RoutePoint {
+  id: string;
+  sessionId: string;
+  lat: number;
+  lng: number;
+  timestamp: string;
+  accuracy: number;
+  speed: number;
+}

@@ -1434,26 +1434,20 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
       </div>
 
       {/* Header & Quick Action */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex-1">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {activeSection === "personal" ? (
+      {activeSection === "personal" && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex-1">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Lock className="w-4 h-4 sm:w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            ) : (
-              <Receipt className="w-4 h-4 sm:w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            )}
-            <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
-              {activeSection === "personal" ? "Personal Expenses" : "Trip Expenses & Transaction History"}
-            </h2>
+              <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
+                Personal Expenses
+              </h2>
+            </div>
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+              Add and manage your private personal expenses that are not shared with anyone.
+            </p>
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-            {activeSection === "personal"
-              ? "Add and manage your private personal expenses that are not shared with anyone."
-              : "Tap any expense to view full details, traveller split breakdowns, notes, and actions."}
-          </p>
-        </div>
 
-        {activeSection === "personal" && (
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleOpenAdd}
@@ -1463,8 +1457,8 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               <span>Record Personal Expense</span>
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 2x2 Mobile Action Grid for Trip Expenses */}
       {activeSection === "trip" && (
@@ -2053,11 +2047,11 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
                           </div>
                         </div>
                         <div className="space-y-2">
-                          {whoUsedIds.map((id) => {
+                          {whoUsedIds.map((id, idx) => {
                             const trv = trip.travellers.find((t) => t.id === id);
                             if (!trv) return null;
                             return (
-                              <div key={id} className="flex items-center gap-3">
+                              <div key={`${id}_${idx}`} className="flex items-center gap-3">
                                 <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 flex-1 truncate">
                                   {trv.fullName}
                                 </span>

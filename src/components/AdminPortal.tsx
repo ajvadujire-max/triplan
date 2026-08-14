@@ -122,7 +122,7 @@ export const AdminPortal: React.FC = () => {
 
   if (isCheckingSetup) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4">
         <Loader2 className="w-10 h-10 animate-spin text-#1AAB67/100 mb-4" />
         <p className="text-slate-400 font-medium">Verifying system configuration...</p>
       </div>
@@ -131,8 +131,8 @@ export const AdminPortal: React.FC = () => {
 
   if (isAuthDisabled) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 p-8 rounded-2xl border border-rose-500/30 shadow-2xl w-full max-w-lg">
+      <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-4">
+        <div className="bg-slate-800 p-[clamp(20px,4vw,32px)] rounded-2xl border border-rose-500/30 shadow-2xl w-full max-w-lg">
           <h2 className="text-2xl font-black text-white mb-2 flex items-center gap-2">
             <AlertTriangle className="text-rose-500 w-6 h-6" /> System Setup Required
           </h2>
@@ -174,12 +174,12 @@ export const AdminPortal: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-#1AAB67/100/20 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-rose-500/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div className="bg-slate-800/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-700 shadow-2xl w-full max-w-md relative z-10">
+      <div className="bg-slate-800/80 backdrop-blur-xl p-[clamp(20px,4vw,32px)] rounded-3xl border border-slate-700 shadow-2xl w-full max-w-md relative z-10">
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-tr from-#1AAB67 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-#1AAB67/100/30 transform rotate-12">
             <div className="transform -rotate-12">

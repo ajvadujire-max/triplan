@@ -456,7 +456,7 @@ export default function JoinTrip() {
 
   if (fetchingTrip) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -464,8 +464,8 @@ export default function JoinTrip() {
 
   if (!trip && !fetchingTrip) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100">
+      <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-[clamp(20px,4vw,32px)] text-center border border-slate-100">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Trip Code</h2>
           <p className="text-slate-500 mb-6">We couldn't find an active trip matching code <strong>{tripCode}</strong>.</p>
           <button 
@@ -481,11 +481,11 @@ export default function JoinTrip() {
 
   if (isAlreadyMember) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100 space-y-4"
+          className="max-w-md w-full bg-white rounded-3xl shadow-xl p-[clamp(20px,4vw,32px)] text-center border border-slate-100 space-y-4"
         >
           <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
             <UserCheck className="w-8 h-8" />
@@ -521,11 +521,11 @@ export default function JoinTrip() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border border-slate-100"
+          className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-[clamp(20px,4vw,32px)] text-center border border-slate-100"
         >
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-emerald-600" />
@@ -558,20 +558,20 @@ export default function JoinTrip() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
-      <div className="max-w-xl mx-auto space-y-6">
+    <div className="min-h-[100dvh] bg-slate-50 py-[clamp(16px,4dvh,40px)] px-3 sm:px-6 flex flex-col justify-start">
+      <div className="max-w-xl w-full mx-auto space-y-4 sm:space-y-6">
         {/* Trip Overview Card */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden border border-slate-100">
           <div 
-            className="h-44 bg-cover bg-center relative"
+            className="h-[clamp(130px,20dvh,180px)] bg-cover bg-center relative"
             style={{ backgroundImage: `url(${coverImage})` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex items-end p-6">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex items-end p-4 sm:p-6">
               <div className="text-white space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-indigo-600 text-white">
                   Trip Invite
                 </span>
-                <h1 className="text-2xl font-black text-white">{trip?.name}</h1>
+                <h1 className="text-xl sm:text-2xl font-black text-white">{trip?.name}</h1>
                 <div className="flex items-center gap-3 text-xs text-slate-200">
                   <span className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-#34D399" /> {trip?.destination}
@@ -585,7 +585,7 @@ export default function JoinTrip() {
             </div>
           </div>
 
-          <div className="p-4 bg-indigo-50/60 border-b border-indigo-100/50 flex items-center justify-between text-xs">
+          <div className="p-3 sm:p-4 bg-indigo-50/60 border-b border-indigo-100/50 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-indigo-900 font-medium">
               <UserCheck className="w-4 h-4 text-indigo-600" />
               <span>Organizer: <strong>{organizerName}</strong></span>
@@ -616,7 +616,7 @@ export default function JoinTrip() {
         )}
 
         {/* Join Trip Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-8 border border-slate-100 space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">

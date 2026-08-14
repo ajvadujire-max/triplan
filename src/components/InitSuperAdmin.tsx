@@ -60,8 +60,8 @@ export const InitSuperAdmin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md text-center">
+    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-slate-800 p-[clamp(20px,4vw,32px)] rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md text-center">
         <h1 className="text-2xl font-black text-white mb-2">System Setup</h1>
         <p className="text-slate-400 mb-8 text-sm">Initialize the permanent Super Admin account.</p>
         

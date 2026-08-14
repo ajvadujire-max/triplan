@@ -22,6 +22,7 @@ import {
   CloudSun,
   Users,
   BookOpen,
+  Navigation,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -71,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "vault", label: "Vault & Packing", icon: Calendar },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun },
     { id: "finance", label: "Finance & Cashbook", icon: Wallet, organizerOnly: true },
-    { id: "ai_insights", label: "AI Insights", icon: Sparkles },
+    { id: "route_tracker", label: "Route Tracker", icon: MapPin },
   ];
 
   const tabs = allTabs.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
@@ -141,6 +142,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
           )}
+
+          {/* Quick Route Tracker Top Button */}
+          <button
+            onClick={() => onSelectTab("route_tracker")}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all active:scale-95 cursor-pointer shadow-xs ${
+              activeTab === "route_tracker"
+                ? "bg-indigo-600 text-white border-indigo-700 shadow-indigo-500/20"
+                : "bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-900 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800"
+            }`}
+          >
+            <Navigation className={`w-4 h-4 ${activeTab === "route_tracker" ? "animate-pulse text-white" : "text-indigo-600 dark:text-indigo-400"}`} />
+            <span>Route Tracker</span>
+          </button>
 
           <button
             onClick={onOpenCreateTrip}

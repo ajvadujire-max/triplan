@@ -158,7 +158,7 @@ export const AdminDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+      <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center text-white p-4">
         Loading admin dashboard...
       </div>
     );
@@ -169,7 +169,7 @@ export const AdminDashboard: React.FC = () => {
   const isSuperAdmin = adminData.role === "super_admin";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex">
       {/* Sidebar */}
       <div className="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
         <div className="p-6">
@@ -249,7 +249,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950 p-6 lg:p-10">
+      <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950 p-[clamp(16px,3vw,32px)]">
         <div className="max-w-6xl mx-auto space-y-8">
           
           <header className="flex items-center justify-between">

@@ -142,6 +142,34 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["tripId", "ownerUid", "date", "title", "content"]
+    },
+    "RouteSession": {
+      "title": "RouteSession",
+      "description": "A single tracking session for a trip.",
+      "type": "object",
+      "properties": {
+        "tripId": { "type": "string" },
+        "userId": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "paused", "ended"] },
+        "totalDistance": { "type": "number" },
+        "totalDuration": { "type": "number" }
+      },
+      "required": ["tripId", "userId", "startTime", "status"]
+    },
+    "RoutePoint": {
+      "title": "RoutePoint",
+      "description": "A single GPS point within a route session.",
+      "type": "object",
+      "properties": {
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "timestamp": { "type": "string" },
+        "accuracy": { "type": "number" },
+        "speed": { "type": "number" }
+      },
+      "required": ["lat", "lng", "timestamp"]
     }
   },
   "firestore": {
@@ -154,6 +182,8 @@
     "/trips/{tripId}/collections/{collectionId}": { "schema": "Collection", "description": "Group collections." },
     "/trips/{tripId}/registrations/{registrationId}": { "schema": "Registration", "description": "Join requests." },
     "/personalExpenses/{expenseId}": { "schema": "PersonalExpense", "description": "Private personal expenses." },
-    "/travelDiaries/{diaryId}": { "schema": "TravelDiary", "description": "Private travel diary entries." }
+    "/travelDiaries/{diaryId}": { "schema": "TravelDiary", "description": "Private travel diary entries." },
+    "/trips/{tripId}/routeSessions/{sessionId}": { "schema": "RouteSession", "description": "Trip route sessions." },
+    "/trips/{tripId}/routeSessions/{sessionId}/points/{pointId}": { "schema": "RoutePoint", "description": "GPS points for a route session." }
   }
 }

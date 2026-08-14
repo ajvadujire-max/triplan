@@ -260,36 +260,36 @@ export default function OnboardingWizard() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center"
+          className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-[clamp(20px,4vw,32px)] text-center"
         >
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
           </div>
-          <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Trip Created Successfully!</h2>
-          <p className="text-slate-600 mb-8">Your professional dashboard is ready for {formData.tripName}.</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">Trip Created Successfully!</h2>
+          <p className="text-slate-600 text-xs sm:text-sm mb-6 sm:mb-8">Your professional dashboard is ready for {formData.tripName}.</p>
 
-          <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
+          <div className="bg-slate-50 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 border border-slate-100">
             <div className="flex justify-center mb-4">
-              <QRCodeSVG value={inviteLink} size={150} />
+              <QRCodeSVG value={inviteLink} size={140} />
             </div>
-            <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Trip Code</div>
-            <div className="text-2xl font-mono font-black text-indigo-600 mb-4">{tripCode}</div>
-            <div className="text-sm text-slate-500 break-all mb-4 px-2">{inviteLink}</div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Trip Code</div>
+            <div className="text-xl sm:text-2xl font-mono font-black text-indigo-600 mb-3">{tripCode}</div>
+            <div className="text-xs text-slate-500 break-all mb-4 px-2">{inviteLink}</div>
             <div className="flex gap-2">
               <button 
                 onClick={handleCopyLink}
-                className="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                className="flex-1 bg-indigo-50 text-indigo-600 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm hover:bg-indigo-100 transition-colors cursor-pointer active:scale-95 flex items-center justify-center gap-2"
               >
                 {copyText === "Copied!" ? <CheckCircle2 className="w-4 h-4" /> : null}
                 {copyText}
               </button>
               <button 
                 onClick={handleWhatsAppShare}
-                className="flex-1 bg-green-50 text-green-600 py-3 rounded-xl font-bold text-sm hover:bg-green-100 transition-colors cursor-pointer active:scale-95"
+                className="flex-1 bg-green-50 text-green-600 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm hover:bg-green-100 transition-colors cursor-pointer active:scale-95"
               >
                 WhatsApp
               </button>
@@ -298,7 +298,7 @@ export default function OnboardingWizard() {
 
           <button 
             onClick={() => navigate("/admin/dashboard")}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100"
+            className="w-full bg-indigo-600 text-white py-3.5 sm:py-4 rounded-2xl font-bold text-base sm:text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 cursor-pointer"
           >
             Open Dashboard
           </button>
@@ -308,10 +308,10 @@ export default function OnboardingWizard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-4 sm:py-10 px-3 sm:px-6">
-      <div className="max-w-xl mx-auto">
+    <div className="min-h-[100dvh] bg-slate-50 py-[clamp(12px,3dvh,32px)] px-3 sm:px-6 flex flex-col justify-start">
+      <div className="max-w-xl w-full mx-auto">
         {/* Progress Stepper */}
-        <div className="flex justify-between items-center mb-5 sm:mb-10 px-1 relative">
+        <div className="flex justify-between items-center mb-[clamp(12px,2.5dvh,28px)] px-1 relative">
           {STEPS.map((step) => (
             <div key={step.id} className="flex flex-col items-center flex-1 relative z-10">
               <div 

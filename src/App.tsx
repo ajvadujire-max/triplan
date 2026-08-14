@@ -35,6 +35,7 @@ import { PlannerModule } from "./components/PlannerModule";
 import { WeatherMapsTimeline } from "./components/WeatherMapsTimeline";
 import { FinanceIntegration } from "./components/FinanceIntegration";
 import { TravelDiaryModule } from "./components/TravelDiaryModule";
+import { RouteTrackerModule } from "./components/RouteTrackerModule";
 import { SplashScreen } from "./components/SplashScreen";
 import { SwitchTripModal } from "./components/SwitchTripModal";
 import { initAuth, googleSignIn, logoutGoogle } from "./lib/googleAuth";
@@ -208,11 +209,11 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const validTabs = [
     "dashboard", "planner", "journey", "collections", "timeline",
     "travellers", "expenses", "vault", "weather", "weather_maps",
-    "finance", "diary", "ai_insights"
+    "finance", "diary", "route_tracker"
   ];
 
   const activeTab = (validTabs.includes(rawTab) ? rawTab : "dashboard") as
-    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "diary";
+    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "diary" | "route_tracker";
 
   const handleSelectTab = (tab: string) => {
     if (tab === activeTab && pathSegments.length <= 1) return;
@@ -687,11 +688,11 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   if (!activeTrip) {
     if (trips.length === 0 && !isLoadingCloud) {
       return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+        <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
           <p className="text-slate-400 font-medium">You don't belong to any trips yet.</p>
           <button 
             onClick={() => navigate("/join")}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer"
           >
             Join or Create a Trip
           </button>
@@ -699,14 +700,14 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
       );
     }
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-slate-900 text-white flex items-center justify-center">
         <p>Loading TripPro system...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
       <ConnectivityIndicator />
       {isLoadingCloud && (
         <div className="fixed top-3 right-3 z-50 pointer-events-none">
@@ -759,7 +760,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         onRoleChange={(newRole) => setUserRole(newRole)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-[clamp(12px,2vw,24px)] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -767,7 +768,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="w-full space-y-6"
+            className="w-full space-y-4 sm:space-y-6"
           >
             {activeTab === "dashboard" && (
               <TripDashboard
@@ -799,6 +800,10 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
             {activeTab === "diary" && (
               <TravelDiaryModule trip={activeTrip} currentUser={user} />
+            )}
+
+            {activeTab === "route_tracker" && (
+              <RouteTrackerModule trip={activeTrip} currentUser={user} />
             )}
 
             {/* Fallbacks for internal navigation if any */}

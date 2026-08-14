@@ -194,6 +194,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   trip,
   onUpdateTrip,
   role = "traveller",
+  hideSegments: initialHideSegments = false,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
   // Navigation View Modes
@@ -220,7 +221,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<TimelineActivity | null>(null);
-  const [hideSegments, setHideSegments] = useState(false);
+  const [hideSegments, setHideSegments] = useState(initialHideSegments);
 
   // Form Fields
   const [formTime, setFormTime] = useState("09:00 AM");
@@ -691,7 +692,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       <div className="relative sm:sticky sm:top-16 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-#1AAB67/10 dark:bg-#1AAB67/20 text-#159257 dark:text-#74D0A5 border border-#1AAB67/30 dark:border-#159257">
+            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 text-[#159257] dark:text-[#74D0A5] border border-[#1AAB67]/30 dark:border-[#159257]">
               Central Itinerary Engine
             </span>
             <span className="text-[11px] sm:text-xs text-slate-400 font-medium">• {trip.name}</span>
@@ -790,9 +791,9 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
 
         <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Travel Distance</p>
-          <p className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{stats.totalDist.toLocaleString()} KM</p>
+          <p className="text-base sm:text-xl font-bold text-[#1AAB67] dark:text-[#34D399] mt-0.5">{stats.totalDist.toLocaleString()} KM</p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 flex items-center gap-1">
-            <Navigation className="w-2.5 h-2.5 text-indigo-500" /> Across {stats.totalSegments} Seg
+            <Navigation className="w-2.5 h-2.5 text-[#1AAB67]" /> Across {stats.totalSegments} Seg
           </p>
         </div>
 
@@ -1173,9 +1174,9 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                   <span className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">Assigned:</span>
                                   {assignedTravellers.length > 0 ? (
                                     <div className="flex items-center -space-x-1">
-                                      {assignedTravellers.map((trv) => (
+                                      {assignedTravellers.map((trv, idx) => (
                                         <img
-                                          key={trv.id}
+                                          key={trv.id ? `${trv.id}_${idx}` : `trv_${idx}`}
                                           src={
                                             trv.profilePhoto ||
                                             "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop"
@@ -1241,18 +1242,18 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                         const seg = item as TransportSegment;
                         return (
                           <div key={seg.id} className="relative pl-4 sm:pl-8 group">
-                            <div className="absolute -left-[19px] sm:-left-[39px] top-1 sm:top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-indigo-300 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
+                            <div className="absolute -left-[19px] sm:-left-[39px] top-1 sm:top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-[#1AAB67]/40 dark:border-[#1AAB67]/60 bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 flex items-center justify-center text-[#1AAB67] dark:text-[#34D399] shadow-sm">
                               <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             </div>
-                            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 shadow-sm">
+                            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-[#1AAB67]/20 dark:border-[#1AAB67]/30 shadow-sm">
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div className="flex items-start gap-3">
-                                  <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                                    <Car className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                  <div className="p-2 bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 rounded-xl border border-[#1AAB67]/20 dark:border-[#1AAB67]/30">
+                                    <Car className="w-4 h-4 text-[#1AAB67] dark:text-[#34D399]" />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                      <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                      <span className="text-[10px] font-black text-[#1AAB67] dark:text-[#34D399] uppercase tracking-wider">
                                         {seg.transportType} Segment
                                       </span>
                                       <span className="text-slate-300 dark:text-slate-700 text-[10px]">•</span>
@@ -1292,7 +1293,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                                     </div>
                                   </div>
                                   {seg.fare > 0 && (
-                                    <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                                    <div className="px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-black text-[#1AAB67] dark:text-[#34D399]">
                                       {trip.currency}{seg.fare.toLocaleString()}
                                     </div>
                                   )}
@@ -1397,18 +1398,18 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                 return (
                   <div
                     key={seg.id}
-                    className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+                    className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-[#1AAB67]/20 dark:border-[#1AAB67]/30 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
                   >
                     <div className="flex items-start gap-2.5 sm:gap-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center shrink-0">
-                        <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border border-[#1AAB67]/30 bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 flex items-center justify-center shrink-0">
+                        <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-[#1AAB67]" />
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="font-extrabold text-[10px] sm:text-xs text-indigo-600">
+                          <span className="font-extrabold text-[10px] sm:text-xs text-[#1AAB67]">
                             {seg.departure.split(',')[1] || seg.departure}
                           </span>
-                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 text-[#1AAB67] dark:text-[#34D399] border border-[#1AAB67]/20">
                             {seg.transportType}
                           </span>
                         </div>
@@ -1421,7 +1422,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                       </div>
                     </div>
                     {seg.fare > 0 && (
-                      <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-black text-indigo-600 dark:text-indigo-400 self-end sm:self-auto">
+                      <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-black text-[#1AAB67] dark:text-[#34D399] self-end sm:self-auto">
                         {trip.currency}{seg.fare.toLocaleString()}
                       </div>
                     )}
@@ -1472,11 +1473,11 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                       return (
                         <div
                           key={seg.id}
-                          className="p-2 rounded-lg sm:rounded-xl bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 text-[10px] sm:text-xs space-y-0.5 sm:space-y-1"
+                          className="p-2 rounded-lg sm:rounded-xl bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 border border-[#1AAB67]/20 dark:border-[#1AAB67]/30 text-[10px] sm:text-xs space-y-0.5 sm:space-y-1"
                         >
                           <div className="flex items-center justify-between font-bold">
-                            <span className="text-indigo-600">{seg.departure.split(',')[1] || seg.departure}</span>
-                            <span className="text-[8px] px-1 py-0.5 rounded border border-indigo-200 bg-indigo-100 text-indigo-700">
+                            <span className="text-[#1AAB67] dark:text-[#34D399]">{seg.departure.split(',')[1] || seg.departure}</span>
+                            <span className="text-[8px] px-1 py-0.5 rounded border border-[#1AAB67]/30 bg-[#1AAB67]/20 text-[#1AAB67] dark:text-[#34D399]">
                               Transport
                             </span>
                           </div>
@@ -1546,7 +1547,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                               <>
                                 <button
                                   onClick={() => handleOpenEdit(act)}
-                                  className="p-1 text-slate-400 hover:text-#1AAB67 mr-1"
+                                  className="p-1 text-slate-400 hover:text-[#1AAB67] mr-1"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </button>
@@ -1564,17 +1565,17 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                     } else {
                       const seg = item as TransportSegment;
                       return (
-                        <tr key={seg.id} className="hover:bg-indigo-50/40 dark:hover:bg-indigo-900/20 transition-colors bg-indigo-50/20 dark:bg-indigo-950/10">
+                        <tr key={seg.id} className="hover:bg-[#1AAB67]/10 dark:hover:bg-[#1AAB67]/20 transition-colors bg-[#1AAB67]/5 dark:bg-[#1AAB67]/10">
                           <td className="p-2 sm:p-3.5 whitespace-nowrap">
-                            <span className="font-bold text-indigo-900 dark:text-indigo-300 block">{dk}</span>
-                            <span className="text-[10px] sm:text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">{seg.departure.split(',')[1] || seg.departure}</span>
+                            <span className="font-bold text-slate-900 dark:text-white block">{dk}</span>
+                            <span className="text-[10px] sm:text-[11px] text-[#1AAB67] dark:text-[#34D399] font-semibold">{seg.departure.split(',')[1] || seg.departure}</span>
                           </td>
                           <td className="p-2 sm:p-3.5">
                             <p className="font-bold text-slate-900 dark:text-white">{seg.from} → {seg.to}</p>
                             <p className="text-[10px] sm:text-[11px] text-slate-500">{seg.transportType} Journey</p>
                           </td>
                           <td className="p-2 sm:p-3.5 whitespace-nowrap">
-                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border border-indigo-200 bg-indigo-50 text-indigo-600">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border border-[#1AAB67]/30 bg-[#1AAB67]/10 text-[#1AAB67] dark:text-[#34D399]">
                               Transport
                             </span>
                           </td>
@@ -1585,7 +1586,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                             -
                           </td>
                           <td className="p-2 sm:p-3.5 whitespace-nowrap">
-                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#1AAB67]/10 text-[#1AAB67] dark:text-[#34D399]">
                               Transit
                             </span>
                           </td>
@@ -1774,11 +1775,11 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Assigned Travellers</label>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {trip.travellers.map((trv) => {
+                  {trip.travellers.map((trv, idx) => {
                     const isSelected = formAssignedTravellers.includes(trv.id);
                     return (
                       <button
-                        key={trv.id}
+                        key={trv.id ? `${trv.id}_${idx}` : `trv_${idx}`}
                         type="button"
                         onClick={() => {
                           if (isSelected) {

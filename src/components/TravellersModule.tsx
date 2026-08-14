@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { useAppNavigation } from "../hooks/useAppNavigation";
 import { Trip, Traveller, TravellerRole, PendingTravellerRegistration, GoogleFormConfig } from "../types";
@@ -63,8 +64,6 @@ const EditTravellerModal: React.FC<EditTravellerModalProps> = ({
   onSave,
   showToast,
 }) => {
-  if (!isOpen) return null;
-
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState<number>(25);
   const [gender, setGender] = useState<"Male" | "Female" | "Other">("Male");
@@ -235,20 +234,23 @@ const EditTravellerModal: React.FC<EditTravellerModalProps> = ({
     }
   };
 
-  return (
-    <>
-      <div 
-        onClick={handleCloseEditTraveller}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden"
-      >
-        <motion.div
-          initial={{ y: "100%", opacity: 0.5 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "100%", opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 220 }}
-          onClick={(e) => e.stopPropagation()}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[24px] shadow-2xl w-[calc(100%-24px)] max-w-[520px] max-h-[92dvh] flex flex-col overflow-hidden relative pointer-events-auto"
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div 
+          key="edit-traveller-backdrop"
+          onClick={handleCloseEditTraveller}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden pointer-events-auto"
         >
+          <motion.div
+            key="edit-traveller-card"
+            initial={{ y: "100%", opacity: 0.5 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[24px] shadow-2xl w-[calc(100%-24px)] max-w-[520px] max-h-[92dvh] flex flex-col overflow-hidden relative pointer-events-auto"
+          >
           {/* Sticky Header */}
           <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
@@ -452,52 +454,54 @@ const EditTravellerModal: React.FC<EditTravellerModalProps> = ({
             </div>
           </form>
         </motion.div>
-      </div>
 
-      {/* Discard Changes Confirmation Dialog */}
-      <AnimatePresence>
-        {showDiscardConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
-          >
+        {/* Discard Changes Confirmation Dialog */}
+        <AnimatePresence>
+          {showDiscardConfirm && (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs pointer-events-auto"
             >
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Discard changes?</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">You have unsaved changes.</p>
-              </div>
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Discard changes?</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">You have unsaved changes.</p>
+                </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDiscardConfirm(false)}
-                  className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
-                >
-                  Keep Editing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDiscardConfirm(false);
-                    onClose();
-                  }}
-                  className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 active:scale-95 transition-all shadow-md shadow-rose-600/20 cursor-pointer"
-                >
-                  Discard
-                </button>
-              </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscardConfirm(false)}
+                    className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+                  >
+                    Keep Editing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDiscardConfirm(false);
+                      onClose();
+                    }}
+                    className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 active:scale-95 transition-all shadow-md shadow-rose-600/20 cursor-pointer"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+          )}
+        </AnimatePresence>
+      </div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 };
 
@@ -518,6 +522,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
 }) => {
   const isOrganizer =
     appRole === "organizer" ||
+    appRole === "admin" ||
     appRole === "super_admin" ||
     !!(currentUser && trip && (trip.organizerUid === currentUser.uid || trip.organizerId === currentUser.uid));
   const { basePath, relativePath, navigate, goBack } = useAppNavigation();
@@ -546,22 +551,50 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
     }
   };
 
+  // Local state as bulletproof backup for opening edit modal
+  const [localEditOpen, setLocalEditOpen] = useState(false);
+
   const selectedTravellerId = useMemo(() => {
-    if (pathSegments[1] && !["add", "collect-form", "pending", "collections"].includes(pathSegments[1])) {
+    // Find the segment that is a traveler ID
+    // It's any segment after "travellers" that is not a reserved keyword
+    const reserved = ["add", "collect-form", "pending", "collections", "edit"];
+    const idx = pathSegments.indexOf("travellers");
+    if (idx !== -1 && pathSegments[idx + 1] && !reserved.includes(pathSegments[idx + 1])) {
+      return decodeURIComponent(pathSegments[idx + 1]);
+    }
+    // Fallback: search for first non-reserved segment that starts with trv_ or matches any traveler's ID
+    for (const segment of pathSegments) {
+      if (!reserved.includes(segment)) {
+        if (segment.startsWith("trv_") || trip.travellers.some(t => String(t.id) === segment)) {
+          return decodeURIComponent(segment);
+        }
+      }
+    }
+    // Final fallback: use segment 1 if it's not reserved
+    if (pathSegments[1] && !reserved.includes(pathSegments[1])) {
       return decodeURIComponent(pathSegments[1]);
     }
     return null;
-  }, [pathSegments]);
+  }, [pathSegments, trip.travellers]);
 
   const isAddModalOpen = useMemo(() => {
-    return pathSegments[1] === "add" || (!!selectedTravellerId && pathSegments[2] === "edit");
+    return (
+      pathSegments[1] === "add" ||
+      pathSegments.includes("add") ||
+      (!!selectedTravellerId && pathSegments.includes("edit"))
+    );
   }, [pathSegments, selectedTravellerId]);
 
   const isGoogleFormModalOpen = useMemo(() => {
-    return pathSegments[1] === "collect-form";
+    return pathSegments[1] === "collect-form" || pathSegments.includes("collect-form");
   }, [pathSegments]);
 
   const editingPendingReg = useMemo(() => {
+    const editIdx = pathSegments.indexOf("edit");
+    if (pathSegments.includes("pending") && editIdx !== -1 && editIdx > 0) {
+      const regId = pathSegments[editIdx - 1];
+      return (trip.pendingRegistrations || []).find((p) => p.id === regId) || null;
+    }
     if (pathSegments[1] === "pending" && pathSegments[2] && pathSegments[3] === "edit") {
       return (trip.pendingRegistrations || []).find((p) => p.id === pathSegments[2]) || null;
     }
@@ -569,8 +602,13 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
   }, [pathSegments, trip.pendingRegistrations]);
 
   const editingTraveller = useMemo(() => {
-    if (selectedTravellerId && pathSegments[2] === "edit") {
-      return trip.travellers.find((t) => t.id === selectedTravellerId || t.id?.trim() === selectedTravellerId?.trim()) || null;
+    const isEditMode = pathSegments.includes("edit");
+    if (selectedTravellerId && isEditMode) {
+      return trip.travellers.find((t) => 
+        String(t.id) === String(selectedTravellerId) || 
+        String(t.id).trim() === String(selectedTravellerId).trim() ||
+        String(t.id).toLowerCase() === String(selectedTravellerId).toLowerCase()
+      ) || null;
     }
     return null;
   }, [selectedTravellerId, pathSegments, trip.travellers]);
@@ -705,10 +743,14 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       userId: currentUser?.uid,
       isOrganizer,
     });
-    navigate(`${basePath}/travellers/${t.id}/edit`);
+    setLocalEditOpen(true);
+    if (t?.id) {
+      navigate(`${basePath}/travellers/${t.id}/edit`);
+    }
   };
 
   const handleCloseEditModal = () => {
+    setLocalEditOpen(false);
     if (selectedTravellerId) {
       navigate(`${basePath}/travellers/${selectedTravellerId}`);
     } else {
@@ -783,7 +825,7 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
       isOrganizer,
     });
     if (trip.travellers.filter(t => t.status !== "left").length <= 1) {
-      alert("At least one traveller is required for a trip.");
+      showToast("At least one traveller is required for a trip.", "error");
       return;
     }
     setTravellerToDeleteId(id);
@@ -800,8 +842,8 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
         return;
     }
 
-    if (trip.travellers.length <= 1) {
-      alert("At least one traveller is required for a trip.");
+    if (trip.travellers.filter(t => t.status !== "left").length <= 1) {
+      showToast("At least one traveller is required for a trip.", "error");
       setTravellerToDeleteId(null);
       return;
     }
@@ -815,12 +857,25 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           reason: "removed_by_admin"
         });
         console.log("[REMOVE] removeTravellerFromTrip called and finished");
+
+        // Sync local parent state so user immediately disappears from list
+        const updatedTravellers = trip.travellers.map((t) =>
+          t.id === travellerToDeleteId ? { ...t, status: "left" as const } : t
+        );
+        const updatedMemberUids = (trip.memberUids || []).filter((id) => id !== travellerToDeleteId);
+        
+        await onUpdateTrip({
+          ...trip,
+          travellers: updatedTravellers,
+          memberUids: updatedMemberUids,
+        });
+
         setTravellerToDeleteId(null);
-        showToast("Traveller removed successfully");
+        showToast("Traveller removed successfully", "success");
         navigate(`${basePath}/travellers`);
-    } catch (err) {
+    } catch (err: any) {
         console.error("[REMOVE] Firestore removal FAILED:", err);
-        showToast("Unable to remove traveller. Please try again.", "error");
+        showToast(`Unable to remove traveller: ${err?.message || "Please try again."}`, "error");
     } finally {
         if (isMounted.current) {
             setIsRemoving(false);
@@ -1141,21 +1196,21 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           </div>
 
           {(isOrganizer || isOwnProfile) && (
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 pb-6">
               <button
                 type="button"
                 onClick={() => handleOpenEdit(selectedTraveller)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-indigo-500/20 text-xs sm:text-sm cursor-pointer relative z-20 pointer-events-auto min-h-[44px]"
               >
-                <Edit className="w-4 h-4" /> Edit Traveller
+                <Edit className="w-4 h-4 pointer-events-none" /> Edit Traveller
               </button>
               {isOrganizer && selectedTraveller.id !== currentUser?.uid && (
                 <button
                   type="button"
                   onClick={() => handleDeleteTraveller(selectedTraveller.id)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold px-5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm cursor-pointer"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 active:scale-95 text-rose-600 dark:text-rose-400 font-bold px-6 py-3 rounded-xl border border-rose-200 dark:border-rose-900 transition-all text-xs sm:text-sm cursor-pointer relative z-20 pointer-events-auto min-h-[44px]"
                 >
-                  <Trash2 className="w-4 h-4" /> Remove Traveller
+                  <Trash2 className="w-4 h-4 pointer-events-none" /> Remove Traveller
                 </button>
               )}
             </div>
@@ -1221,11 +1276,13 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           </div>
         ))}
       </div>
+      </>
+      )}
 
       {/* Edit Traveller Profile Modal */}
       <EditTravellerModal
-        isOpen={isAddModalOpen}
-        editingTraveller={editingTraveller}
+        isOpen={isAddModalOpen || localEditOpen}
+        editingTraveller={editingTraveller || (localEditOpen ? selectedTraveller : null)}
         isOrganizer={isOrganizer}
         currency={trip.currency}
         currentUser={currentUser}
@@ -1318,50 +1375,68 @@ export const TravellersModule: React.FC<TravellersModuleProps> = ({
           </motion.div>
         )}
 
-        {travellerToDeleteId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
-            >
-              <div className="flex items-center gap-3 text-rose-600">
-                <Trash2 className="w-6 h-6" />
-                <h3 className="text-lg font-black">Remove Traveller?</h3>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                Are you sure you want to remove this traveller from the trip? This will permanently delete their profile details from the trip list.
-              </p>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setTravellerToDeleteId(null)}
-                  disabled={isRemoving}
-                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 cursor-pointer disabled:opacity-50"
+        {createPortal(
+          <AnimatePresence>
+            {travellerToDeleteId && (
+              <motion.div
+                key="remove-traveller-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm pointer-events-auto"
+                onClick={() => setTravellerToDeleteId(null)}
+              >
+                <motion.div
+                  key="remove-traveller-modal"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 pointer-events-auto relative z-10"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmDeleteTraveller}
-                  disabled={isRemoving}
-                  className="flex-1 px-4 py-2 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 shadow-lg shadow-rose-500/20 cursor-pointer disabled:opacity-50"
-                >
-                  {isRemoving ? "Removing..." : "Remove Now"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+                  <div className="flex items-center gap-3 text-rose-600">
+                    <Trash2 className="w-6 h-6" />
+                    <h3 className="text-lg font-black">Remove Traveller?</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Are you sure you want to remove{" "}
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {trip.travellers.find((t) => t.id === travellerToDeleteId)?.fullName || "this traveller"}
+                    </span>{" "}
+                    from this trip? This will permanently delete their profile details from the trip list.
+                  </p>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setTravellerToDeleteId(null)}
+                      disabled={isRemoving}
+                      className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmDeleteTraveller}
+                      disabled={isRemoving}
+                      className="flex-1 min-h-[44px] px-4 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-lg shadow-rose-500/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isRemoving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Removing...</span>
+                        </>
+                      ) : (
+                        <span>Remove Now</span>
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
       </AnimatePresence>
-      </>
-      )}
     </div>
   );
 };

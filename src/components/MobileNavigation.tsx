@@ -23,7 +23,8 @@ import {
   X,
   Bell,
   Search,
-  BookOpen
+  BookOpen,
+  MapPin
 } from "lucide-react";
 import { Trip } from "../types";
 
@@ -79,10 +80,9 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const primaryTabs = primaryTabsAll.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
 
   const moreTabsAll = [
+    { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync", organizerOnly: true },
     { id: "vault", label: "Vault & Packing", icon: Calendar, description: "Checklists & essential files" },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun, description: "Live climate & route views" },
-    { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync", organizerOnly: true },
-    { id: "ai_insights", label: "AI Smart Insights", icon: Sparkles, description: "Predictive fuel & schedules" },
   ];
 
   const moreTabs = moreTabsAll.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
@@ -123,13 +123,28 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
           )}
         </div>
 
-        {/* Quick actions (Sync indicator / dark mode / profile) */}
-        <div className="flex items-center gap-2">
+        {/* Quick actions (Route Tracker / Dark mode / profile) */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Dedicated Route Tracker Quick Button */}
+          <button
+            onClick={() => onSelectTab("route_tracker")}
+            aria-label="Route Tracker"
+            title="GPS Route Tracker"
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border transition-all active:scale-95 cursor-pointer ${
+              activeTab === "route_tracker"
+                ? "bg-indigo-600 text-white border-indigo-700 shadow-xs"
+                : "bg-indigo-50/90 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/80 shadow-xs"
+            }`}
+          >
+            <MapPin className={`w-3.5 h-3.5 ${activeTab === "route_tracker" ? "animate-bounce" : "text-indigo-600 dark:text-indigo-400"}`} />
+            <span className="text-[11px] font-bold tracking-tight hidden xs:inline">Tracker</span>
+          </button>
+
           {/* Dark Mode toggle */}
           <button
             onClick={onToggleDarkMode}
             aria-label="Toggle dark mode"
-            className="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-400 active:scale-95 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-all"
+            className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-slate-500 dark:text-slate-400 active:scale-95 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-all"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -308,18 +323,6 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
                 {user ? (
                   <div className="flex items-center gap-2">
-                    {onOpenSwitchTrip && (
-                      <button
-                        onClick={() => {
-                          setIsMoreDrawerOpen(false);
-                          onOpenSwitchTrip();
-                        }}
-                        className="flex items-center gap-1 py-1.5 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-extrabold uppercase active:scale-95"
-                      >
-                        <Compass className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                        <span>Switch Trip ({trips.length})</span>
-                      </button>
-                    )}
                     <button
                       onClick={() => {
                         onSignOut();

@@ -110,7 +110,7 @@ export default function OrganizerDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-[100dvh] bg-slate-50 flex">
       {/* Sidebar */}
       <aside className={cn(
         "bg-white border-r border-slate-200 transition-all duration-300 flex flex-col z-50",
@@ -152,7 +152,7 @@ export default function OrganizerDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-[100dvh] overflow-y-auto">
         <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <button 
