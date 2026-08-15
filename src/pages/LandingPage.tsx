@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Plane, Users, Wallet, Shield, CheckCircle2, ChevronRight, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
+import tripproLogo from "../assets/logo.svg";
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -22,8 +23,11 @@ export default function LandingPage() {
                 className="shrink-0 flex items-center justify-center p-0.5"
               >
                 <img
-                  src="/triplan_logo.png"
-                  alt="TripPro Logo"
+                  src={tripproLogo}
+                  alt=""
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
+                  }}
                   className="w-full h-full object-contain drop-shadow-sm"
                 />
               </div>

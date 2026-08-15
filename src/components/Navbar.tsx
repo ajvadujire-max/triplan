@@ -7,6 +7,7 @@ import React from "react";
 import { User } from "firebase/auth";
 import { Trip } from "../types";
 import { Avatar } from "./Avatar";
+import tripproLogo from "../assets/logo.svg";
 import {
   Compass,
   Plus,
@@ -85,8 +86,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           <div className="w-[42px] h-[42px] shrink-0 flex items-center justify-center p-0.5">
             <img
-              src="/triplan_logo.png"
-              alt="TripPro Logo"
+              src={tripproLogo}
+              alt=""
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
+              }}
               className="w-full h-full object-contain drop-shadow-sm"
             />
           </div>

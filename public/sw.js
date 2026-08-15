@@ -1,11 +1,13 @@
-const CACHE_NAME = 'trippro-v2';
+const CACHE_NAME = 'trippro-v4';
 const STATIC_ASSETS = [
   '/manifest.json',
+  '/logo.svg',
   '/triplan_logo.png',
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
-  '/favicon-32x32.png'
+  '/favicon-32x32.png',
+  '/favicon-16x16.png'
 ];
 
 // Install event: cache minimal static assets and skip waiting

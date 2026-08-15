@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Smooth Cyan to Deep Royal Blue Gradient -->
+    <linearGradient id="tripBlueGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#00bece"/>
+      <stop offset="22%" stop-color="#0092c7"/>
+      <stop offset="48%" stop-color="#0e56ba"/>
+      <stop offset="78%" stop-color="#123a9e"/>
+      <stop offset="100%" stop-color="#091b68"/>
+    </linearGradient>
+
+    <!-- Vibrant Lime Green Gradient for Top Arrow -->
+    <linearGradient id="limeArrowGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#93da02"/>
+      <stop offset="100%" stop-color="#72b300"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(6, 6)">
+    <!-- 1. Top Green Arrow Pointer -->
+    <path d="M 250 18 L 298 84 L 250 66 L 202 84 Z" fill="url(#limeArrowGrad)" />
+
+    <!-- 2. Main Logo Geometry (Map + Pin + Route) with Gradient -->
+    <!-- Folded Map Frame & Vertical Columns -->
+    <g fill="none" stroke="url(#tripBlueGrad)" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Outer Accordion Map Border -->
+      <path d="M 46 190 L 250 102 L 454 190 V 440 L 250 352 L 46 440 Z" stroke-width="28" />
+
+      <!-- Vertical Inner Panel Divider Bars -->
+      <path d="M 160 140 V 402" stroke-width="26" />
+      <path d="M 340 140 V 402" stroke-width="26" />
+    </g>
+
+    <!-- Pin Marker Head & Body -->
+    <path d="M 250 68 
+             C 192 68, 180 140, 250 250 
+             C 320 140, 308 68, 250 68 Z" 
+          fill="url(#tripBlueGrad)" />
+
+    <!-- Inner Pin Cutout Hole (White) -->
+    <circle cx="250" cy="120" r="24" fill="#ffffff" />
+
+    <!-- Winding S-Route Path -->
+    <path d="M 250 248 
+             C 310 248, 388 240, 388 296 
+             C 388 350, 112 300, 112 360 
+             C 112 418, 380 350, 380 422 
+             C 380 480, 250 440, 250 440" 
+          fill="none" 
+          stroke="url(#tripBlueGrad)" 
+          stroke-width="32" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+  </g>
+</svg>

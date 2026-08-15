@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
+import tripproLogo from "../assets/logo.svg";
 
 export const SplashScreen: React.FC = () => {
   return (
@@ -13,8 +14,11 @@ export const SplashScreen: React.FC = () => {
         <div className="relative mb-6">
           <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-900/80 p-2 shadow-2xl border border-white/10 backdrop-blur-md flex items-center justify-center">
             <img
-              src="/triplan_logo.png"
-              alt="TripPro Logo"
+              src={tripproLogo}
+              alt=""
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
+              }}
               className="w-full h-full object-contain drop-shadow-md"
             />
           </div>

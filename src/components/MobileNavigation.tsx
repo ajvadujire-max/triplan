@@ -3,6 +3,7 @@ import { User } from "firebase/auth";
 import { motion, AnimatePresence } from "motion/react";
 import { Avatar } from "./Avatar";
 import { useModalBack } from "../hooks/useModalBack";
+import tripproLogo from "../assets/logo.svg";
 import {
   Compass,
   Luggage,
@@ -99,8 +100,11 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 sm:w-[38px] sm:h-[38px] shrink-0 flex items-center justify-center p-0.5">
             <img 
-              src="/triplan_logo.png" 
-              alt="TripPro Logo" 
+              src={tripproLogo} 
+              alt="" 
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
+              }}
               className="w-full h-full object-contain drop-shadow-sm" 
             />
           </div>
