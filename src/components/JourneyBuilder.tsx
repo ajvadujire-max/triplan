@@ -703,7 +703,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
               </div>
             ) : (
               trip.segments.map((seg, idx) => (
-                <div key={seg.id} className="relative pl-5 sm:pl-10">
+                <div key={seg.id ? `${seg.id}_${idx}` : `seg_${idx}`} className="relative pl-5 sm:pl-10">
                   {/* Vertical Connecting Line */}
                   {idx < trip.segments.length - 1 && (
                     <div className="absolute left-2.5 sm:left-[19px] top-8 bottom-0 w-0.5 bg-[#1AAB67]/40 dark:bg-[#1AAB67]/60 -mb-4 z-0" />

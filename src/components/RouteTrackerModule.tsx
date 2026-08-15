@@ -160,6 +160,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   const [completedSummary, setCompletedSummary] = useState<StoredRouteSession | null>(null);
   const [journeyToDelete, setJourneyToDelete] = useState<StoredRouteSession | null>(null);
   const [isDeletingJourney, setIsDeletingJourney] = useState<boolean>(false);
+  const [showLocationInstructionModal, setShowLocationInstructionModal] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const watchIdRef = useRef<number | null>(null);
@@ -376,6 +377,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     const { latitude, longitude, accuracy, speed, heading } = position.coords;
     setGpsPermissionState("granted");
     setGpsError(null);
+    setShowLocationInstructionModal(false);
 
     const speedKmh = speed !== null && speed >= 0 ? speed * 3.6 : 0;
     setCurrentSpeedKmh(Math.round(speedKmh * 10) / 10);
@@ -537,11 +539,12 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     if (error.code === error.PERMISSION_DENIED) {
       setGpsPermissionState("denied");
       setGpsError(
-        "Location permission denied. Please allow location access in your browser settings (tap the lock 🔒 or settings icon in your address bar) and tap 'Enable Location'."
+        "Location access blocked. Please allow location permission in your browser settings (tap 🔒 in address bar) and tap 'Enable Location'."
       );
+      setShowLocationInstructionModal(true);
     } else if (error.code === error.POSITION_UNAVAILABLE) {
       setGpsPermissionState("unavailable");
-      setGpsError("GPS position unavailable. Please ensure device location is enabled and try again.");
+      setGpsError("GPS position unavailable. Please ensure device location is turned on and try again.");
     } else if (error.code === error.TIMEOUT) {
       setGpsError("GPS request timed out. Please tap 'Enable Location' to retry.");
     } else {
@@ -560,6 +563,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     if (typeof window !== "undefined" && !window.isSecureContext && window.location.hostname !== "localhost") {
       setGpsPermissionState("denied");
       setGpsError("Geolocation requires a secure HTTPS connection.");
+      setShowLocationInstructionModal(true);
       return;
     }
 
@@ -569,6 +573,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       (position) => {
         setGpsPermissionState("granted");
         setGpsError(null);
+        setShowLocationInstructionModal(false);
         handleGpsUpdate(position);
 
         if (mapInstanceRef.current) {
@@ -594,6 +599,27 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
         timeout: 10000
       }
     );
+  };
+
+  // Dedicated Enable Location button click handler
+  const handleEnableLocationClick = async () => {
+    // If permissions API is available, check state
+    if (typeof navigator !== "undefined" && navigator.permissions && navigator.permissions.query) {
+      try {
+        const perm = await navigator.permissions.query({ name: "geolocation" });
+        if (perm.state === "denied") {
+          setShowLocationInstructionModal(true);
+        }
+      } catch (e) {
+        // Query not supported for geolocation in some contexts
+      }
+    }
+
+    handleRequestLocationPermission((pos) => {
+      setShowLocationInstructionModal(false);
+      setToastMessage({ type: "success", text: "Location access granted! GPS tracking ready." });
+      startWatchingLocation();
+    });
   };
 
   // Start continuous GPS tracking watcher
@@ -905,16 +931,16 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-4 px-2 sm:px-4 pb-24 md:pb-12 select-none">
+    <div className="w-full max-w-7xl mx-auto space-y-2.5 sm:space-y-4 px-1.5 sm:px-4 pb-20 md:pb-12 select-none">
       {/* 1. Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs">
-            <Navigation className="w-6 h-6 animate-pulse" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 bg-white dark:bg-slate-900 p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs">
+            <Navigation className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 Route Tracker
               </h1>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
@@ -922,17 +948,17 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
                 Live GPS
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
               Track your journey in real time for <span className="font-bold text-slate-700 dark:text-slate-300">{trip.name}</span>
             </p>
           </div>
         </div>
 
         {/* View Toggle Buttons */}
-        <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-1.5 sm:gap-2 self-start sm:self-auto bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setActiveViewTab("live")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold rounded-lg transition-all ${
               activeViewTab === "live"
                 ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -943,7 +969,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
           </button>
           <button
             onClick={() => setActiveViewTab("history")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold rounded-lg transition-all ${
               activeViewTab === "history"
                 ? "bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-xs"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -957,14 +983,14 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       {/* 2. GPS Permission / Warning Banners */}
       {gpsError && (
-        <div className="flex items-center justify-between p-3.5 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 rounded-xl text-amber-900 dark:text-amber-200 text-xs font-medium animate-fadeIn">
+        <div className="flex items-center justify-between p-2.5 sm:p-3.5 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 rounded-xl text-amber-900 dark:text-amber-200 text-xs font-medium animate-fadeIn">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>{gpsError}</span>
           </div>
           <button
             type="button"
-            onClick={() => handleRequestLocationPermission()}
+            onClick={handleEnableLocationClick}
             className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-[11px] shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
           >
             Enable Location
@@ -973,7 +999,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       )}
 
       {currentPosition && currentPosition.accuracy > 35 && (
-        <div className="flex items-center gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-xl text-blue-800 dark:text-blue-300 text-xs">
+        <div className="flex items-center gap-2 p-2 sm:p-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-xl text-blue-800 dark:text-blue-300 text-[11px] sm:text-xs">
           <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
           <span>
             GPS accuracy is low (±{currentPosition.accuracy}m). Move to an open area for high precision tracking.
@@ -983,118 +1009,120 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       {/* 3. MAIN LIVE MAP VIEW */}
       {activeViewTab === "live" && (
-        <div className="space-y-3">
-          {/* Real-time Telemetry Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="space-y-2.5 sm:space-y-3">
+          {/* Real-time Telemetry Stats Grid - Compact 2x2 Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
             {/* Total Distance */}
-            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
                 <span>Total Distance</span>
-                <Compass className="w-4 h-4 text-indigo-500" />
+                <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
               </div>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              <div className="mt-0.5 sm:mt-1 flex items-baseline gap-1">
+                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                   {totalDistanceKm.toFixed(2)}
                 </span>
-                <span className="text-xs font-bold text-slate-500">KM</span>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500">KM</span>
               </div>
             </div>
 
             {/* Tracking Duration */}
-            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
                 <span>Tracking Time</span>
-                <Clock className="w-4 h-4 text-emerald-500" />
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
               </div>
-              <div className="mt-1">
-                <span className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+              <div className="mt-0.5 sm:mt-1">
+                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
                   {formatDurationDigital(elapsedSeconds)}
                 </span>
               </div>
             </div>
 
             {/* Current Speed */}
-            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
                 <span>Current Speed</span>
-                <Gauge className="w-4 h-4 text-blue-500" />
+                <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
               </div>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              <div className="mt-0.5 sm:mt-1 flex items-baseline gap-1">
+                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                   {currentSpeedKmh.toFixed(1)}
                 </span>
-                <span className="text-xs font-bold text-slate-500">km/h</span>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500">km/h</span>
               </div>
             </div>
 
             {/* GPS Accuracy */}
-            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
                 <span>GPS Accuracy</span>
-                <ShieldCheck className="w-4 h-4 text-amber-500" />
+                <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
               </div>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              <div className="mt-0.5 sm:mt-1 flex items-baseline gap-1">
+                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                   ±{currentPosition ? currentPosition.accuracy : "--"}
                 </span>
-                <span className="text-xs font-bold text-slate-500">m</span>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500">m</span>
               </div>
             </div>
           </div>
 
           {/* Interactive Map Canvas Container */}
           <div
-            className={`relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 transition-all ${
-              isFullscreen ? "fixed inset-0 z-50 rounded-none h-[100dvh] w-screen" : "h-[clamp(360px,50dvh,540px)]"
+            className={`relative w-full rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 transition-all ${
+              isFullscreen
+                ? "fixed inset-0 z-50 rounded-none h-[100dvh] w-screen"
+                : "h-[clamp(200px,34dvh,480px)] sm:h-[clamp(320px,45dvh,540px)]"
             }`}
           >
             {/* The Leaflet Div */}
             <div ref={mapContainerRef} className="w-full h-full z-0" />
 
             {/* Floating Top Bar (Active Tracking Indicator & Controls) */}
-            <div className="absolute top-3 left-3 right-14 z-10 flex items-center justify-between pointer-events-none">
+            <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-12 sm:right-14 z-10 flex items-center justify-between pointer-events-none">
               {trackingState === "tracking" && (
-                <div className="pointer-events-auto flex items-center gap-2 bg-slate-900/90 dark:bg-slate-900/95 backdrop-blur text-white px-3 py-1.5 rounded-full shadow-lg border border-slate-700/60 text-xs font-bold animate-fadeIn">
-                  <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 dark:bg-slate-900/95 backdrop-blur text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-700/60 text-[10px] sm:text-xs font-bold animate-fadeIn">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full animate-ping" />
                   <span>TRACKING ACTIVE</span>
                   <span className="text-slate-400">|</span>
-                  <span className="text-emerald-400">{routePoints.length} points</span>
+                  <span className="text-emerald-400">{routePoints.length} pts</span>
                 </div>
               )}
 
               {trackingState === "paused" && (
-                <div className="pointer-events-auto flex items-center gap-2 bg-amber-500/95 backdrop-blur text-white px-3 py-1.5 rounded-full shadow-lg text-xs font-extrabold animate-fadeIn">
-                  <Pause className="w-3.5 h-3.5" />
-                  <span>TRACKING PAUSED</span>
+                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-amber-500/95 backdrop-blur text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg text-[10px] sm:text-xs font-extrabold animate-fadeIn">
+                  <Pause className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <span>PAUSED</span>
                 </div>
               )}
 
               {selectedSessionToView && (
-                <div className="pointer-events-auto flex items-center gap-2 bg-indigo-600/95 text-white px-3 py-1.5 rounded-full shadow-lg text-xs font-bold">
-                  <span>Viewing Saved Route ({selectedSessionToView.totalDistanceKm} KM)</span>
+                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-indigo-600/95 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg text-[10px] sm:text-xs font-bold">
+                  <span>Saved Route ({selectedSessionToView.totalDistanceKm} KM)</span>
                   <button
                     onClick={() => setSelectedSessionToView(null)}
                     className="p-0.5 hover:bg-white/20 rounded-full"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </button>
                 </div>
               )}
             </div>
 
             {/* Floating Map Utility Buttons (Right Side) */}
-            <div className="absolute top-14 right-3 z-10 flex flex-col gap-2">
+            <div className="absolute top-10 sm:top-14 right-2.5 sm:right-3 z-10 flex flex-col gap-1.5 sm:gap-2">
               {/* My Location / Recenter */}
               <button
                 onClick={handleRecenter}
                 title="Center on My Location"
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md border transition-all active:scale-95 ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border transition-all active:scale-95 ${
                   autoCenter
                     ? "bg-indigo-600 text-white border-indigo-700 shadow-indigo-500/20"
                     : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700"
                 }`}
               >
-                <Compass className={`w-5 h-5 ${autoCenter ? "animate-spin" : ""}`} />
+                <Compass className={`w-4 h-4 sm:w-5 sm:h-5 ${autoCenter ? "animate-spin" : ""}`} />
               </button>
 
               {/* Fit Entire Route Bounds */}
@@ -1102,9 +1130,9 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
                 <button
                   onClick={handleFitRouteBounds}
                   title="Fit Complete Route"
-                  className="w-10 h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
                 >
-                  <Navigation className="w-5 h-5 text-indigo-600 rotate-45" />
+                  <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 rotate-45" />
                 </button>
               )}
 
@@ -1116,34 +1144,34 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
                   )
                 }
                 title="Switch Map Layers"
-                className="w-10 h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
               >
-                <Layers className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
               </button>
 
               {/* Fullscreen Toggle */}
               <button
                 onClick={() => setIsFullscreen((prev) => !prev)}
                 title="Toggle Fullscreen"
-                className="w-10 h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
               >
                 {isFullscreen ? (
-                  <Minimize2 className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                  <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
                 ) : (
-                  <Maximize2 className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                  <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
                 )}
               </button>
             </div>
 
             {/* Floating Bottom Control Panel */}
-            <div className="absolute bottom-4 left-3 right-3 z-10 flex items-center justify-center pointer-events-none">
-              <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl flex items-center gap-2 sm:gap-3 max-w-lg w-full justify-between">
+            <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-3 right-2.5 sm:right-3 z-10 flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl flex items-center gap-2 sm:gap-3 max-w-lg w-full justify-between">
                 {trackingState === "idle" ? (
                   <button
                     onClick={handleStartRoute}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-6 rounded-xl shadow-md transition-all active:scale-98 text-sm sm:text-base cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 sm:py-3.5 px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-md transition-all active:scale-98 text-sm sm:text-base cursor-pointer min-h-[44px]"
                   >
-                    <Play className="w-5 h-5 fill-white" />
+                    <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
                     <span>START ROUTE</span>
                   </button>
                 ) : (
@@ -1151,26 +1179,26 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
                     {trackingState === "tracking" ? (
                       <button
                         onClick={handlePauseTracking}
-                        className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
                       >
-                        <Pause className="w-4 h-4 fill-white" />
+                        <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
                         <span>PAUSE TRACKING</span>
                       </button>
                     ) : (
                       <button
                         onClick={handleResumeTracking}
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
                       >
-                        <Play className="w-4 h-4 fill-white" />
+                        <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
                         <span>RESUME TRACKING</span>
                       </button>
                     )}
 
                     <button
                       onClick={() => setShowEndConfirmation(true)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer"
+                      className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
                     >
-                      <Square className="w-4 h-4 fill-white" />
+                      <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
                       <span>END ROUTE</span>
                     </button>
                   </>
@@ -1475,7 +1503,96 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
         </div>
       )}
 
-      {/* 8. Toast Feedback Message */}
+      {/* 8. Location Access Instruction Modal */}
+      {showLocationInstructionModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 max-w-md w-full rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5 text-amber-600 dark:text-amber-400">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/80 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                    Location Access Blocked
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Browser location permission is required
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLocationInstructionModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300">
+              <p className="font-medium text-slate-800 dark:text-slate-200">
+                Location access is blocked for this site in your browser settings. To allow location access:
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-[10px] shrink-0">
+                    1
+                  </span>
+                  <span>
+                    Tap the <strong>Lock 🔒</strong> or <strong>Tune/Settings</strong> icon in your browser address bar.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-[10px] shrink-0">
+                    2
+                  </span>
+                  <span>
+                    Go to <strong>Permissions</strong> or <strong>Site Settings</strong> &rarr; <strong>Location</strong>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-[10px] shrink-0">
+                    3
+                  </span>
+                  <span>
+                    Change the location setting to <strong>Allow</strong>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-[10px] shrink-0">
+                    4
+                  </span>
+                  <span>
+                    Tap <strong>Retry Location Access</strong> below.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLocationInstructionModal(false)}
+                className="flex-1 py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={handleEnableLocationClick}
+                className="flex-1 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Compass className="w-4 h-4" />
+                <span>Retry Location Access</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. Toast Feedback Message */}
       {toastMessage && (
         <div
           className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg border text-xs font-bold animate-fadeIn ${

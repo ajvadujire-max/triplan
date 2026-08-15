@@ -187,14 +187,14 @@ export const TrainDetailsModule: React.FC<TrainDetailsModuleProps> = ({
 
       {/* Accordion List of Train Cards */}
       <div className="space-y-3">
-        {unifiedTrains.map((item) => {
+        {unifiedTrains.map((item, idx) => {
           const isExpanded = expandedId === item.segmentId;
           const live = liveStatuses[item.segmentId];
           const isLoading = loadingTracking[item.segmentId];
 
           return (
             <div
-              key={item.segmentId}
+              key={item.segmentId ? `${item.segmentId}_${idx}` : `train_${idx}`}
               className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-all hover:border-indigo-300 dark:hover:border-indigo-800"
             >
               {/* COLLAPSED JOURNEY ROUTE CARD (Master View ~120-140px) */}

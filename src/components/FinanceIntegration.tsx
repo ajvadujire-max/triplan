@@ -914,11 +914,11 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                     No ledger transactions matching filters.
                   </div>
                 ) : (
-                  paginatedLedger.map((entry) => {
+                  paginatedLedger.map((entry, idx) => {
                     const isDebit = entry.type === "debit";
                     return (
                       <div
-                        key={entry.id}
+                        key={entry.id ? `${entry.id}_${idx}` : `entry_${idx}`}
                         className="p-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/10 flex items-start justify-between gap-3 transition-colors"
                       >
                         <div className="flex items-start gap-3">
@@ -1016,11 +1016,11 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                 </button>
               </div>
             ) : (
-              groupedAccounts.active.map((acc) => {
+              groupedAccounts.active.map((acc, idx) => {
                 const IconComponent = getAccountIconComponent(acc.iconName);
                 return (
                   <div
-                    key={acc.id}
+                    key={acc.id ? `${acc.id}_${idx}` : `acc_${idx}`}
                     onClick={() => {
                       setViewingHistoryAccountId(acc.id);
                       setHistoryPage(1);
@@ -1154,9 +1154,9 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                 Archived Portfolios ({groupedAccounts.archived.length})
               </h4>
               <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/40 dark:bg-slate-900/40 rounded-xl overflow-hidden">
-                {groupedAccounts.archived.map((acc) => (
+                {groupedAccounts.archived.map((acc, idx) => (
                   <div
-                    key={acc.id}
+                    key={acc.id ? `${acc.id}_arch_${idx}` : `arch_${idx}`}
                     className="p-3 flex items-center justify-between text-xs opacity-60 hover:opacity-100 transition-opacity"
                   >
                     <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[220px]">

@@ -124,18 +124,22 @@ const LoginCard = ({ type }: LoginProps) => {
         // Sign In flow
         const cred = await signInWithEmailAndPassword(auth, email, password);
         
-        // Check and create profile if missing
-        const userDocRef = doc(db, "users", cred.user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (!userDocSnap.exists()) {
-          await setDoc(userDocRef, {
-            uid: cred.user.uid,
-            name: cred.user.displayName || "User",
-            email: cred.user.email,
-            phone: cred.user.phoneNumber || "",
-            role: targetRole,
-            createdAt: new Date().toISOString()
-          }, { merge: true });
+        // Check and create profile if missing (handled gracefully if offline)
+        try {
+          const userDocRef = doc(db, "users", cred.user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+              uid: cred.user.uid,
+              name: cred.user.displayName || "User",
+              email: cred.user.email,
+              phone: cred.user.phoneNumber || "",
+              role: targetRole,
+              createdAt: new Date().toISOString()
+            }, { merge: true });
+          }
+        } catch (docErr) {
+          console.warn("Could not check/create user profile document (client may be offline):", docErr);
         }
 
         setIsLoading(false);

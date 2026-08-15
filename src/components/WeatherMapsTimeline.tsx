@@ -267,11 +267,11 @@ export const WeatherMapsTimeline: React.FC<WeatherMapsTimelineProps> = ({
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-          {nearbyEssentials.map((item) => {
+          {nearbyEssentials.map((item, idx) => {
             const IconComp = item.icon;
             return (
               <button
-                key={item.id}
+                key={item.id ? `${item.id}_${idx}` : `ess_${idx}`}
                 onClick={() => handleOpenGoogleMaps(item.query)}
                 className="h-[74px] p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 hover:border-rose-500 dark:hover:border-rose-500 active:scale-95 text-left flex items-center gap-2.5 transition-all cursor-pointer group"
               >

@@ -32,7 +32,9 @@ if (typeof window !== "undefined") {
       msg.includes("INTERNAL ASSERTION FAILED") ||
       msg.includes("auth/argument-error") ||
       msg.includes("Could not reach Cloud Firestore backend") ||
-      msg.includes("backend didn't respond within")
+      msg.includes("backend didn't respond within") ||
+      msg.includes("Failed to get document because the client is offline") ||
+      msg.includes("client is offline")
     ) {
       console.warn("Suppressed Firebase notice:", ...args);
       return;

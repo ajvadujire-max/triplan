@@ -65,8 +65,14 @@ export default function JoinTrip() {
               mobileNumber: user.phoneNumber || prev.mobileNumber,
             }));
           }
-        } catch (e) {
-          console.error("Error fetching user profile for prefill:", e);
+        } catch (e: any) {
+          console.warn("Could not fetch user profile for prefill (client may be offline):", e?.message || e);
+          setFormData(prev => ({
+            ...prev,
+            fullName: user.displayName || prev.fullName,
+            email: user.email || prev.email,
+            mobileNumber: user.phoneNumber || prev.mobileNumber,
+          }));
         }
       }
     });

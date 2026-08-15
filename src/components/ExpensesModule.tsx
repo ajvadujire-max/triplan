@@ -1665,9 +1665,9 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {filteredPersonalExpenses.map((exp) => (
+              {filteredPersonalExpenses.map((exp, idx) => (
                 <div
-                  key={exp.id}
+                  key={exp.id ? `${exp.id}_pers_${idx}` : `pers_exp_${idx}`}
                   onClick={() => navigate(`${basePath}/expenses/personal/${exp.id}`)}
                   className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
                 >
@@ -1714,12 +1714,12 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {filteredExpenses.map((exp) => {
+              {filteredExpenses.map((exp, idx) => {
                 const paidByPerson = trip.travellers.find((t) => t.id === exp.whoPaidId);
 
                 return (
                   <div
-                    key={exp.id}
+                    key={exp.id ? `${exp.id}_${idx}` : `trip_exp_${idx}`}
                     onClick={() => navigate(`${basePath}/expenses/${exp.id}`)}
                     className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-between gap-3 min-h-[90px] max-h-[110px] select-none"
                   >

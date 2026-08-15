@@ -1132,9 +1132,9 @@ export const CollectionsModule: React.FC<CollectionsModuleProps> = ({
             {/* List of Payments */}
             <div className="overflow-y-auto flex-1 space-y-2 pr-1">
               {(activeHistoryTraveller.paymentHistory || []).length > 0 ? (
-                (activeHistoryTraveller.paymentHistory || []).map((rec) => (
+                (activeHistoryTraveller.paymentHistory || []).map((rec, idx) => (
                   <div
-                    key={rec.id}
+                    key={rec.id ? `${rec.id}_${idx}` : `pmt_${idx}`}
                     className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -1540,9 +1540,9 @@ const CollectionDetails: React.FC<CollectionDetailsProps> = ({
 
         {stats.history.length > 0 ? (
           <div className="space-y-2">
-            {stats.history.map((record) => (
+            {stats.history.map((record, idx) => (
               <div
-                key={record.id}
+                key={record.id ? `${record.id}_${idx}` : `hist_${idx}`}
                 className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 group"
               >
                 <div className="flex items-center gap-3 min-w-0">
