@@ -168,6 +168,9 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   const trackingStateRef = useRef(trackingState);
   trackingStateRef.current = trackingState;
 
+  const stationaryCountRef = useRef<number>(0);
+  const consecutiveMovementsRef = useRef<number>(0);
+
   const routePointsRef = useRef(routePoints);
   routePointsRef.current = routePoints;
 
@@ -379,17 +382,14 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     setGpsError(null);
     setShowLocationInstructionModal(false);
 
-    const speedKmh = speed !== null && speed >= 0 ? speed * 3.6 : 0;
-    setCurrentSpeedKmh(Math.round(speedKmh * 10) / 10);
-    if (speedKmh > maxSpeedKmh) {
-      setMaxSpeedKmh(Math.round(speedKmh * 10) / 10);
-    }
+    const pointAccuracy = Math.round(accuracy || 15);
+    const rawSpeedKmh = speed !== null && speed >= 0 ? speed * 3.6 : 0;
 
     const newPos = {
       lat: latitude,
       lng: longitude,
-      accuracy: Math.round(accuracy),
-      speed: speedKmh,
+      accuracy: pointAccuracy,
+      speed: rawSpeedKmh,
       heading,
       timestamp: position.timestamp
     };
@@ -424,7 +424,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     // Render / update Accuracy Circle
     if (!accuracyCircleRef.current) {
       accuracyCircleRef.current = L.circle([latitude, longitude], {
-        radius: accuracy,
+        radius: pointAccuracy,
         color: "#3b82f6",
         weight: 1,
         fillColor: "#3b82f6",
@@ -432,7 +432,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       }).addTo(map);
     } else {
       accuracyCircleRef.current.setLatLng([latitude, longitude]);
-      accuracyCircleRef.current.setRadius(accuracy);
+      accuracyCircleRef.current.setRadius(pointAccuracy);
     }
 
     // If autoCenter is enabled, pan map smoothly to current position
@@ -440,97 +440,171 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       map.panTo([latitude, longitude], { animate: true, duration: 0.8 });
     }
 
-    // IF TRACKING IS ACTIVE: Filter GPS noise and add to route
-    if (trackingStateRef.current === "tracking") {
-      const prevPoints = routePointsRef.current;
-      const pointTimestamp = new Date(position.timestamp).toISOString();
+    // IF TRACKING IS NOT ACTIVE (e.g. idle or paused): Force current speed to 0 km/h
+    if (trackingStateRef.current !== "tracking") {
+      setCurrentSpeedKmh(0);
+      stationaryCountRef.current = 0;
+      consecutiveMovementsRef.current = 0;
+      return;
+    }
 
-      if (prevPoints.length === 0) {
-        // FIRST POINT: Set official Start Point
-        const firstPoint = {
-          lat: latitude,
-          lng: longitude,
-          timestamp: pointTimestamp,
-          accuracy: Math.round(accuracy),
-          speed: speedKmh
-        };
+    // TRACKING IS ACTIVE:
+    // 1. FILTER UNRELIABLE / POOR GPS ACCURACY (accuracy > 35 meters)
+    if (pointAccuracy > 35) {
+      setCurrentSpeedKmh(0);
+      return;
+    }
 
-        const updatedPoints = [firstPoint];
-        setRoutePoints(updatedPoints);
+    const prevPoints = routePointsRef.current;
+    const pointTimestamp = new Date(position.timestamp || Date.now()).toISOString();
 
-        // Add Emerald Start Marker
-        const startIcon = L.divIcon({
-          className: "custom-start-marker",
-          html: `
-            <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-              <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-              START
-            </div>
-          `,
-          iconSize: [60, 26],
-          iconAnchor: [30, 13]
-        });
+    if (prevPoints.length === 0) {
+      // FIRST ACCEPTED POINT: Set official Start Point
+      const firstPoint = {
+        lat: latitude,
+        lng: longitude,
+        timestamp: pointTimestamp,
+        accuracy: pointAccuracy,
+        speed: 0
+      };
 
-        if (startMarkerRef.current) {
-          startMarkerRef.current.remove();
-        }
-        startMarkerRef.current = L.marker([latitude, longitude], { icon: startIcon }).addTo(map);
+      const updatedPoints = [firstPoint];
+      setRoutePoints(updatedPoints);
+      setTotalDistanceKm(0);
+      setCurrentSpeedKmh(0);
+      stationaryCountRef.current = 0;
+      consecutiveMovementsRef.current = 0;
 
-        if (polylineLayerRef.current) {
-          polylineLayerRef.current.setLatLngs([[latitude, longitude]]);
-        }
-      } else {
-        // SUBSEQUENT POINTS: Apply Filtering
-        const lastPoint = prevPoints[prevPoints.length - 1];
-        const distDeltaKm = haversineDistanceKm(
-          lastPoint.lat,
-          lastPoint.lng,
-          latitude,
-          longitude
-        );
-        const distDeltaMeters = distDeltaKm * 1000;
+      // Add Emerald Start Marker
+      const startIcon = L.divIcon({
+        className: "custom-start-marker",
+        html: `
+          <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+            <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+            START
+          </div>
+        `,
+        iconSize: [60, 26],
+        iconAnchor: [30, 13]
+      });
 
-        // GPS FILTER RULES:
-        // 1. Ignore tiny noise when stationary (< 4 meters)
-        // 2. Ignore unrealistic jumps (> 250 km/h or impossible delta with bad accuracy)
-        const isSpuriousJump = distDeltaKm > 5 && accuracy > 50;
-        const isStationaryNoise = distDeltaMeters < 4 && accuracy > 10;
-
-        if (!isSpuriousJump && !isStationaryNoise) {
-          const newPoint = {
-            lat: latitude,
-            lng: longitude,
-            timestamp: pointTimestamp,
-            accuracy: Math.round(accuracy),
-            speed: speedKmh
-          };
-
-          const newPointsList = [...prevPoints, newPoint];
-          setRoutePoints(newPointsList);
-
-          const newTotalDist = totalDistanceKmRef.current + distDeltaKm;
-          setTotalDistanceKm(newTotalDist);
-
-          // Update polyline on map
-          if (polylineLayerRef.current) {
-            const latLngs = newPointsList.map((p) => [p.lat, p.lng] as [number, number]);
-            polylineLayerRef.current.setLatLngs(latLngs);
-          }
-
-          // Persist draft to local storage
-          try {
-            localStorage.setItem(
-              localStorageDraftKey,
-              JSON.stringify({
-                sessionId: activeSessionId,
-                points: newPointsList,
-                totalDistanceKm: newTotalDist,
-                elapsedSeconds
-              })
-            );
-          } catch (e) {}
-        }
+      if (startMarkerRef.current) {
+        startMarkerRef.current.remove();
       }
+      startMarkerRef.current = L.marker([latitude, longitude], { icon: startIcon }).addTo(map);
+
+      if (polylineLayerRef.current) {
+        polylineLayerRef.current.setLatLngs([[latitude, longitude]]);
+      }
+    } else {
+      // SUBSEQUENT POINTS: Apply Strict GPS Filtering & Noise Rejection
+      const lastPoint = prevPoints[prevPoints.length - 1];
+
+      // A. Calculate distance delta between last accepted point and new coordinate
+      const distDeltaKm = haversineDistanceKm(
+        lastPoint.lat,
+        lastPoint.lng,
+        latitude,
+        longitude
+      );
+      const distDeltaMeters = distDeltaKm * 1000;
+
+      // B. Calculate time delta (seconds)
+      const lastTimeMs = new Date(lastPoint.timestamp).getTime();
+      const currTimeMs = position.timestamp || Date.now();
+      const timeDeltaSec = Math.max(0.5, (currTimeMs - lastTimeMs) / 1000);
+
+      // C. Accuracy-Aware Minimum Movement Threshold
+      // minimumMovement = Math.max(5, Math.min(20, Math.max(previousAccuracy, currentAccuracy)))
+      const previousAccuracy = lastPoint.accuracy || 15;
+      const currentAccuracy = pointAccuracy;
+      const minimumMovementMeters = Math.max(
+        5,
+        Math.min(20, Math.max(previousAccuracy, currentAccuracy))
+      );
+
+      // D. Detect Spurious Jumps & Impossible Speed (> 180 km/h or sudden massive jump with bad accuracy)
+      const impliedSpeedKmh = distDeltaKm / (timeDeltaSec / 3600);
+      const isSpuriousJump =
+        impliedSpeedKmh > 180 ||
+        (distDeltaMeters > 70 && pointAccuracy > 20 && timeDeltaSec < 5) ||
+        (distDeltaMeters > 150 && timeDeltaSec < 10);
+
+      if (isSpuriousJump) {
+        setCurrentSpeedKmh(0);
+        return;
+      }
+
+      // E. Evaluate Minimum Movement Threshold (Stationary & Drift Filter)
+      if (distDeltaMeters < minimumMovementMeters) {
+        // GPS DRIFT / STATIONARY NOISE:
+        stationaryCountRef.current += 1;
+        consecutiveMovementsRef.current = 0;
+
+        // Force speed to 0 km/h, keep Total Distance unchanged, do not add point to route
+        setCurrentSpeedKmh(0);
+        return;
+      }
+
+      // F. Stationary Recovery Guard: Require consecutive or clear movement if previously stationary
+      if (
+        stationaryCountRef.current >= 2 &&
+        consecutiveMovementsRef.current === 0 &&
+        distDeltaMeters < minimumMovementMeters * 1.4
+      ) {
+        consecutiveMovementsRef.current = 1;
+        setCurrentSpeedKmh(0);
+        return;
+      }
+
+      // G. REAL MOVEMENT CONFIRMED!
+      stationaryCountRef.current = 0;
+      consecutiveMovementsRef.current += 1;
+
+      // Calculate speed from genuine movement
+      let effectiveSpeedKmh = Math.round(impliedSpeedKmh * 10) / 10;
+      if (rawSpeedKmh > 0 && Math.abs(rawSpeedKmh - impliedSpeedKmh) < 25) {
+        effectiveSpeedKmh = Math.round(rawSpeedKmh * 10) / 10;
+      }
+      if (effectiveSpeedKmh > 180) effectiveSpeedKmh = 0;
+
+      const newPoint = {
+        lat: latitude,
+        lng: longitude,
+        timestamp: new Date(currTimeMs).toISOString(),
+        accuracy: pointAccuracy,
+        speed: effectiveSpeedKmh
+      };
+
+      const newPointsList = [...prevPoints, newPoint];
+      setRoutePoints(newPointsList);
+
+      const newTotalDist = totalDistanceKmRef.current + distDeltaKm;
+      setTotalDistanceKm(newTotalDist);
+
+      setCurrentSpeedKmh(effectiveSpeedKmh);
+      if (effectiveSpeedKmh > maxSpeedKmh) {
+        setMaxSpeedKmh(Math.round(effectiveSpeedKmh * 10) / 10);
+      }
+
+      // Update polyline on map
+      if (polylineLayerRef.current) {
+        const latLngs = newPointsList.map((p) => [p.lat, p.lng] as [number, number]);
+        polylineLayerRef.current.setLatLngs(latLngs);
+      }
+
+      // Persist draft to local storage
+      try {
+        localStorage.setItem(
+          localStorageDraftKey,
+          JSON.stringify({
+            sessionId: activeSessionId,
+            points: newPointsList,
+            totalDistanceKm: newTotalDist,
+            elapsedSeconds
+          })
+        );
+      } catch (e) {}
     }
   };
 
@@ -664,7 +738,10 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       setRoutePoints([]);
       setTotalDistanceKm(0);
       setElapsedSeconds(0);
+      setCurrentSpeedKmh(0);
       setMaxSpeedKmh(0);
+      stationaryCountRef.current = 0;
+      consecutiveMovementsRef.current = 0;
       setCompletedSummary(null);
       setSelectedSessionToView(null);
       setTrackingState("tracking");
@@ -687,6 +764,9 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
   const handlePauseTracking = () => {
     setTrackingState("paused");
+    setCurrentSpeedKmh(0);
+    stationaryCountRef.current = 0;
+    consecutiveMovementsRef.current = 0;
     // Add a pause marker on the map if we have points
     if (mapInstanceRef.current && currentPosition && stopMarkersGroupRef.current) {
       const pauseIcon = L.divIcon({
@@ -712,6 +792,9 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   const handleConfirmEndRoute = async () => {
     setShowEndConfirmation(false);
     setTrackingState("idle");
+    setCurrentSpeedKmh(0);
+    stationaryCountRef.current = 0;
+    consecutiveMovementsRef.current = 0;
 
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
