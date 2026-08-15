@@ -97,11 +97,11 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
       {/* 1. Mobile Compact Sticky Header */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800/80 transition-colors pt-safe px-3 sm:px-4 flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 sm:w-[40px] sm:h-[40px] rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-white shadow-xs border border-slate-100">
+          <div className="w-9 h-9 sm:w-[38px] sm:h-[38px] shrink-0 flex items-center justify-center p-0.5">
             <img 
               src="/triplan_logo.png" 
-              alt="Triplan Logo" 
-              className="w-full h-full object-contain" 
+              alt="TripPro Logo" 
+              className="w-full h-full object-contain drop-shadow-sm" 
             />
           </div>
           

@@ -11,11 +11,11 @@ export const SplashScreen: React.FC = () => {
         className="flex flex-col items-center text-center max-w-xs"
       >
         <div className="relative mb-6">
-          <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/10 p-2 shadow-2xl border border-white/20 backdrop-blur-md flex items-center justify-center">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-900/80 p-2 shadow-2xl border border-white/10 backdrop-blur-md flex items-center justify-center">
             <img
               src="/triplan_logo.png"
               alt="TripPro Logo"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain drop-shadow-md"
             />
           </div>
           <span className="absolute -bottom-1 -right-1 flex h-4 w-4">

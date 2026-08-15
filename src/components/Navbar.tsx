@@ -83,11 +83,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand & App Title */}
         <div className="flex items-center gap-3">
-          <div className="w-[44px] h-[44px] rounded-xl overflow-hidden shrink-0">
+          <div className="w-[42px] h-[42px] shrink-0 flex items-center justify-center p-0.5">
             <img
               src="/triplan_logo.png"
-              alt="Triplan Logo"
-              className="w-full h-full object-cover"
+              alt="TripPro Logo"
+              className="w-full h-full object-contain drop-shadow-sm"
             />
           </div>
           <div>

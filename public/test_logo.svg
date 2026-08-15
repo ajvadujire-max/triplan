@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00bece"/>
+      <stop offset="35%" stop-color="#0092bf"/>
+      <stop offset="70%" stop-color="#0052a5"/>
+      <stop offset="100%" stop-color="#071b75"/>
+    </linearGradient>
+
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a3e635"/>
+      <stop offset="100%" stop-color="#65a30d"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Green Top Arrow / Compass Pointer -->
+  <path d="M 256 24 L 306 80 L 256 62 L 206 80 Z" fill="url(#arrowGrad)"/>
+
+  <!-- Folded Map Base & Route Path Group with Gradient -->
+  <g fill="none" stroke="url(#mainGrad)" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Map Outer Accordion Frames -->
+    <!-- Left Panel Outer Frame -->
+    <path d="M 64 160 L 176 112 V 400 L 64 448 Z" stroke-width="24"/>
+    <!-- Right Panel Outer Frame -->
+    <path d="M 448 160 L 336 112 V 400 L 448 448 Z" stroke-width="24"/>
+
+    <!-- Map Inner Vertical Lines -->
+    <line x1="176" y1="112" x2="176" y2="400" stroke-width="18"/>
+    <line x1="336" y1="112" x2="336" y2="400" stroke-width="18"/>
+  </g>
+
+  <!-- Location Pin & Winding Route Path -->
+  <g fill="url(#mainGrad)">
+    <!-- Location Pin Head -->
+    <path d="M 256 70 
+             C 210 70, 175 105, 175 150 
+             C 175 190, 220 235, 256 265 
+             C 292 235, 337 190, 337 150 
+             C 337 105, 302 70, 256 70 Z"/>
+  </g>
+  
+  <!-- Pin Cutout Circle -->
+  <circle cx="256" cy="142" r="26" fill="#ffffff"/>
+
+  <!-- S-Curve Route Line -->
+  <path d="M 256 245 
+           C 310 245, 395 240, 395 280 
+           C 395 320, 130 280, 130 335 
+           C 130 380, 380 340, 380 390 
+           L 380 435 
+           C 380 410, 100 420, 100 335 
+           C 100 250, 360 290, 360 280 
+           C 360 270, 310 245, 256 245 Z" 
+        fill="url(#mainGrad)"/>
+</svg>

@@ -16,15 +16,15 @@ export default function LandingPage() {
       >
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center w-full" style={{ paddingLeft: "clamp(4px, 1vw, 12px)", paddingRight: "clamp(4px, 1vw, 12px)" }}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div 
-                style={{ width: "clamp(44px, 12vw, 56px)", height: "clamp(44px, 12vw, 56px)" }}
-                className="rounded-lg md:rounded-xl overflow-hidden shadow-md md:shadow-lg shadow-indigo-100 shrink-0"
+                style={{ width: "clamp(42px, 10vw, 52px)", height: "clamp(42px, 10vw, 52px)" }}
+                className="shrink-0 flex items-center justify-center p-0.5"
               >
                 <img
                   src="/triplan_logo.png"
                   alt="TripPro Logo"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain drop-shadow-sm"
                 />
               </div>
               <span 
