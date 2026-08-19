@@ -1,12 +1,46 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Plane, Users, Wallet, Shield, CheckCircle2, ChevronRight, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import tripproLogo from "../assets/logo.svg";
+import { auth } from "../lib/firebase";
+import { fetchUserTripsByUid } from "../lib/firestoreSync";
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) {
+        // Check if user has trips saved in localStorage first
+        const savedTrips = localStorage.getItem("trippro_trips");
+        if (savedTrips) {
+          try {
+            const parsed = JSON.parse(savedTrips);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              navigate("/dashboard", { replace: true });
+              return;
+            }
+          } catch {
+            // ignore
+          }
+        }
+        // Also verify in Firestore
+        fetchUserTripsByUid(user.uid).then((trips) => {
+          if (trips && trips.length > 0) {
+            localStorage.setItem("trippro_trips", JSON.stringify(trips));
+            if (!localStorage.getItem("trippro_active_trip_id")) {
+              localStorage.setItem("trippro_active_trip_id", trips[0].id);
+            }
+            navigate("/dashboard", { replace: true });
+          }
+        }).catch((err) => console.warn("LandingPage fetchUserTripsByUid error:", err));
+      }
+    });
+    return () => unsub();
+  }, [navigate]);
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-x-hidden flex flex-col justify-start">

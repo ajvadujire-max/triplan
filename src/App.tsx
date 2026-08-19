@@ -9,6 +9,7 @@ import { getDoc, getDocs, updateDoc, setDoc, doc, collection, query, where, onSn
 import { db } from "./lib/firebase";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import { CheckCircle2 } from "lucide-react";
 import { AdminPortal } from "./components/AdminPortal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { InitSuperAdmin } from "./components/InitSuperAdmin";
@@ -52,7 +53,9 @@ import {
   migrateLocalDataToFirestore,
   fetchTripById,
   removeTravellerFromTrip,
+  leaveOrDeleteTrip,
   verifyTripMembership,
+  fetchChecklistItems,
 } from "./lib/firestoreSync";
 
 function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
@@ -143,6 +146,19 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (location.state && (location.state as any).notice) {
+      setToastNotice((location.state as any).notice);
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => {
+        setToastNotice(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
+
   const activeTrip = trips.find((t) => t.id === selectedTripId) || trips[0];
 
   // Ref to track if we just explicitly left the trip ourselves
@@ -209,16 +225,33 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const validTabs = [
     "dashboard", "planner", "journey", "collections", "timeline",
     "travellers", "expenses", "vault", "weather", "weather_maps",
-    "finance", "diary", "route_tracker"
+    "finance", "diary", "route_tracker", "checklist"
   ];
 
   const activeTab = (validTabs.includes(rawTab) ? rawTab : "dashboard") as
-    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "diary" | "route_tracker";
+    "dashboard" | "planner" | "journey" | "collections" | "timeline" | "travellers" | "expenses" | "vault" | "weather" | "weather_maps" | "finance" | "diary" | "route_tracker" | "checklist";
 
   const handleSelectTab = (tab: string) => {
     if (tab === activeTab && pathSegments.length <= 1) return;
     navigate(`${basePath}/${tab}`);
   };
+
+  const [checklistStats, setChecklistStats] = useState<{ packedCount: number; totalCount: number }>({ packedCount: 0, totalCount: 47 });
+
+  useEffect(() => {
+    if (activeTrip?.id && user?.uid) {
+      fetchChecklistItems(activeTrip.id, user.uid).then((items) => {
+        if (items && items.length > 0) {
+          const uniqueItems = items.reduce((acc, current) => {
+            const x = acc.find(item => item.title === current.title && item.category === current.category);
+            return x ? acc : acc.concat([current]);
+          }, [] as any[]);
+          const packed = uniqueItems.filter((c) => c.isPacked).length;
+          setChecklistStats({ packedCount: packed, totalCount: uniqueItems.length });
+        }
+      });
+    }
+  }, [activeTrip?.id, user?.uid]);
 
   const [accounts, setAccounts] = useState<FinanceAccount[]>(() => {
     const saved = localStorage.getItem("trippro_accounts");
@@ -709,6 +742,21 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
       <ConnectivityIndicator />
+      
+      {toastNotice && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
+        >
+          <div className="bg-slate-900/95 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700/60 flex items-center gap-2 backdrop-blur-md">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastNotice}</span>
+          </div>
+        </motion.div>
+      )}
+
       {isLoadingCloud && (
         <div className="fixed top-3 right-3 z-50 pointer-events-none">
           <div className="bg-slate-900/90 dark:bg-slate-800/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg border border-slate-700/50 flex items-center gap-2 backdrop-blur-md transition-all">
@@ -737,6 +785,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         isAuthLoading={isAuthLoading}
         role={userRole}
         onRoleChange={(newRole) => setUserRole(newRole)}
+        checklistStats={checklistStats}
       />
 
       <MobileNavigation
@@ -758,6 +807,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         isAuthLoading={isAuthLoading}
         role={userRole}
         onRoleChange={(newRole) => setUserRole(newRole)}
+        checklistStats={checklistStats}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-[clamp(12px,2vw,24px)] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
@@ -828,7 +878,23 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             )}
 
             {activeTab === "vault" && (
-              <VaultChecklist trip={activeTrip} onUpdateTrip={handleUpdateTrip} currentUser={user} />
+              <VaultChecklist
+                trip={activeTrip}
+                onUpdateTrip={handleUpdateTrip}
+                currentUser={user}
+                mode="vault"
+                onChecklistStatsChange={setChecklistStats}
+              />
+            )}
+
+            {activeTab === "checklist" && (
+              <VaultChecklist
+                trip={activeTrip}
+                onUpdateTrip={handleUpdateTrip}
+                currentUser={user}
+                mode="checklist"
+                onChecklistStatsChange={setChecklistStats}
+              />
             )}
 
             {(activeTab === "weather" || activeTab === "weather_maps") && (
@@ -879,19 +945,18 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         }}
         onLeaveTrip={async (tripId) => {
           if (!user) return;
-          console.log("CONFIRM_LEAVE_CLICKED", {
+          console.log("[App] onLeaveTrip triggered:", {
             selectedTripId,
             currentTripId: tripId,
             uid: user.uid
           });
           try {
             justLeftRef.current = true;
-            await removeTravellerFromTrip({
+            const res = await leaveOrDeleteTrip({
               tripId: tripId,
-              travellerId: user.uid,
-              userId: user.uid,
-              reason: "left"
+              userId: user.uid
             });
+            console.log("[App] leaveOrDeleteTrip result:", res);
             
             const remainingTrips = trips.filter(t => t.id !== tripId);
             setTrips(remainingTrips);
@@ -907,14 +972,14 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
               }
             }
             
-            alert("You left the trip successfully.");
+            window.dispatchEvent(new Event("trip_changed"));
             
             if (remainingTrips.length === 0) {
               navigate("/join");
             }
           } catch (err: any) {
-            console.error("LEAVE TRIP FAILED:", err);
-            alert("Unable to leave trip. Please try again.");
+            console.error("[App] LEAVE/DELETE TRIP FAILED:", err);
+            throw new Error(err?.message || "Unable to process trip operation. Please try again.");
           }
         }}
         currentUserId={user?.uid}

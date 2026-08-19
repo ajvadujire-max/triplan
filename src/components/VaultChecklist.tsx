@@ -54,14 +54,17 @@ interface VaultChecklistProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
   currentUser: FirebaseUser | null;
+  mode?: "vault" | "checklist";
+  onChecklistStatsChange?: (stats: { packedCount: number; totalCount: number }) => void;
 }
 
 export const VaultChecklist: React.FC<VaultChecklistProps> = ({
   trip,
   onUpdateTrip,
   currentUser,
+  mode = "vault",
+  onChecklistStatsChange,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<"vault" | "checklist">("vault");
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
 
@@ -92,6 +95,13 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
         .finally(() => setIsLoadingChecklist(false));
     }
   }, [trip.id, currentUser?.uid]);
+
+  useEffect(() => {
+    if (onChecklistStatsChange) {
+      const packed = checklistItems.filter((c) => c.isPacked).length;
+      onChecklistStatsChange({ packedCount: packed, totalCount: checklistItems.length });
+    }
+  }, [checklistItems, onChecklistStatsChange]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -660,43 +670,8 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
   return (
     <div className="space-y-4 max-w-full overflow-x-hidden md:px-0">
-      {/* Tab Switcher - Optimized for Mobile Screen size */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs max-w-md mx-auto">
-        <button
-          onClick={() => {
-            setActiveSubTab("vault");
-            setSearchQuery("");
-            setCategoryFilter("all");
-          }}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-lg transition-all ${
-            activeSubTab === "vault"
-              ? "bg-indigo-600 text-white shadow-xs"
-              : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Folder className="w-3.5 h-3.5" />
-          <span>Documents ({currentDocuments.length})</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveSubTab("checklist");
-            setSearchQuery("");
-            setCategoryFilter("all");
-          }}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-lg transition-all ${
-            activeSubTab === "checklist"
-              ? "bg-indigo-600 text-white shadow-xs"
-              : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-          }`}
-        >
-          <CheckSquare className="w-3.5 h-3.5" />
-          <span>Checklist ({packedCount}/{currentChecklist.length})</span>
-        </button>
-      </div>
-
       {/* --- SUB-TAB 1: ENCRYPTED DOCUMENT VAULT --- */}
-      {activeSubTab === "vault" && (
+      {mode === "vault" && (
         <div className="space-y-3 max-w-md mx-auto px-1">
           {/* Header Actions Card */}
           <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-2.5">
@@ -814,7 +789,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
       )}
 
       {/* --- SUB-TAB 2: PACKING CHECKLIST --- */}
-      {activeSubTab === "checklist" && (
+      {mode === "checklist" && (
         <div className="space-y-4 max-w-md mx-auto px-1">
           {/* Compact Summary Header */}
           <div className="px-1 pt-2 pb-1 flex items-end justify-between">

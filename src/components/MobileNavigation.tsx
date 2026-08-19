@@ -25,7 +25,9 @@ import {
   Bell,
   Search,
   BookOpen,
-  MapPin
+  MapPin,
+  CheckSquare2,
+  FileText,
 } from "lucide-react";
 import { Trip } from "../types";
 
@@ -45,6 +47,7 @@ interface MobileNavigationProps {
   isAuthLoading?: boolean;
   role?: "traveller" | "organizer" | "super_admin";
   onRoleChange?: (role: "traveller" | "organizer" | "super_admin") => void;
+  checklistStats?: { packedCount: number; totalCount: number };
 }
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({
@@ -63,6 +66,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   isAuthLoading = false,
   role = "traveller",
   onRoleChange,
+  checklistStats,
 }) => {
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
   useModalBack(isMoreDrawerOpen, () => setIsMoreDrawerOpen(false));
@@ -82,7 +86,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
   const moreTabsAll = [
     { id: "finance", label: "Finance & Cashbook", icon: Wallet, description: "Account ledger audit sync", organizerOnly: true },
-    { id: "vault", label: "Vault & Packing", icon: Calendar, description: "Checklists & essential files" },
+    { id: "vault", label: "Document Vault", icon: FileText, description: "Secure travel tickets & IDs" },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun, description: "Live climate & route views" },
   ];
 
@@ -144,6 +148,20 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
             <span className="text-[11px] font-bold tracking-tight hidden xs:inline">Tracker</span>
           </button>
 
+          {/* Dedicated Checklist Quick Button */}
+          <button
+            onClick={() => onSelectTab("checklist")}
+            aria-label="Checklist"
+            title="Packing Checklist"
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl border transition-all active:scale-95 cursor-pointer ${
+              activeTab === "checklist"
+                ? "bg-indigo-600 text-white border-indigo-700 shadow-xs"
+                : "bg-indigo-50/90 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/80 shadow-xs"
+            }`}
+          >
+            <CheckSquare2 className={`w-3.5 h-3.5 ${activeTab === "checklist" ? "text-white" : "text-indigo-600 dark:text-indigo-400"}`} />
+          </button>
+
           {/* Dark Mode toggle */}
           <button
             onClick={onToggleDarkMode}
@@ -152,38 +170,6 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
           </button>
-
-          {/* User auth or trigger */}
-          {user ? (
-            <button
-              onClick={() => setIsMoreDrawerOpen(true)}
-              className="relative rounded-full border border-indigo-200 dark:border-indigo-800 overflow-hidden active:scale-95 transition-transform"
-            >
-              <Avatar src={user.photoURL} name={user.displayName} size="w-8 h-8 text-[10px]" />
-              {/* Online indicator dot */}
-              <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-white dark:border-slate-900 rounded-full z-10" />
-            </button>
-          ) : (
-            <button
-              onClick={onSignIn}
-              disabled={isAuthLoading}
-              className={`flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-100 dark:border-indigo-900 px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide transition-all ${
-                isAuthLoading ? "opacity-60 cursor-not-allowed" : "active:scale-95 cursor-pointer"
-              }`}
-            >
-              {isAuthLoading ? (
-                <>
-                  <div className="w-3 h-3 border border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                  <span>Sync...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkle className="w-3 h-3 animate-pulse" />
-                  <span>Sync</span>
-                </>
-              )}
-            </button>
-          )}
         </div>
       </header>
 

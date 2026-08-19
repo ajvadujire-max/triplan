@@ -558,101 +558,201 @@ export async function verifyTripMembership(uid: string, tripId: string): Promise
   }
 }
 
-export async function removeTravellerFromTrip(params: {
+export async function leaveOrDeleteTrip(params: {
   tripId: string;
-  travellerId: string;
-  userId: string; // The user making the request
-  reason: "left" | "removed_by_admin";
-}): Promise<void> {
+  userId: string;
+}): Promise<{ actionTaken: "left" | "deleted" }> {
+  const { tripId, userId } = params;
+  console.log("[Trip Delete/Leave] Initiating operation:", { tripId, userId });
+
+  if (!tripId || !userId) {
+    throw new Error("Missing trip or user identification.");
+  }
+
+  const tripRef = doc(db, "trips", tripId);
+  let tripSnap;
   try {
-    const { tripId, travellerId, userId, reason } = params;
-    console.log("REMOVE_TRAVELLER_CALLED", params);
+    tripSnap = await getDoc(tripRef);
+  } catch (getErr: any) {
+    console.error("[Trip Delete/Leave] Failed to fetch trip document:", getErr);
+    throw new Error(`Unable to fetch trip details: ${getErr.message || "Network/permission error"}`);
+  }
 
-    const tripRef = doc(db, "trips", tripId);
-    const tripSnap = await getDoc(tripRef);
-    if (!tripSnap.exists()) {
-      throw new Error("Trip not found");
-    }
+  if (!tripSnap.exists()) {
+    console.warn("[Trip Delete/Leave] Trip document does not exist in Firestore. Cleaning up local references.");
+    return { actionTaken: "deleted" };
+  }
 
-    const tripData = tripSnap.data() as Trip;
-    
-    // Determine roles
-    const isOrganizer = tripData.organizerUid === travellerId || tripData.organizerId === travellerId;
-    if (isOrganizer) {
-      throw new Error("You are the organizer of this trip. Transfer ownership or delete the trip instead.");
-    }
-    
-    if (reason === "removed_by_admin") {
-      const requesterIsOrganizer = tripData.organizerUid === userId || tripData.organizerId === userId;
-      if (!requesterIsOrganizer) {
-         throw new Error("Only the organizer can remove other travellers.");
+  const tripData = tripSnap.data() as Trip;
+  const isOrganizer = tripData.organizerUid === userId || tripData.organizerId === userId;
+  const activeMembers = (tripData.memberUids || []).filter(uid => uid);
+  const activeMembersCount = activeMembers.length;
+
+  console.log("[Trip Delete/Leave] Role assessment:", {
+    isOrganizer,
+    activeMembersCount,
+    organizerUid: tripData.organizerUid,
+    organizerId: tripData.organizerId,
+    userId
+  });
+
+  // CASE B: ORGANIZER OR SOLE MEMBER DELETING THE TRIP
+  if (isOrganizer || activeMembersCount <= 1) {
+    console.log("[Trip Delete/Leave] Executing DELETION of trip:", tripId);
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Delete main trip document
+      batch.delete(tripRef);
+
+      // 2. Delete registration doc in trip subcollection
+      const regRef = doc(db, "trips", tripId, "registrations", userId);
+      batch.delete(regRef);
+
+      // 3. Delete user membership doc in user subcollection
+      const userMembershipRef = doc(db, "users", userId, "memberships", tripId);
+      batch.delete(userMembershipRef);
+
+      // 4. Update user's active trip references if necessary
+      const userRef = doc(db, "users", userId);
+      try {
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.tripId === tripId || userData.lastActiveTripId === tripId) {
+            batch.update(userRef, {
+              tripId: "",
+              lastActiveTripId: "",
+              tripCode: "",
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      } catch (uErr) {
+        console.warn("[Trip Delete/Leave] User document check notice:", uErr);
       }
-    } else {
-      if (userId !== travellerId) {
-         throw new Error("You can only leave the trip yourself.");
-      }
-    }
 
-    // 1. Remove traveller from memberUids, but keep in travellers with status "left" for historical data
-    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== travellerId);
+      await batch.commit();
+      console.log("[Trip Delete/Leave] Trip deleted successfully from Firestore.");
+      return { actionTaken: "deleted" };
+    } catch (delErr: any) {
+      console.error("[Trip Delete/Leave] Error deleting trip document:", delErr);
+      throw new Error(`Failed to delete trip: ${delErr.message || "Database permission denied"}`);
+    }
+  }
+
+  // CASE A: NON-ORGANIZER MEMBER LEAVING THE TRIP
+  console.log("[Trip Delete/Leave] Executing LEAVE for member:", userId);
+  try {
+    const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== userId);
     const updatedTravellers = (tripData.travellers || []).map(t => {
-      if (t.id === travellerId) {
+      if (t.id === userId) {
         return { ...t, status: "left" as const };
       }
       return t;
     });
 
-    // 2. Query other memberships for the leaving user to find next active trip
-    const membershipsRef = collection(db, "users", travellerId, "memberships");
-    const membershipsSnap = await getDocs(membershipsRef);
-    const remainingMemberships = membershipsSnap.docs
-      .map(doc => doc.data())
-      .filter(m => m.tripId !== tripId);
-
-    let nextTripId = "";
-    let nextTripCode = "";
-    if (remainingMemberships.length > 0) {
-      nextTripId = remainingMemberships[0].tripId || "";
-      nextTripCode = remainingMemberships[0].tripCode || "";
-    }
-
-    // 3. Create a WriteBatch to make this operation atomic
     const batch = writeBatch(db);
 
-    // Update the trip document: remove user from memberUids & travellers
+    // Update trip doc
     batch.update(tripRef, {
       memberUids: updatedMemberUids,
       travellers: updatedTravellers,
       updatedAt: new Date().toISOString()
     });
 
-    // Delete registration document in trip subcollection
-    const regRef = doc(db, "trips", tripId, "registrations", travellerId);
+    // Delete registration subcollection doc
+    const regRef = doc(db, "trips", tripId, "registrations", userId);
     batch.delete(regRef);
 
-    // Delete membership document in user subcollection
-    const userMembershipRef = doc(db, "users", travellerId, "memberships", tripId);
+    // Delete membership doc in user subcollection
+    const userMembershipRef = doc(db, "users", userId, "memberships", userId);
     batch.delete(userMembershipRef);
 
-    // Check if the user document exists. If so, update it atomically.
-    const userRef = doc(db, "users", travellerId);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      batch.update(userRef, {
-        tripId: nextTripId,
-        lastActiveTripId: nextTripId,
-        tripCode: nextTripCode,
-        updatedAt: new Date().toISOString()
-      });
+    // Update user's active trip references
+    const userRef = doc(db, "users", userId);
+    try {
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.tripId === tripId || userData.lastActiveTripId === tripId) {
+          batch.update(userRef, {
+            tripId: "",
+            lastActiveTripId: "",
+            tripCode: "",
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    } catch (uErr) {
+      console.warn("[Trip Delete/Leave] User document check notice:", uErr);
     }
 
-    // Commit the entire atomic batch!
     await batch.commit();
-    console.log("REMOVE_TRAVELLER_ATOMIC_SUCCESS", { tripId, travellerId });
-  } catch (error) {
-    console.error("Error removing traveller:", error);
-    throw error;
+    console.log("[Trip Delete/Leave] Successfully left trip in Firestore.");
+    return { actionTaken: "left" };
+  } catch (leaveErr: any) {
+    console.error("[Trip Delete/Leave] Error leaving trip:", leaveErr);
+    throw new Error(`Failed to leave trip: ${leaveErr.message || "Database write failed"}`);
   }
+}
+
+export async function removeTravellerFromTrip(params: {
+  tripId: string;
+  travellerId: string;
+  userId: string; // The user making the request
+  reason: "left" | "removed_by_admin";
+}): Promise<void> {
+  const { tripId, travellerId, userId, reason } = params;
+  console.log("REMOVE_TRAVELLER_CALLED", params);
+
+  if (reason === "left" || userId === travellerId) {
+    await leaveOrDeleteTrip({ tripId, userId: travellerId });
+    return;
+  }
+
+  // Admin removing another traveller
+  const tripRef = doc(db, "trips", tripId);
+  const tripSnap = await getDoc(tripRef);
+  if (!tripSnap.exists()) {
+    throw new Error("Trip not found");
+  }
+
+  const tripData = tripSnap.data() as Trip;
+  const requesterIsOrganizer = tripData.organizerUid === userId || tripData.organizerId === userId;
+  if (!requesterIsOrganizer) {
+    throw new Error("Only the organizer can remove other travellers from this trip.");
+  }
+
+  const isTargetOrganizer = tripData.organizerUid === travellerId || tripData.organizerId === travellerId;
+  if (isTargetOrganizer) {
+    throw new Error("Cannot remove the primary organizer from the trip.");
+  }
+
+  const updatedMemberUids = (tripData.memberUids || []).filter(id => id !== travellerId);
+  const updatedTravellers = (tripData.travellers || []).map(t => {
+    if (t.id === travellerId) {
+      return { ...t, status: "left" as const };
+    }
+    return t;
+  });
+
+  const batch = writeBatch(db);
+
+  batch.update(tripRef, {
+    memberUids: updatedMemberUids,
+    travellers: updatedTravellers,
+    updatedAt: new Date().toISOString()
+  });
+
+  const regRef = doc(db, "trips", tripId, "registrations", travellerId);
+  batch.delete(regRef);
+
+  const userMembershipRef = doc(db, "users", travellerId, "memberships", tripId);
+  batch.delete(userMembershipRef);
+
+  await batch.commit();
+  console.log("REMOVE_TRAVELLER_ADMIN_SUCCESS", { tripId, travellerId });
 }
 
 export async function deleteChecklistItem(itemId: string): Promise<void> {

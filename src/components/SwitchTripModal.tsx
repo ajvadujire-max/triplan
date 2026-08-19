@@ -42,12 +42,20 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
   const [confirmLeaveTripId, setConfirmLeaveTripId] = useState<string | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   // Note: AnimatePresence handles isOpen conditional rendering
   const filteredTrips = trips.filter(
     (t) =>
       t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (t.inviteCode && t.inviteCode.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const selectedTripForLeave = confirmLeaveTripId ? trips.find(t => t.id === confirmLeaveTripId) : null;
+  const isOrganizerOfSelected = selectedTripForLeave && currentUserId && (
+    selectedTripForLeave.organizerUid === currentUserId || 
+    selectedTripForLeave.organizerId === currentUserId
   );
 
   const handleSelect = (tripId: string) => {
@@ -58,12 +66,15 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
   const handleLeaveConfirm = async () => {
     if (!confirmLeaveTripId || !onLeaveTrip) return;
     setIsLeaving(true);
+    setErrorMessage(null);
     try {
       await onLeaveTrip(confirmLeaveTripId);
       setConfirmLeaveTripId(null);
+      setErrorMessage(null);
       onClose();
-    } catch (err) {
-      console.error("Failed to leave trip:", err);
+    } catch (err: any) {
+      console.error("Failed to leave/delete trip:", err);
+      setErrorMessage(err?.message || "Unable to process trip operation. Please check your connection and try again.");
     } finally {
       setIsLeaving(false);
     }
@@ -256,7 +267,7 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
       </motion.div>
     )}
 
-      {/* Confirm Leave Trip Modal */}
+      {/* Confirm Leave/Delete Trip Modal */}
       {confirmLeaveTripId && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -270,29 +281,41 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
-                Leave Trip?
+                {isOrganizerOfSelected ? "Delete Trip?" : "Leave Trip?"}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                You will no longer see this trip on your dashboard. Your expenses and payment history recorded during your participation will be retained.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                {isOrganizerOfSelected
+                  ? `Are you sure you want to delete "${selectedTripForLeave?.name || "this trip"}"? As the trip organizer, deleting this trip will remove it for all members.`
+                  : `Are you sure you want to leave "${selectedTripForLeave?.name || "this trip"}"? You will no longer see this trip on your dashboard.`}
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="p-2.5 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-700 dark:text-rose-300 text-left font-medium">
+                {errorMessage}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 disabled={isLeaving}
-                onClick={() => setConfirmLeaveTripId(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                onClick={() => {
+                  setConfirmLeaveTripId(null);
+                  setErrorMessage(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 disabled={isLeaving}
                 onClick={handleLeaveConfirm}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 {isLeaving ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <span>Confirm Leave</span>
+                  <span>{isOrganizerOfSelected ? "Confirm Delete" : "Confirm Leave"}</span>
                 )}
               </button>
             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Ticket, AlertCircle, ArrowLeft } from "lucide-react";
 import { motion } from "motion/react";
 import { fetchTripByInviteCode } from "../lib/firestoreSync";
+import { auth } from "../lib/firebase";
 
 export default function JoinTripByCode() {
   const [code, setCode] = useState(() => localStorage.getItem("trippro_last_trip_code") || "");
@@ -20,7 +21,7 @@ export default function JoinTripByCode() {
 
     try {
       // 1. Search Firestore trips where tripCode or inviteCode == enteredCode
-      const trip = await fetchTripByInviteCode(cleanCode);
+      let trip = await fetchTripByInviteCode(cleanCode);
       if (!trip) {
         // Also check local storage as fallback
         const savedTrips = localStorage.getItem("trippro_trips");
@@ -35,9 +36,29 @@ export default function JoinTripByCode() {
           setIsLoading(false);
           return;
         }
+        trip = foundLocal;
       }
 
-      // If trip exists, save as last joined code and open Join Trip page
+      // 2. Check if the current logged-in user is already a member of this trip
+      const currentUser = auth.currentUser;
+      if (currentUser && trip) {
+        const isAlreadyMember = 
+          trip.organizerUid === currentUser.uid ||
+          trip.organizerId === currentUser.uid ||
+          (Array.isArray(trip.memberUids) && trip.memberUids.includes(currentUser.uid)) ||
+          (Array.isArray(trip.travellers) && trip.travellers.some((t: any) => t.id === currentUser.uid && t.status !== "left"));
+
+        if (isAlreadyMember) {
+          localStorage.setItem("trippro_active_trip_id", trip.id);
+          localStorage.setItem("trippro_last_trip_id", trip.id);
+          localStorage.setItem("trippro_last_trip_code", cleanCode);
+          window.dispatchEvent(new Event("trip_changed"));
+          navigate("/dashboard", { replace: true, state: { notice: `You're already a member of ${trip.name}.` } });
+          return;
+        }
+      }
+
+      // If trip exists and user is not yet a member, open Join Trip registration page
       localStorage.setItem("trippro_last_trip_code", cleanCode);
       navigate(`/t/${cleanCode}`);
     } catch (err) {

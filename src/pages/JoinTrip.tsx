@@ -120,6 +120,16 @@ export default function JoinTrip() {
     return isOrganizer || isMemberUid || isTraveller;
   }, [currentUser, trip]);
 
+  useEffect(() => {
+    if (isAlreadyMember && trip) {
+      localStorage.setItem("trippro_active_trip_id", trip.id);
+      localStorage.setItem("trippro_last_trip_id", trip.id);
+      localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
+      window.dispatchEvent(new Event("trip_changed"));
+      navigate("/dashboard", { replace: true, state: { notice: `You're already a member of ${trip.name}.` } });
+    }
+  }, [isAlreadyMember, trip, navigate, tripCode]);
+
   const coverImage = trip?.coverPhoto || trip?.coverImage || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80";
 
   const handleGoogleJoin = async () => {
@@ -491,35 +501,14 @@ export default function JoinTrip() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white rounded-3xl shadow-xl p-[clamp(20px,4vw,32px)] text-center border border-slate-100 space-y-4"
+          className="max-w-sm w-full bg-white rounded-3xl shadow-xl p-6 text-center border border-slate-100 space-y-3"
         >
-          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
-            <UserCheck className="w-8 h-8" />
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+            <UserCheck className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900">Already Joined!</h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            You are already a member of <strong>{trip?.name}</strong>. Your traveller session is active.
-          </p>
-          <button
-            onClick={() => {
-              if (trip) {
-                localStorage.setItem("trippro_active_trip_id", trip.id);
-                localStorage.setItem("trippro_last_trip_id", trip.id);
-                localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
-                window.dispatchEvent(new Event("trip_changed"));
-              }
-              navigate("/dashboard");
-            }}
-            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg cursor-pointer"
-          >
-            Open Trip Dashboard
-          </button>
-          <button
-            onClick={() => navigate("/join")}
-            className="w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs cursor-pointer"
-          >
-            Join Another Trip
-          </button>
+          <h2 className="text-lg font-extrabold text-slate-900">Opening {trip?.name}...</h2>
+          <p className="text-xs text-slate-500">You're already a member of this trip. Redirecting to your dashboard.</p>
+          <div className="w-5 h-5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin mx-auto pt-1" />
         </motion.div>
       </div>
     );

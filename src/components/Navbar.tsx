@@ -24,6 +24,8 @@ import {
   Users,
   BookOpen,
   Navigation,
+  CheckSquare2,
+  FileText,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -42,6 +44,7 @@ interface NavbarProps {
   isAuthLoading?: boolean;
   role?: "traveller" | "organizer" | "super_admin";
   onRoleChange?: (role: "traveller" | "organizer" | "super_admin") => void;
+  checklistStats?: { packedCount: number; totalCount: number };
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -60,6 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAuthLoading = false,
   role = "traveller",
   onRoleChange,
+  checklistStats,
 }) => {
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
   const isOrganizerCreator = !!(user && activeTrip && activeTrip.organizerId === user.uid);
@@ -70,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "diary", label: "Travel Diary", icon: BookOpen },
     { id: "expenses", label: "Split Expenses", icon: Wallet },
     { id: "travellers", label: "Travellers & Budgets", icon: Users },
-    { id: "vault", label: "Vault & Packing", icon: Calendar },
+    { id: "vault", label: "Document Vault", icon: FileText },
     { id: "weather_maps", label: "Weather & Maps", icon: CloudSun },
     { id: "finance", label: "Finance & Cashbook", icon: Wallet, organizerOnly: true },
     { id: "route_tracker", label: "Route Tracker", icon: MapPin },
@@ -160,6 +164,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Route Tracker</span>
           </button>
 
+          {/* Quick Checklist Top Button */}
+          <button
+            onClick={() => onSelectTab("checklist")}
+            aria-label="Checklist"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all active:scale-95 cursor-pointer shadow-xs ${
+              activeTab === "checklist"
+                ? "bg-indigo-600 text-white border-indigo-700 shadow-indigo-500/20"
+                : "bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-900 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800"
+            }`}
+          >
+            <CheckSquare2 className={`w-4 h-4 ${activeTab === "checklist" ? "text-white" : "text-indigo-600 dark:text-indigo-400"}`} />
+            <span>Checklist</span>
+          </button>
+
           <button
             onClick={onOpenCreateTrip}
             className="flex items-center gap-1.5 bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-all active:scale-95"
@@ -197,47 +215,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onToggleDarkMode}
             aria-label="Toggle dark mode"
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors mr-1"
+            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
           </button>
-
-          {user ? (
-            <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-850 py-1 pl-1.5 pr-2 sm:pr-3 rounded-xl shadow-xs transition-all">
-              <Avatar src={user.photoURL} name={user.displayName} size="w-7 h-7 text-[10px]" />
-              <div className="hidden md:block text-left text-[11px] leading-tight">
-                <p className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
-                  {user.displayName}
-                </p>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase text-[8px] tracking-wide flex items-center gap-0.5">
-                  <span className="w-1 h-1 bg-emerald-500 rounded-full animate-ping" /> Cloud Active
-                </span>
-              </div>
-              <button
-                onClick={onSignOut}
-                className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 text-[10px] font-bold uppercase tracking-wider py-1 px-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ml-1"
-              >
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onSignIn}
-              disabled={isAuthLoading}
-              className={`flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-800/80 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3 py-2 rounded-lg transition-all shadow-xs ${
-                isAuthLoading ? "opacity-60 cursor-not-allowed" : "active:scale-95 cursor-pointer"
-              }`}
-            >
-              {isAuthLoading ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                  <span>Connecting...</span>
-                </>
-              ) : (
-                <span>Sync to Cloud</span>
-              )}
-            </button>
-          )}
         </div>
       </div>
 
