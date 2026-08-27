@@ -1979,7 +1979,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       {/* 3. MAIN LIVE MAP VIEW */}
       {activeViewTab === "live" && (
-        <div className="space-y-2.5 sm:space-y-3">
+        <div className="space-y-3.5 sm:space-y-4">
           {/* Active Route Recovered Notification Banner */}
           {recoveredNotice && trackingState !== "idle" && (
             <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-emerald-900 dark:text-emerald-200 text-xs font-medium animate-fadeIn">
@@ -1998,272 +1998,346 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
               </button>
             </div>
           )}
-          {/* Real-time Telemetry Stats Grid - Compact 2x2 Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
-            {/* Total Distance */}
-            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-                <span>Total Distance</span>
-                <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
-              </div>
-              <div className="mt-0.5 sm:mt-1 flex items-baseline gap-1">
-                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {totalDistanceKm.toFixed(2)}
-                </span>
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500">KM</span>
-              </div>
-            </div>
 
-            {/* Tracking Duration */}
-            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-                <span>Tracking Time</span>
-                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
-              </div>
-              <div className="mt-0.5 sm:mt-1">
-                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-                  {formatDurationDigital(elapsedSeconds)}
-                </span>
-              </div>
-            </div>
-
-            {/* Current Speed */}
-            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-                <span>Current Speed</span>
-                <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
-              </div>
-              <div className="mt-0.5 sm:mt-1 flex items-baseline gap-1">
-                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {currentSpeedKmh.toFixed(1)}
-                </span>
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500">km/h</span>
-              </div>
-            </div>
-
-            {/* GPS Accuracy */}
-            <div className="bg-white dark:bg-slate-900 px-3 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-                <span>GPS Accuracy</span>
-                <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
-              </div>
-              <div className="mt-0.5 sm:mt-1 flex items-baseline gap-1">
-                <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  ±{currentPosition ? currentPosition.accuracy : "--"}
-                </span>
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500">m</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Map Canvas Container */}
-          <div
-            className={`relative w-full rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 transition-all ${
-              isFullscreen
-                ? "fixed inset-0 z-50 rounded-none h-[100dvh] w-screen"
-                : "h-[clamp(200px,34dvh,480px)] sm:h-[clamp(320px,45dvh,540px)]"
-            }`}
-          >
-            {/* The Leaflet Div */}
-            <div ref={mapContainerRef} className="w-full h-full z-0" />
-
-            {/* Locating You Overlay */}
-            {isLocating && !currentPosition && (
-              <div className="absolute inset-0 z-20 bg-slate-900/10 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
-                <div className="bg-white/95 dark:bg-slate-900/95 px-4 py-2.5 rounded-full shadow-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-extrabold text-slate-800 dark:text-slate-100 animate-fadeIn">
-                  <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin" />
-                  <span>Locating you…</span>
-                </div>
-              </div>
-            )}
-
-            {/* Permission Denied Overlay */}
-            {!isLocating && !currentPosition && gpsPermissionState === "denied" && (
-              <div className="absolute inset-0 z-20 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-xs pointer-events-auto">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
-                    <AlertTriangle className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
-                      Location Access Required
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Allow location access to show your current position on the map.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleEnableLocationClick}
-                    className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    Enable Location
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Position Unavailable Overlay */}
-            {!isLocating && !currentPosition && gpsPermissionState === "unavailable" && (
-              <div className="absolute inset-0 z-20 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-xs pointer-events-auto">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mx-auto">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
-                      Unable to Determine Location
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Please check that GPS / Location services are enabled on your device.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => detectAndShowCurrentLocation(true, true)}
-                    className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Retry Location</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Floating Top Bar (Active Tracking Indicator & Controls) */}
-            <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-12 sm:right-14 z-10 flex items-center justify-between pointer-events-none">
+          {/* Status Bar Above Map (Active Tracking, Paused, or Saved Route View) */}
+          {(trackingState !== "idle" || selectedSessionToView) && (
+            <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs text-xs font-bold animate-fadeIn">
               {trackingState === "tracking" && (
-                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 dark:bg-slate-900/95 backdrop-blur text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg border border-slate-700/60 text-[10px] sm:text-xs font-bold animate-fadeIn">
-                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full animate-ping" />
-                  <span>TRACKING ACTIVE</span>
-                  <span className="text-slate-400">|</span>
-                  <span className="text-emerald-400">{routePoints.length} pts</span>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
+                    <span className="font-extrabold uppercase tracking-wide">TRACKING ACTIVE</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium">
+                    <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{routePoints.length}</span>
+                    <span>GPS Points</span>
+                  </div>
                 </div>
               )}
 
               {trackingState === "paused" && (
-                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-amber-500/95 backdrop-blur text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg text-[10px] sm:text-xs font-extrabold animate-fadeIn">
-                  <Pause className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span>PAUSED</span>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <Pause className="w-4 h-4 text-amber-500" />
+                    <span className="font-extrabold uppercase tracking-wide">TRACKING PAUSED</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium">
+                    <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{routePoints.length}</span>
+                    <span>GPS Points Recorded</span>
+                  </div>
                 </div>
               )}
 
-              {selectedSessionToView && (
-                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-indigo-600/95 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg text-[10px] sm:text-xs font-bold">
-                  <span>Saved Route ({selectedSessionToView.totalDistanceKm} KM)</span>
+              {selectedSessionToView && trackingState === "idle" && (
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                    <Navigation className="w-4 h-4" />
+                    <span>Viewing Saved Route ({selectedSessionToView.totalDistanceKm} KM)</span>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => setSelectedSessionToView(null)}
-                    className="p-0.5 hover:bg-white/20 rounded-full"
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 cursor-pointer"
                   >
-                    <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               )}
+            </div>
+          )}
 
-              {autoCenter && (trackingState === "tracking" || routePoints.length > 0) && (
-                <div className="pointer-events-auto flex items-center gap-1.5 bg-indigo-600/90 dark:bg-indigo-700/90 text-white px-2.5 py-1 rounded-full shadow-md text-[10px] sm:text-xs font-bold border border-indigo-400/30 backdrop-blur animate-fadeIn">
-                  <Maximize2 className="w-3 h-3 text-indigo-200" />
-                  <span>AUTO-FIT ROUTE</span>
+          {/* Main Layout Grid: Mobile stacks Stats -> Map; Desktop (lg:) side-by-side Map (left) + Stats (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 lg:gap-4 items-stretch">
+            
+            {/* Real-time Telemetry Stats Grid */}
+            <div className="lg:col-span-1 order-1 lg:order-2 grid grid-cols-2 lg:grid-cols-1 gap-2.5 sm:gap-3">
+              {/* Total Distance */}
+              <div className="bg-white dark:bg-slate-900 px-3.5 py-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                  <span>Total Distance</span>
+                  <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
                 </div>
-              )}
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {totalDistanceKm.toFixed(2)}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">KM</span>
+                </div>
+              </div>
+
+              {/* Tracking Duration */}
+              <div className="bg-white dark:bg-slate-900 px-3.5 py-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                  <span>Tracking Time</span>
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+                </div>
+                <div className="mt-1">
+                  <span className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                    {formatDurationDigital(elapsedSeconds)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Current Speed */}
+              <div className="bg-white dark:bg-slate-900 px-3.5 py-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                  <span>Current Speed</span>
+                  <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
+                </div>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {currentSpeedKmh.toFixed(1)}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">km/h</span>
+                </div>
+              </div>
+
+              {/* GPS Accuracy */}
+              <div className="bg-white dark:bg-slate-900 px-3.5 py-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                  <span>GPS Accuracy</span>
+                  <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
+                </div>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                    ±{currentPosition ? currentPosition.accuracy : "--"}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">m</span>
+                </div>
+              </div>
             </div>
 
-            {/* Floating Map Utility Buttons (Right Side) */}
-            <div className="absolute top-10 sm:top-14 right-2.5 sm:right-3 z-10 flex flex-col gap-1.5 sm:gap-2">
-              {/* My Location / Recenter */}
-              <button
-                onClick={handleRecenter}
-                title="Center on My Location"
-                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border transition-all active:scale-95 ${
-                  autoCenter
-                    ? "bg-indigo-600 text-white border-indigo-700 shadow-indigo-500/20"
-                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700"
+            {/* Interactive Map Canvas Container (Unobstructed) */}
+            <div className="lg:col-span-2 order-2 lg:order-1 flex flex-col">
+              <div
+                className={`relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 transition-all ${
+                  isFullscreen
+                    ? "fixed inset-0 z-50 rounded-none h-[100dvh] w-screen"
+                    : "h-[360px] sm:h-[440px] lg:h-[490px]"
                 }`}
               >
-                <Compass className={`w-4 h-4 sm:w-5 sm:h-5 ${autoCenter ? "animate-spin" : ""}`} />
-              </button>
+                {/* The Leaflet Div */}
+                <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-              {/* Fit Entire Route Bounds */}
-              {(routePoints.length > 1 || selectedSessionToView) && (
-                <button
-                  onClick={handleFitRouteBounds}
-                  title="Fit Complete Route"
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
-                >
-                  <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 rotate-45" />
-                </button>
-              )}
-
-              {/* Tile layer switcher */}
-              <button
-                onClick={() =>
-                  setMapType((prev) =>
-                    prev === "voyager" ? "streets" : prev === "streets" ? "satellite" : "voyager"
-                  )
-                }
-                title="Switch Map Layers"
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
-              >
-                <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
-              </button>
-
-              {/* Fullscreen Toggle */}
-              <button
-                onClick={() => setIsFullscreen((prev) => !prev)}
-                title="Toggle Fullscreen"
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
-                ) : (
-                  <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
+                {/* Locating You Overlay */}
+                {isLocating && !currentPosition && (
+                  <div className="absolute inset-0 z-20 bg-slate-900/10 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+                    <div className="bg-white/95 dark:bg-slate-900/95 px-4 py-2.5 rounded-full shadow-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-extrabold text-slate-800 dark:text-slate-100 animate-fadeIn">
+                      <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin" />
+                      <span>Locating you…</span>
+                    </div>
+                  </div>
                 )}
-              </button>
-            </div>
 
-            {/* Floating Bottom Control Panel */}
-            <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-3 right-2.5 sm:right-3 z-10 flex items-center justify-center pointer-events-none">
-              <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl flex items-center gap-2 sm:gap-3 max-w-lg w-full justify-between">
-                {trackingState === "idle" ? (
+                {/* Permission Denied Overlay */}
+                {!isLocating && !currentPosition && gpsPermissionState === "denied" && (
+                  <div className="absolute inset-0 z-20 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-xs pointer-events-auto">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
+                          Location Access Required
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Allow location access to show your current position on the map.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleEnableLocationClick}
+                        className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+                      >
+                        Enable Location
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Position Unavailable Overlay */}
+                {!isLocating && !currentPosition && gpsPermissionState === "unavailable" && (
+                  <div className="absolute inset-0 z-20 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-xs pointer-events-auto">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mx-auto">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
+                          Unable to Determine Location
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Please check that GPS / Location services are enabled on your device.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => detectAndShowCurrentLocation(true, true)}
+                        className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Retry Location</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Map Utility Controls (Only map-related controls on top right) */}
+                <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+                  {/* My Location / Recenter */}
                   <button
-                    onClick={handleStartRoute}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 sm:py-3.5 px-4 sm:px-6 rounded-lg sm:rounded-xl shadow-md transition-all active:scale-98 text-sm sm:text-base cursor-pointer min-h-[44px]"
+                    type="button"
+                    onClick={handleRecenter}
+                    title="Center on My Location"
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-md border transition-all active:scale-95 cursor-pointer ${
+                      autoCenter
+                        ? "bg-indigo-600 text-white border-indigo-700 shadow-indigo-500/20"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    }`}
                   >
-                    <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
-                    <span>START ROUTE</span>
+                    <Compass className={`w-4 h-4 sm:w-5 sm:h-5 ${autoCenter ? "animate-spin" : ""}`} />
                   </button>
-                ) : (
-                  <>
-                    {trackingState === "tracking" ? (
-                      <button
-                        onClick={handlePauseTracking}
-                        className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
-                      >
-                        <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
-                        <span>PAUSE TRACKING</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleResumeTracking}
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
-                      >
-                        <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
-                        <span>RESUME TRACKING</span>
-                      </button>
-                    )}
 
+                  {/* Fit Entire Route Bounds */}
+                  {(routePoints.length > 1 || selectedSessionToView) && (
                     <button
-                      onClick={() => setShowEndConfirmation(true)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
+                      type="button"
+                      onClick={handleFitRouteBounds}
+                      title="Fit Complete Route"
+                      className="w-9 h-9 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
                     >
-                      <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
-                      <span>END ROUTE</span>
+                      <Navigation className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 rotate-45" />
                     </button>
-                  </>
+                  )}
+
+                  {/* Switch Map Tiles */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMapType((prev) =>
+                        prev === "voyager" ? "streets" : prev === "streets" ? "satellite" : "voyager"
+                      )
+                    }
+                    title="Switch Map Layers"
+                    className="w-9 h-9 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
+                  </button>
+
+                  {/* Fullscreen Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFullscreen((prev) => !prev)}
+                    title="Toggle Fullscreen"
+                    className="w-9 h-9 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isFullscreen ? (
+                      <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
+                    ) : (
+                      <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 dark:text-slate-300" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Fullscreen Mode Bottom Controls Overlay (Only visible when user explicitly expands map to fullscreen) */}
+                {isFullscreen && (
+                  <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-center pointer-events-none">
+                    <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl flex items-center gap-3 max-w-lg w-full justify-between">
+                      {trackingState === "idle" ? (
+                        <button
+                          type="button"
+                          onClick={handleStartRoute}
+                          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 px-5 rounded-xl shadow-md transition-all active:scale-98 text-sm cursor-pointer min-h-[44px]"
+                        >
+                          <Play className="w-4 h-4 fill-white" />
+                          <span>START ROUTE</span>
+                        </button>
+                      ) : (
+                        <>
+                          {trackingState === "tracking" ? (
+                            <button
+                              type="button"
+                              onClick={handlePauseTracking}
+                              className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
+                            >
+                              <Pause className="w-4 h-4 fill-white" />
+                              <span>PAUSE TRACKING</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleResumeTracking}
+                              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
+                            >
+                              <Play className="w-4 h-4 fill-white" />
+                              <span>RESUME TRACKING</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setShowEndConfirmation(true)}
+                            className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-all active:scale-95 text-xs sm:text-sm cursor-pointer min-h-[44px]"
+                          >
+                            <Square className="w-4 h-4 fill-white" />
+                            <span>END ROUTE</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
+
           </div>
+
+          {/* DEDICATED TRACKING ACTIONS CARD BELOW THE MAP */}
+          {!isFullscreen && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-sm animate-fadeIn">
+              {trackingState === "idle" ? (
+                <button
+                  type="button"
+                  onClick={handleStartRoute}
+                  className="w-full flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 sm:py-4 px-6 rounded-xl shadow-md transition-all active:scale-[0.99] text-sm sm:text-base cursor-pointer min-h-[48px]"
+                >
+                  <Play className="w-5 h-5 fill-white" />
+                  <span>START ROUTE</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  {trackingState === "tracking" ? (
+                    <button
+                      type="button"
+                      onClick={handlePauseTracking}
+                      className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer min-h-[48px]"
+                    >
+                      <Pause className="w-4 h-4 fill-white" />
+                      <span>PAUSE TRACKING</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResumeTracking}
+                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer min-h-[48px]"
+                    >
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>RESUME TRACKING</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowEndConfirmation(true)}
+                    className="flex-1 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer min-h-[48px]"
+                  >
+                    <Square className="w-4 h-4 fill-white" />
+                    <span>END ROUTE</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
