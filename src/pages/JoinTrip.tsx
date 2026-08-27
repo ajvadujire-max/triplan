@@ -85,7 +85,7 @@ export default function JoinTrip() {
         const foundTrip = await fetchTripByInviteCode(tripCode.trim().toUpperCase());
         if (!foundTrip) {
           // Check local storage fallback
-          const savedTrips = localStorage.getItem("trippro_trips");
+          const savedTrips = localStorage.getItem("triplan_trips");
           const localTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
           const foundLocal = localTrips.find(t => 
             (t.inviteCode && t.inviteCode.toUpperCase() === tripCode.trim().toUpperCase()) ||
@@ -122,9 +122,9 @@ export default function JoinTrip() {
 
   useEffect(() => {
     if (isAlreadyMember && trip) {
-      localStorage.setItem("trippro_active_trip_id", trip.id);
-      localStorage.setItem("trippro_last_trip_id", trip.id);
-      localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
+      localStorage.setItem("triplan_active_trip_id", trip.id);
+      localStorage.setItem("triplan_last_trip_id", trip.id);
+      localStorage.setItem("triplan_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
       window.dispatchEvent(new Event("trip_changed"));
       navigate("/dashboard", { replace: true, state: { notice: `You're already a member of ${trip.name}.` } });
     }
@@ -246,7 +246,7 @@ export default function JoinTrip() {
           memberUids: updatedMemberUids
         };
 
-        const savedTrips = localStorage.getItem("trippro_trips");
+        const savedTrips = localStorage.getItem("triplan_trips");
         const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
         const idx = currentTrips.findIndex(t => t.id === trip.id);
         if (idx >= 0) {
@@ -254,10 +254,10 @@ export default function JoinTrip() {
         } else {
           currentTrips.unshift(updatedTripDoc);
         }
-        localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
-        localStorage.setItem("trippro_active_trip_id", trip.id);
-        localStorage.setItem("trippro_last_trip_id", trip.id);
-        localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
+        localStorage.setItem("triplan_trips", JSON.stringify(currentTrips));
+        localStorage.setItem("triplan_active_trip_id", trip.id);
+        localStorage.setItem("triplan_last_trip_id", trip.id);
+        localStorage.setItem("triplan_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
         window.dispatchEvent(new Event("trip_changed"));
 
         setIsSuccess(true);
@@ -438,7 +438,7 @@ export default function JoinTrip() {
           memberUids: updatedMemberUids
         };
 
-        const savedTrips = localStorage.getItem("trippro_trips");
+        const savedTrips = localStorage.getItem("triplan_trips");
         const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
         const idx = currentTrips.findIndex(t => t.id === trip.id);
         if (idx >= 0) {
@@ -446,10 +446,10 @@ export default function JoinTrip() {
         } else {
           currentTrips.unshift(updatedTripDoc);
         }
-        localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
-        localStorage.setItem("trippro_active_trip_id", trip.id);
-        localStorage.setItem("trippro_last_trip_id", trip.id);
-        localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
+        localStorage.setItem("triplan_trips", JSON.stringify(currentTrips));
+        localStorage.setItem("triplan_active_trip_id", trip.id);
+        localStorage.setItem("triplan_last_trip_id", trip.id);
+        localStorage.setItem("triplan_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
         window.dispatchEvent(new Event("trip_changed"));
 
         setIsSuccess(true);
@@ -530,9 +530,9 @@ export default function JoinTrip() {
           <button 
             onClick={() => {
               if (trip) {
-                localStorage.setItem("trippro_active_trip_id", trip.id);
-                localStorage.setItem("trippro_last_trip_id", trip.id);
-                localStorage.setItem("trippro_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
+                localStorage.setItem("triplan_active_trip_id", trip.id);
+                localStorage.setItem("triplan_last_trip_id", trip.id);
+                localStorage.setItem("triplan_last_trip_code", trip.inviteCode || trip.tripCode || tripCode || "");
                 window.dispatchEvent(new Event("trip_changed"));
               }
               navigate("/dashboard");

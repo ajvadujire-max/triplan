@@ -41,7 +41,7 @@ export default function SuperAdminDashboard() {
           </div>
           {isSidebarOpen && (
             <div className="ml-4">
-              <div className="font-bold text-xl tracking-tight leading-none">TripPro</div>
+              <div className="font-bold text-xl tracking-tight leading-none">Triplan</div>
               <div className="text-[10px] text-rose-500 font-black uppercase tracking-widest mt-1">Super Admin</div>
             </div>
           )}

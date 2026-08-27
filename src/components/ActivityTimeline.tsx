@@ -60,6 +60,7 @@ interface ActivityTimelineProps {
   onUpdateTrip: (updatedTrip: Trip) => void;
   hideSegments?: boolean;
   role?: string;
+  isDesktop?: boolean;
 }
 
 // Category Config with Icons & Colors
@@ -195,6 +196,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   onUpdateTrip,
   role = "traveller",
   hideSegments: initialHideSegments = false,
+  isDesktop = false,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
   // Navigation View Modes
@@ -687,9 +689,9 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   };
 
   return (
-    <div className="space-y-3 sm:space-y-6 animate-fadeIn">
+    <div className={`space-y-3 sm:space-y-6 animate-fadeIn ${isDesktop ? "max-w-[1440px] mx-auto px-4" : ""}`}>
       {/* 1. STICKY PAGE HEADER */}
-      <div className="relative sm:sticky sm:top-16 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
+      <div className={`relative sm:sticky sm:top-16 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 ${isDesktop ? "rounded-[24px]" : "rounded-xl sm:rounded-2xl"}`}>
         <div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-[#1AAB67]/10 dark:bg-[#1AAB67]/20 text-[#159257] dark:text-[#74D0A5] border border-[#1AAB67]/30 dark:border-[#159257]">
@@ -767,21 +769,21 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       </div>
 
       {/* 2. SMART STATS DASHBOARD HEADER */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className={`grid gap-3 ${isDesktop ? "grid-cols-6" : "grid-cols-2 sm:grid-cols-3"}`}>
+        <div className={`p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-lg sm:rounded-xl"}`}>
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Events</p>
-          <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">{stats.totalActivities + stats.totalSegments}</p>
+          <p className={`${isDesktop ? "text-2xl" : "text-base sm:text-xl"} font-bold text-slate-900 dark:text-white mt-0.5`}>{stats.totalActivities + stats.totalSegments}</p>
           <p className="text-[9px] sm:text-[10px] text-[#1AAB67] dark:text-[#34D399] font-semibold mt-1">
             {stats.totalActivities} Act + {stats.totalSegments} Seg
           </p>
         </div>
 
-        <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className={`p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-lg sm:rounded-xl"}`}>
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completion</p>
           <div className="flex items-baseline gap-2 mt-0.5">
-            <p className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.completionRate}%</p>
+            <p className={`${isDesktop ? "text-2xl" : "text-base sm:text-xl"} font-bold text-emerald-600 dark:text-emerald-400`}>{stats.completionRate}%</p>
           </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 rounded-full mt-2 overflow-hidden">
+          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
             <div
               className="bg-emerald-500 h-full rounded-full transition-all duration-500"
               style={{ width: `${stats.completionRate}%` }}
@@ -789,31 +791,31 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
           </div>
         </div>
 
-        <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className={`p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-lg sm:rounded-xl"}`}>
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Travel Distance</p>
-          <p className="text-base sm:text-xl font-bold text-[#1AAB67] dark:text-[#34D399] mt-0.5">{stats.totalDist.toLocaleString()} KM</p>
+          <p className={`${isDesktop ? "text-2xl" : "text-base sm:text-xl"} font-bold text-[#1AAB67] dark:text-[#34D399] mt-0.5`}>{stats.totalDist.toLocaleString()} KM</p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 flex items-center gap-1">
             <Navigation className="w-2.5 h-2.5 text-[#1AAB67]" /> Across {stats.totalSegments} Seg
           </p>
         </div>
 
-        <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className={`p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-lg sm:rounded-xl"}`}>
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Travel Time</p>
-          <p className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">{stats.travelTimeString}</p>
+          <p className={`${isDesktop ? "text-2xl" : "text-base sm:text-xl"} font-bold text-amber-600 dark:text-amber-400 mt-0.5`}>{stats.travelTimeString}</p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1">Movement duration</p>
         </div>
 
-        <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className={`p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-lg sm:rounded-xl"}`}>
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Combined Cost</p>
-          <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+          <p className={`${isDesktop ? "text-2xl" : "text-base sm:text-xl"} font-bold text-slate-900 dark:text-white mt-0.5`}>
             {trip.currency}{stats.totalCost.toLocaleString()}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1">Act + Transport</p>
         </div>
 
-        <div className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className={`p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-lg sm:rounded-xl"}`}>
           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trip Duration</p>
-          <p className="text-[11px] sm:text-sm font-bold text-slate-900 dark:text-white mt-1">
+          <p className={`${isDesktop ? "text-lg" : "text-[11px] sm:text-sm"} font-bold text-slate-900 dark:text-white mt-1`}>
             {trip.totalDuration || "5 Days"}
           </p>
           <p className="text-[9px] sm:text-[10px] text-slate-500 mt-0.5 truncate">{trip.destination}</p>

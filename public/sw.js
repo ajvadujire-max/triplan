@@ -1,31 +1,37 @@
-const CACHE_NAME = 'trippro-v4';
+const CACHE_NAME = 'triplan-pwa-v7';
 const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
   '/manifest.json',
   '/logo.svg',
-  '/triplan_logo.png',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-192-maskable.png',
+  '/icons/icon-512-maskable.png',
   '/apple-touch-icon.png',
   '/favicon-32x32.png',
   '/favicon-16x16.png'
 ];
 
-// Install event: cache minimal static assets and skip waiting
+// Install Event: cache static shell assets and skip waiting
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Pre-caching app shell');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
 
-// Activate event: clean up old caches and claim clients immediately
+// Activate Event: clean old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Clearing old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -34,22 +40,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event: Network-first for navigation and API/Firebase requests, cache-falling for static assets
+// Fetch Event: handle requests without caching dynamic Firestore/User data
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
+  if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // Skip Firebase / external API requests from being cached by SW
-  if (url.origin.includes('firestore.googleapis.com') || 
-      url.origin.includes('firebase.googleapis.com') || 
-      url.origin.includes('identitytoolkit.googleapis.com') ||
-      url.origin.includes('googleapis.com') ||
-      url.pathname.startsWith('/api/')) {
+  // Exclude non-http(s) schemes (e.g. chrome-extension://)
+  if (!url.protocol.startsWith('http')) return;
+
+  // CRITICAL: NEVER cache Firebase Auth, Firestore DB, or API calls
+  if (
+    url.origin.includes('firestore.googleapis.com') ||
+    url.origin.includes('firebase.googleapis.com') ||
+    url.origin.includes('identitytoolkit.googleapis.com') ||
+    url.origin.includes('securetoken.googleapis.com') ||
+    url.origin.includes('googleapis.com') ||
+    url.origin.includes('firebaseio.com') ||
+    url.pathname.startsWith('/api/')
+  ) {
     return;
   }
 
-  // Navigation requests (HTML pages): Network first, never serve stale cached index.html if offline unless necessary
+  // Navigation requests (HTML SPA pages): Network first, offline fallback to /index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -60,24 +73,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets or JS/CSS chunks: Network first with cache fallback
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          (url.pathname.includes('/assets/') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.png') || url.pathname.endsWith('.svg'))
-        ) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
+  // Static Assets (JS, CSS, Images, Fonts, Icons, Manifests)
+  if (
+    url.pathname.includes('/assets/') ||
+    url.pathname.includes('/icons/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.webmanifest') ||
+    url.pathname.endsWith('.json')
+  ) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        }).catch(() => null);
+
+        // Return cached asset immediately if available, otherwise wait for network
+        return cachedResponse || fetchPromise;
       })
-      .catch(() => {
-        return caches.match(event.request);
-      })
-  );
+    );
+    return;
+  }
+
+  // Default: pass-through to network
+  event.respondWith(fetch(event.request));
 });

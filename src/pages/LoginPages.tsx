@@ -182,7 +182,7 @@ const LoginCard = ({ type }: LoginProps) => {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-1">
             {isRegister ? `Register as ${type === "traveller" ? "Traveller" : "Organizer"}` : config.title}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500">{isRegister ? "Create a secure account on TripPro" : config.subtitle}</p>
+          <p className="text-xs sm:text-sm text-slate-500">{isRegister ? "Create a secure account on Triplan" : config.subtitle}</p>
         </div>
 
         {errorMsg && (

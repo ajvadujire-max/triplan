@@ -122,7 +122,7 @@ export default function OnboardingWizard() {
   };
 
   const handleWhatsAppShare = () => {
-    const text = encodeURIComponent(`Join my trip on TripPro! Trip Code: ${tripCode} - ${inviteLink}`);
+    const text = encodeURIComponent(`Join my trip on Triplan! Trip Code: ${tripCode} - ${inviteLink}`);
     const whatsappUrl = `https://wa.me/?text=${text}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
@@ -241,10 +241,10 @@ export default function OnboardingWizard() {
       }, { merge: true });
 
       // Save to local storage
-      const savedTrips = localStorage.getItem("trippro_trips");
+      const savedTrips = localStorage.getItem("triplan_trips");
       const currentTrips: Trip[] = savedTrips ? JSON.parse(savedTrips) : [];
       currentTrips.unshift(newTrip);
-      localStorage.setItem("trippro_trips", JSON.stringify(currentTrips));
+      localStorage.setItem("triplan_trips", JSON.stringify(currentTrips));
 
       // Save to Firestore
       await saveUserTrip(`personal_${currentUser.uid}`, newTrip);

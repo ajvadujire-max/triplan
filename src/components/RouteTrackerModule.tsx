@@ -539,7 +539,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     }
   };
 
-  const localStorageActiveKey = `trippro_active_session_${trip.id}`;
+  const localStorageActiveKey = `triplan_active_session_${trip.id}`;
 
   const saveActiveSessionToStorage = async (forceFirestore = false) => {
     if (!activeSessionIdRef.current || trackingStateRef.current === "idle") {
@@ -590,7 +590,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   const clearActiveSessionFromStorage = async () => {
     try {
       localStorage.removeItem(localStorageActiveKey);
-      localStorage.removeItem(`trippro_tracker_draft_${trip.id}`);
+      localStorage.removeItem(`triplan_tracker_draft_${trip.id}`);
     } catch (e) {}
 
     try {
@@ -709,7 +709,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     // Fallback: check legacy draft key if active key wasn't found
     if (!activeData) {
       try {
-        const draftStr = localStorage.getItem(`trippro_tracker_draft_${trip.id}`);
+        const draftStr = localStorage.getItem(`triplan_tracker_draft_${trip.id}`);
         if (draftStr) {
           const legacy = JSON.parse(draftStr);
           if (legacy.sessionId && legacy.points && legacy.points.length > 0) {
@@ -878,7 +878,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   }, []);
 
   // Key for local storage persistence
-  const localStorageDraftKey = `trippro_tracker_draft_${trip.id}`;
+  const localStorageDraftKey = `triplan_tracker_draft_${trip.id}`;
 
   // 1. Load Past Saved Routes from Firestore & LocalStorage
   const loadSavedRoutes = async () => {
@@ -899,7 +899,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       // Also merge with localStorage saved sessions for this trip
       try {
-        const localSaved = localStorage.getItem(`trippro_saved_routes_${trip.id}`);
+        const localSaved = localStorage.getItem(`triplan_saved_routes_${trip.id}`);
         if (localSaved) {
           const parsed: StoredRouteSession[] = JSON.parse(localSaved);
           parsed.forEach((p) => {
@@ -1684,7 +1684,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       // 2. Save to LocalStorage
       try {
-        const localKey = `trippro_saved_routes_${trip.id}`;
+        const localKey = `triplan_saved_routes_${trip.id}`;
         const existing = localStorage.getItem(localKey);
         const parsed: StoredRouteSession[] = existing ? JSON.parse(existing) : [];
         const updated = [sessionData, ...parsed.filter((s) => s.id !== sessionData.id)];
@@ -1844,7 +1844,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       // 2. Delete from LocalStorage
       try {
-        const localKey = `trippro_saved_routes_${trip.id}`;
+        const localKey = `triplan_saved_routes_${trip.id}`;
         const existing = localStorage.getItem(localKey);
         if (existing) {
           const parsed: StoredRouteSession[] = JSON.parse(existing);

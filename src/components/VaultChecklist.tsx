@@ -56,6 +56,7 @@ interface VaultChecklistProps {
   currentUser: FirebaseUser | null;
   mode?: "vault" | "checklist";
   onChecklistStatsChange?: (stats: { packedCount: number; totalCount: number }) => void;
+  isDesktop?: boolean;
 }
 
 export const VaultChecklist: React.FC<VaultChecklistProps> = ({
@@ -64,6 +65,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
   currentUser,
   mode = "vault",
   onChecklistStatsChange,
+  isDesktop = false,
 }) => {
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
@@ -669,51 +671,51 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
       : 0;
 
   return (
-    <div className="space-y-4 max-w-full overflow-x-hidden md:px-0">
+    <div className={`space-y-4 max-w-full overflow-x-hidden md:px-0 ${isDesktop ? "max-w-[1440px] mx-auto px-4" : ""}`}>
       {/* --- SUB-TAB 1: ENCRYPTED DOCUMENT VAULT --- */}
       {mode === "vault" && (
-        <div className="space-y-3 max-w-md mx-auto px-1">
+        <div className={`space-y-3 px-1 ${isDesktop ? "" : "max-w-md mx-auto"}`}>
           {/* Header Actions Card */}
-          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-2.5">
+          <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-2.5 ${isDesktop ? "rounded-[24px] p-6" : "p-3.5 rounded-xl"}`}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-indigo-600" />
+                <h3 className={`${isDesktop ? "text-2xl" : "text-sm"} font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5`}>
+                  <Shield className={`${isDesktop ? "w-6 h-6" : "w-4 h-4"} text-indigo-600`} />
                   Document Vault
                 </h3>
-                <p className="text-[10px] text-slate-500 font-medium">
+                <p className={`${isDesktop ? "text-sm" : "text-[10px]"} text-slate-500 font-medium`}>
                   Secure local backup for trip tickets, vouchers, and travel IDs.
                 </p>
               </div>
 
               <button
                 onClick={() => navigate(`${basePath}/vault/add-doc`)}
-                className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold h-9 px-3 rounded-lg transition-all shadow-xs shrink-0"
+                className={`flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-xs shrink-0 ${isDesktop ? "px-6 py-3 rounded-2xl text-base" : "h-9 px-3 rounded-lg text-[11px]"}`}
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Upload</span>
+                <Upload className={isDesktop ? "w-5 h-5" : "w-3.5 h-3.5"} />
+                <span>Upload Document</span>
               </button>
             </div>
 
             {/* Search and Filters */}
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 ${isDesktop ? "mt-4" : ""}`}>
               <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 ${isDesktop ? "w-5 h-5" : "w-3.5 h-3.5"}`} />
                 <input
                   type="text"
                   placeholder="Search stored documents..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className={`w-full pr-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 ${isDesktop ? "pl-11 py-3.5 rounded-2xl text-base" : "pl-8 py-1.5 text-xs rounded-lg"}`}
                 />
               </div>
 
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="text-xs px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none"
+                className={`px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none ${isDesktop ? "py-3.5 text-base" : "py-1.5 text-xs"}`}
               >
-                <option value="all">All Types</option>
+                <option value="all">All Document Types</option>
                 {docCategories.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -726,27 +728,45 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
           {/* Documents Grid / Stack */}
           <div className="space-y-2">
             {filteredDocuments.length === 0 ? (
-              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-400">
-                <Folder className="w-8 h-8 mx-auto mb-1.5 opacity-30 text-slate-400" />
-                <p className="text-xs font-bold">No matching documents</p>
-                <p className="text-[10px] mt-0.5 text-slate-400">
+              <div className={`p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 ${isDesktop ? "rounded-[32px]" : "rounded-xl"}`}>
+                <Folder className="w-12 h-12 mx-auto mb-2 opacity-30 text-slate-400" />
+                <p className="text-sm font-bold">No matching documents</p>
+                <p className="text-xs mt-1 text-slate-400">
                   Upload PDF or images for easy reference on the go.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2">
+              <div className={isDesktop ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "grid grid-cols-1 gap-2"}>
                 {filteredDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 shadow-xs flex items-center justify-between gap-3 hover:border-indigo-500 dark:hover:border-indigo-500/50 transition-all"
+                    className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 shadow-xs flex transition-all ${isDesktop ? "flex-col rounded-[24px] overflow-hidden hover:border-indigo-500/50" : "p-3 rounded-xl items-center justify-between gap-3 hover:border-indigo-500 dark:hover:border-indigo-500/50"}`}
                   >
+                    {isDesktop && (
+                      <div 
+                        onClick={() => navigate(`${basePath}/vault/doc/${doc.id}`)}
+                        className="aspect-[4/3] bg-slate-100 dark:bg-slate-800 relative cursor-pointer group/photo overflow-hidden"
+                      >
+                        <img 
+                          src={doc.fileUrl} 
+                          alt={doc.title} 
+                          className="w-full h-full object-cover group-hover/photo:scale-105 transition-transform duration-500" 
+                        />
+                        <div className="absolute inset-0 bg-slate-900/0 group-hover/photo:bg-slate-900/20 transition-all flex items-center justify-center">
+                          <Eye className="w-8 h-8 text-white opacity-0 group-hover/photo:opacity-100 transition-all scale-75 group-hover/photo:scale-100" />
+                        </div>
+                      </div>
+                    )}
+
                     <div
                       onClick={() => navigate(`${basePath}/vault/doc/${doc.id}`)}
-                      className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                      className={`flex flex-1 min-w-0 cursor-pointer ${isDesktop ? "p-5" : "items-center gap-3"}`}
                     >
-                      <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800/80 rounded-lg flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-750">
-                        {getFileIcon(doc.docType)}
-                      </div>
+                      {!isDesktop && (
+                        <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800/80 rounded-lg flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-750">
+                          {getFileIcon(doc.docType)}
+                        </div>
+                      )}
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -757,7 +777,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                             {doc.uploadedAt}
                           </span>
                         </div>
-                        <h4 className="font-extrabold text-slate-900 dark:text-white text-xs mt-1 truncate">
+                        <h4 className={`font-extrabold text-slate-900 dark:text-white truncate mt-1 ${isDesktop ? "text-sm" : "text-xs"}`}>
                           {doc.title}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400">
@@ -772,14 +792,44 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                           )}
                         </div>
                       </div>
+
+                      {!isDesktop && (
+                        <button
+                          onClick={(e) => handleOpenMenu(e, "document", doc.id)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-850 self-center"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
-                    <button
-                      onClick={(e) => handleOpenMenu(e, "document", doc.id)}
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-850 self-center"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                    {isDesktop && (
+                      <div className="px-5 pb-5 flex items-center justify-between gap-2 mt-auto">
+                        <button
+                          onClick={() => handleDownloadDoc(doc)}
+                          className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
+                          title="Download"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditDoc(doc)}
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDoc(doc.id)}
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-600 transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -790,38 +840,48 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
       {/* --- SUB-TAB 2: PACKING CHECKLIST --- */}
       {mode === "checklist" && (
-        <div className="space-y-4 max-w-md mx-auto px-1">
+        <div className={`space-y-4 px-1 ${isDesktop ? "" : "max-w-md mx-auto"}`}>
           {/* Compact Summary Header */}
-          <div className="px-1 pt-2 pb-1 flex items-end justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Packing Checklist</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-xs text-slate-500 font-medium">{packedCount} of {currentChecklist.length} packed ({packedPercent}%)</p>
+          <div className={isDesktop ? "bg-white dark:bg-slate-900 p-6 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-sm" : ""}>
+            <div className="px-1 pt-2 pb-1 flex items-end justify-between">
+              <div>
+                <h2 className={`${isDesktop ? "text-2xl" : "text-lg"} font-bold text-slate-900 dark:text-white`}>Packing Checklist</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className={`${isDesktop ? "text-sm" : "text-xs"} text-slate-500 font-medium`}>{packedCount} of {currentChecklist.length} packed ({packedPercent}%)</p>
+                </div>
               </div>
+              <div className={`${isDesktop ? "text-base" : "text-xs"} font-bold text-indigo-600`}>{packedPercent}%</div>
             </div>
-            <div className="text-xs font-bold text-indigo-600">{packedPercent}%</div>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-              style={{ width: `${packedPercent}%` }}
-            />
+            <div className={`w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden ${isDesktop ? "mt-3" : ""}`}>
+              <div
+                className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                style={{ width: `${packedPercent}%` }}
+              />
+            </div>
           </div>
 
           {/* Action Row */}
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${isDesktop ? "bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-sm" : ""}`}>
             <button
               onClick={() => navigate(`${basePath}/vault/add-item`)}
-              className="flex-[7] bg-indigo-600 hover:bg-indigo-500 text-white text-[12px] font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+              className={`bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 ${isDesktop ? "flex-1 text-base py-3.5" : "flex-[7] text-[12px]"}`}
             >
-              <Plus className="w-4 h-4" /> Add Item
+              <Plus className={isDesktop ? "w-5 h-5" : "w-4 h-4"} /> Add Packing Item
             </button>
             <button
               onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
-              className="flex-[3] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold py-2.5 rounded-xl hover:bg-slate-200 transition-all"
+              className={`bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-xl hover:bg-slate-200 transition-all ${isDesktop ? "px-8 text-base py-3.5" : "flex-[3] text-xs"}`}
             >
               Manage
             </button>
+            {isDesktop && (
+              <button
+                onClick={handleSortAlphabetically}
+                className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-8 py-3.5 rounded-xl hover:bg-slate-200 transition-all text-base flex items-center gap-2"
+              >
+                <ArrowUpDown className="w-5 h-5" /> Sort A-Z
+              </button>
+            )}
           </div>
 
           {/* Search and Filter */}
@@ -845,15 +905,16 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
           </div>
 
           {/* Collapsible Categories Checklist Stack (Requirement 10) */}
-          <div className="space-y-2.5 pt-1">
+          <div className={`pt-1 ${isDesktop ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-2.5"}`}>
             {allCategories.map((category) => {
               const categoryItems = filteredChecklist.filter((item) => item.category === category);
               if (categoryItems.length === 0) return null;
 
               const catPacked = categoryItems.filter((i) => i.isPacked).length;
-              const isCollapsed = collapsedCategories[category] || false;
+              const isCollapsed = isDesktop ? false : (collapsedCategories[category] || false);
 
               const toggleCollapse = () => {
+                if (isDesktop) return;
                 setCollapsedCategories((prev) => ({
                   ...prev,
                   [category]: !prev[category],
@@ -861,19 +922,21 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
               };
 
               return (
-                <div key={category} className="space-y-1">
+                <div key={category} className={`space-y-1 ${isDesktop ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[24px] p-6 shadow-sm flex flex-col" : ""}`}>
                   {/* Category Section Header */}
                   <div
                     onClick={toggleCollapse}
-                    className="flex items-center justify-between bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-lg cursor-pointer select-none border border-slate-200 dark:border-slate-850/80 hover:bg-slate-200 dark:hover:bg-slate-850"
+                    className={`flex items-center justify-between select-none ${isDesktop ? "mb-4 border-b border-slate-100 dark:border-slate-800 pb-3" : "bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-850/80 hover:bg-slate-200 dark:hover:bg-slate-850"}`}
                   >
                     <div className="flex items-center gap-1.5">
-                      {isCollapsed ? (
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                      {!isDesktop && (
+                        isCollapsed ? (
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                        )
                       )}
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">
+                      <span className={`${isDesktop ? "text-base" : "text-xs"} font-black text-slate-700 dark:text-slate-200`}>
                         {category}
                       </span>
                     </div>
@@ -889,7 +952,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                      <span className="text-[10px] font-extrabold text-slate-500 bg-white dark:bg-slate-850 px-1.5 py-0.5 rounded-full border border-slate-200/50 dark:border-slate-750">
+                      <span className="text-[10px] font-extrabold text-slate-500 bg-slate-50 dark:bg-slate-850 px-1.5 py-0.5 rounded-full border border-slate-200/50 dark:border-slate-750">
                         {catPacked}/{categoryItems.length} packed
                       </span>
                     </div>
@@ -897,7 +960,7 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
 
                   {/* Category Items */}
                   {!isCollapsed && (
-                    <div className="space-y-1.5 pl-1.5">
+                    <div className={`space-y-1.5 ${isDesktop ? "flex-1" : "pl-1.5"}`}>
                       <AnimatePresence initial={false}>
                         {categoryItems.map((item, idx) => (
                           <motion.div
@@ -1020,8 +1083,8 @@ export const VaultChecklist: React.FC<VaultChecklistProps> = ({
                                     <MoreVertical className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
-                              </motion.div>
                             </motion.div>
+                          </motion.div>
                         ))}
                       </AnimatePresence>
                     </div>

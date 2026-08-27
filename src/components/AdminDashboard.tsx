@@ -173,7 +173,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Sidebar */}
       <div className="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
         <div className="p-6">
-          <h2 className="text-white font-black text-xl tracking-tight">TripPro Admin</h2>
+          <h2 className="text-white font-black text-xl tracking-tight">Triplan Admin</h2>
           <p className="text-xs font-bold text-#34D399 mt-1 uppercase tracking-widest">{adminData.role}</p>
         </div>
         

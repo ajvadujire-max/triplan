@@ -449,6 +449,137 @@ function getPhotoLayout(
   return rows;
 }
 
+// 5. EDITORIAL COVER COLLAGE RENDERER (MAGAZINE MOSAIC LAYOUT)
+function renderCoverCollage(
+  doc: jsPDF,
+  cachedImages: Record<string, { base64: string; width: number; height: number; imgElement?: HTMLImageElement }>,
+  availablePhotoUrls: string[],
+  startX: number,
+  startY: number,
+  collageWidth: number,
+  collageHeight: number
+) {
+  const count = Math.min(availablePhotoUrls.length, 6);
+  const gap = 3; // 3mm clean gap between tiles
+
+  if (count === 0) {
+    // Elegant typographic placeholder banner when no photos exist
+    doc.setFillColor(241, 245, 249);
+    doc.roundedRect(startX, startY, collageWidth, collageHeight, 4, 4, "F");
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(startX, startY, collageWidth, collageHeight, 4, 4, "D");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(100, 116, 139);
+    doc.text("MEMORIES & PHOTOGRAPHS", startX + collageWidth / 2, startY + collageHeight / 2 - 5, { align: "center" });
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Add photos to your diary entries to see your magazine cover collage here", startX + collageWidth / 2, startY + collageHeight / 2 + 5, { align: "center" });
+    return;
+  }
+
+  interface TileSpec {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }
+
+  let tiles: TileSpec[] = [];
+
+  if (count === 1) {
+    tiles = [{ x: 0, y: 0, w: collageWidth, h: collageHeight }];
+  } else if (count === 2) {
+    const w1 = Math.round((collageWidth - gap) * 0.58);
+    const w2 = collageWidth - gap - w1;
+    tiles = [
+      { x: 0, y: 0, w: w1, h: collageHeight },
+      { x: w1 + gap, y: 0, w: w2, h: collageHeight },
+    ];
+  } else if (count === 3) {
+    const wLeft = Math.round((collageWidth - gap) * 0.6);
+    const wRight = collageWidth - gap - wLeft;
+    const hSub = (collageHeight - gap) / 2;
+    tiles = [
+      { x: 0, y: 0, w: wLeft, h: collageHeight },
+      { x: wLeft + gap, y: 0, w: wRight, h: hSub },
+      { x: wLeft + gap, y: hSub + gap, w: wRight, h: hSub },
+    ];
+  } else if (count === 4) {
+    const wLeft = 105;
+    const wRight = collageWidth - gap - wLeft;
+    const hSub = (collageHeight - gap * 2) / 3;
+    tiles = [
+      { x: 0, y: 0, w: wLeft, h: collageHeight },
+      { x: wLeft + gap, y: 0, w: wRight, h: hSub },
+      { x: wLeft + gap, y: hSub + gap, w: wRight, h: hSub },
+      { x: wLeft + gap, y: (hSub + gap) * 2, w: wRight, h: hSub },
+    ];
+  } else if (count === 5) {
+    const wLeft = 104;
+    const wRight = collageWidth - gap - wLeft;
+    const hTop = 96;
+    const hBottom = collageHeight - gap - hTop;
+    const wBottomSub = (collageWidth - gap * 2) / 3;
+
+    tiles = [
+      { x: 0, y: 0, w: wLeft, h: hTop },
+      { x: wLeft + gap, y: 0, w: wRight, h: hTop },
+      { x: 0, y: hTop + gap, w: wBottomSub, h: hBottom },
+      { x: wBottomSub + gap, y: hTop + gap, w: wBottomSub, h: hBottom },
+      { x: (wBottomSub + gap) * 2, y: hTop + gap, w: wBottomSub, h: hBottom },
+    ];
+  } else {
+    // 6 photos: Magazine Mosaic Grid
+    const wTopLeft = 104;
+    const wTopRight = collageWidth - gap - wTopLeft;
+    const hTop = 102;
+    const hTopRightSub = (hTop - gap) / 2;
+    const hBottom = collageHeight - gap - hTop;
+    const wBottomSub = (collageWidth - gap * 2) / 3;
+
+    tiles = [
+      { x: 0, y: 0, w: wTopLeft, h: hTop },
+      { x: wTopLeft + gap, y: 0, w: wTopRight, h: hTopRightSub },
+      { x: wTopLeft + gap, y: hTopRightSub + gap, w: wTopRight, h: hTopRightSub },
+      { x: 0, y: hTop + gap, w: wBottomSub, h: hBottom },
+      { x: wBottomSub + gap, y: hTop + gap, w: wBottomSub, h: hBottom },
+      { x: (wBottomSub + gap) * 2, y: hTop + gap, w: wBottomSub, h: hBottom },
+    ];
+  }
+
+  for (let i = 0; i < tiles.length; i++) {
+    const tile = tiles[i];
+    const photoUrl = availablePhotoUrls[i];
+    const cachedImg = cachedImages[photoUrl];
+    const tileX = startX + tile.x;
+    const tileY = startY + tile.y;
+
+    if (cachedImg) {
+      try {
+        const croppedBase64 = getCroppedImageBase64(cachedImg, tile.w, tile.h);
+
+        // Soft background frame under tile
+        doc.setFillColor(226, 232, 240);
+        doc.roundedRect(tileX - 0.5, tileY - 0.5, tile.w + 1, tile.h + 1, 1.5, 1.5, "F");
+
+        // Image tile
+        doc.addImage(croppedBase64, "JPEG", tileX, tileY, tile.w, tile.h);
+
+        // White border accent
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.6);
+        doc.rect(tileX, tileY, tile.w, tile.h, "D");
+      } catch (err) {
+        console.error("Cover collage image rendering error:", err);
+      }
+    }
+  }
+}
+
 export const TravelDiaryPdfModal: React.FC<TravelDiaryPdfModalProps> = ({
   trip,
   entries,
@@ -540,7 +671,7 @@ export const TravelDiaryPdfModal: React.FC<TravelDiaryPdfModalProps> = ({
         doc.setFont("helvetica", "italic");
         doc.setFontSize(8.5);
         doc.setTextColor(140, 140, 140);
-        doc.text(`TripPro Travel Memory Book • ${sanitizePdfText(trip.name)}`, margin, pageHeight - 12);
+        doc.text(`Triplan Travel Memory Book • ${sanitizePdfText(trip.name)}`, margin, pageHeight - 12);
         doc.text(`Page ${pageNum}`, pageWidth - margin, pageHeight - 12, { align: "right" });
       };
 
@@ -554,127 +685,233 @@ export const TravelDiaryPdfModal: React.FC<TravelDiaryPdfModalProps> = ({
         pageCount++;
       };
 
-      // A. COVER PAGE
+      // A. COVER PAGE (PREMIUM EDITORIAL TRAVEL COVER)
       if (includeCover) {
         startPageIfNeeded();
 
-        // Elegant Modern cover styling
-        doc.setFillColor(styleMode === "Classic" ? 44 : styleMode === "Modern" ? 22 : 248, styleMode === "Classic" ? 62 : styleMode === "Modern" ? 163 : 250, styleMode === "Classic" ? 80 : styleMode === "Modern" ? 102 : 252);
-        doc.rect(0, 0, pageWidth, pageHeight, "F");
-
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(margin, margin + 5, contentWidth, pageHeight - (margin * 2 + 10), 4, 4, "F");
-
-        let currentY = margin + 30;
+        // 1. TOP HEADER BRANDING
+        let currentY = margin + 5;
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.setTextColor(26, 171, 103);
-        doc.text("PERSONAL TRAVEL DIARY & PHOTO JOURNAL", pageWidth / 2, currentY, { align: "center" });
+        doc.setTextColor(16, 185, 129); // Emerald-500
+        doc.text("OFFICIAL TRAVEL JOURNAL", margin, currentY);
 
-        currentY += 22;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(26);
-        doc.setTextColor(30, 41, 59);
-        doc.text("TRAVEL DIARY", pageWidth / 2, currentY, { align: "center" });
-
-        currentY += 12;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.setTextColor(71, 85, 105);
-        doc.text(sanitizePdfText(trip.name), pageWidth / 2, currentY, { align: "center" });
-
-        currentY += 10;
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(12);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Destination: ${sanitizePdfText(trip.destination) || "Multiple Locations"}`, pageWidth / 2, currentY, { align: "center" });
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184); // Slate-400
+        doc.text("EST. 2026", pageWidth - margin, currentY, { align: "right" });
 
-        currentY += 7;
-        const dateStr = `${trip.startDate || ""} — ${trip.endDate || ""}`;
-        doc.text(sanitizePdfText(dateStr), pageWidth / 2, currentY, { align: "center" });
-
-        // Center cover photo with original aspect ratio
-        const coverImgUrl = trip.coverImage || trip.coverPhoto || (sortedEntries[0]?.photos?.[0]);
-        if (includePhotos && coverImgUrl && cachedImages[coverImgUrl]) {
-          try {
-            currentY += 12;
-            const imgData = cachedImages[coverImgUrl];
-            const { width, height } = getContainedDimensions(imgData.width, imgData.height, 110, 85);
-            const imgX = (pageWidth - width) / 2;
-
-            doc.setFillColor(248, 250, 252);
-            doc.roundedRect(imgX - 2, currentY - 2, width + 4, height + 4, 2, 2, "F");
-            doc.addImage(imgData.base64, "JPEG", imgX, currentY, width, height);
-            
-            currentY += height + 16;
-          } catch (err) {
-            currentY += 25;
-          }
-        } else {
-          currentY += 45;
-        }
-
-        doc.setFont("times", "italic");
-        doc.setFontSize(12);
-        doc.setTextColor(100, 116, 139);
-        doc.text('"Every journey is a story waiting to be told."', pageWidth / 2, currentY, { align: "center" });
-      }
-
-      // B. TRIP OVERVIEW / INTRODUCTION
-      if (includeSummary) {
-        startPageIfNeeded();
-        let currentY = margin + 15;
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(22);
-        doc.setTextColor(30, 41, 59);
-        doc.text("OUR JOURNEY SUMMARY", margin, currentY);
-
-        currentY += 8;
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(226, 232, 240);
-        doc.line(margin, currentY, pageWidth - margin, currentY);
-
+        // 2. MAIN TRIP TITLE (EMBEDDED EDITORIAL DISPLAY STYLE)
         currentY += 15;
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(15);
-        doc.setTextColor(15, 23, 42);
-        doc.text(sanitizePdfText(trip.name), margin, currentY);
+        doc.setFontSize(42); // Large bold display
+        doc.setTextColor(15, 23, 42); // Slate-900
 
-        currentY += 9;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Destination: ${sanitizePdfText(trip.destination) || "N/A"}`, margin, currentY);
+        const sanitizedTripTitle = sanitizePdfText(trip.name).toUpperCase();
+        const titleLines = doc.splitTextToSize(sanitizedTripTitle, contentWidth);
+        doc.text(titleLines, margin, currentY);
+        currentY += titleLines.length * 14 + 5;
 
-        currentY += 7;
-        doc.text(`Travel Dates: ${trip.startDate || "N/A"} to ${trip.endDate || "N/A"}`, margin, currentY);
-
-        currentY += 7;
-        doc.text(`Total Companion Travellers: ${trip.travellers?.length || 1}`, margin, currentY);
-
-        currentY += 7;
-        doc.text(`Diary Log Entries: ${sortedEntries.length}`, margin, currentY);
-
-        currentY += 7;
-        doc.text(`High-Quality Photographs: ${totalPhotos}`, margin, currentY);
-
-        currentY += 22;
-        doc.setFillColor(248, 250, 252);
-        doc.roundedRect(margin, currentY, contentWidth, 38, 3, 3, "F");
+        // 3. SUBTITLE / METADATA (TRACKED OUT SANS-SERIF)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139); // Slate-500
+        const destStr = (sanitizePdfText(trip.destination) || "UNEXPLORED TERRITORY").toUpperCase();
+        const dateStr = `${trip.startDate || ""} - ${trip.endDate || ""}`.toUpperCase();
+        const travellerCount = trip.travellers?.length || 1;
+        const travellerStr = `${travellerCount} ${travellerCount === 1 ? 'TRAVELLER' : 'TRAVELLERS'}`;
         
+        const metadataText = `${destStr}   //   ${dateStr}   //   ${travellerStr}`;
+        doc.text(metadataText, margin, currentY);
+
+        currentY += 12;
+
+        // 4. EDITORIAL PHOTO COLLAGE (4-6 REAL DIARY PHOTOS)
+        const allTripPhotos: string[] = [];
+        if (trip.coverImage) allTripPhotos.push(trip.coverImage);
+        if (trip.coverPhoto && trip.coverPhoto !== trip.coverImage) allTripPhotos.push(trip.coverPhoto);
+        for (const entry of sortedEntries) {
+          if (entry.photos) {
+            for (const p of entry.photos) {
+              if (p && !allTripPhotos.includes(p)) {
+                allTripPhotos.push(p);
+              }
+            }
+          }
+        }
+
+        const availablePhotos = allTripPhotos.filter((url) => cachedImages[url]);
+        const collageHeight = 160; 
+
+        renderCoverCollage(
+          doc,
+          cachedImages,
+          availablePhotos,
+          margin,
+          currentY,
+          contentWidth,
+          collageHeight
+        );
+
+        currentY += collageHeight + 10;
+
+        // 5. BOTTOM BRANDING BAR (HIGH CONTRAST)
+        doc.setFillColor(15, 23, 42); // Slate-900
+        doc.rect(0, currentY, pageWidth, pageHeight - currentY, "F");
+
+        const bannerY = currentY + 12;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(255, 255, 255);
+        doc.text("Triplan", margin, bannerY);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(16, 185, 129); // Emerald-500
+        doc.text("MEMORIES PRESERVED IN HIGH-FIDELITY", margin, bannerY + 6);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184); // Slate-400
+        const footerNote = `This volume contains ${sortedEntries.length} chronological logs and ${totalPhotos} photographs documented during ${trip.name}.`.toUpperCase();
+        doc.text(footerNote, margin, bannerY + 14);
+      }
+
+      // B. OFFICIAL JOURNEY SUMMARY (PAGE 2)
+      if (includeSummary) {
+        startPageIfNeeded();
+        let currentY = margin + 5;
+
+        // Page Title
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(26);
+        doc.setTextColor(15, 23, 42);
+        doc.text("OFFICIAL JOURNEY SUMMARY", margin, currentY);
+
+        doc.setFillColor(16, 185, 129);
+        doc.rect(margin, currentY + 4, 45, 2, "F");
+
+        currentY += 20;
+
+        // 1. GRID-BASED STATS CARDS
+        const gridColWidth = (contentWidth - 10) / 3;
+        const gridRowHeight = 28;
+        const gap = 5;
+
+        const infoItems = [
+          { label: "TRIP DESIGNATION", val: trip.name },
+          { label: "PRIMARY DESTINATION", val: trip.destination || "N/A" },
+          { label: "TIME PERIOD", val: `${trip.startDate || "N/A"} - ${trip.endDate || "N/A"}` },
+          { label: "TRAVELLER COMPLEMENT", val: `${trip.travellers?.length || 1} Registered` },
+          { label: "DOCUMENTED ENTRIES", val: `${sortedEntries.length} Records` },
+          { label: "VISUAL ASSETS", val: `${totalPhotos} Photographs` },
+        ];
+
+        for (let idx = 0; idx < infoItems.length; idx++) {
+          const row = Math.floor(idx / 3);
+          const col = idx % 3;
+          const cardX = margin + col * (gridColWidth + gap);
+          const cardY = currentY + row * (gridRowHeight + gap);
+          const item = infoItems[idx];
+
+          doc.setFillColor(248, 250, 252); // Slate-50
+          doc.rect(cardX, cardY, gridColWidth, gridRowHeight, "F");
+          doc.setDrawColor(226, 232, 240); // Slate-200
+          doc.setLineWidth(0.3);
+          doc.rect(cardX, cardY, gridColWidth, gridRowHeight, "D");
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7.5);
+          doc.setTextColor(100, 116, 139); // Slate-500
+          doc.text(item.label.toUpperCase(), cardX + 4, cardY + 7);
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10.5);
+          doc.setTextColor(15, 23, 42); // Slate-900
+          const valLines = doc.splitTextToSize(sanitizePdfText(item.val), gridColWidth - 8);
+          doc.text(valLines[0], cardX + 4, cardY + 16);
+          if (valLines[1]) doc.text(valLines[1], cardX + 4, cardY + 21);
+        }
+
+        currentY += (gridRowHeight + gap) * 2 + 10;
+
+        // 2. JOURNEY DESCRIPTION (SPACIOUS BLOCK)
         doc.setFont("helvetica", "bold");
         doc.setFontSize(12);
-        doc.setTextColor(30, 41, 59);
-        doc.text("Journal Overview", margin + 10, currentY + 11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("MISSION OVERVIEW", margin, currentY);
 
+        currentY += 6;
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10.5);
+        doc.setFontSize(11);
+        doc.setTextColor(51, 65, 85); // Slate-700
+        
+        let overviewText = `This archival travel journal provides a comprehensive record of the ${trip.name} expedition. Spanning ${sortedEntries.length} individual entries, this document serves as the official repository of experiences, locations, and visual memories captured during the journey.`;
+        if (trip.description) {
+          overviewText += `\n\nNotes: ${trip.description}`;
+        }
+        
+        const splitOverview = doc.splitTextToSize(sanitizePdfText(overviewText), contentWidth);
+        doc.text(splitOverview, margin, currentY);
+        currentY += splitOverview.length * 6 + 15;
+
+        // 3. MINIMALIST CHRONOLOGICAL INDEX
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(15, 23, 42);
+        doc.text("CHRONOLOGICAL LOG INDEX", margin, currentY);
+
+        currentY += 6;
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(15, 23, 42);
+        doc.line(margin, currentY, pageWidth - margin, currentY);
+        currentY += 6;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        const overviewText = `This beautifully compiled memory book highlights a collection of ${sortedEntries.length} chronological journal entries spanning across our journey. Complete with ${totalPhotos} fully preloaded high-resolution print photographs. Generated securely via TripPro Travel Assistant.`;
-        const splitOverview = doc.splitTextToSize(sanitizePdfText(overviewText), contentWidth - 20);
-        doc.text(splitOverview, margin + 10, currentY + 20);
+        doc.text("DATE", margin, currentY);
+        doc.text("RECORD TITLE", margin + 35, currentY);
+        doc.text("LOCATION", margin + 110, currentY);
+        doc.text("ASSETS", pageWidth - margin, currentY, { align: "right" });
+
+        currentY += 4;
+        doc.setLineWidth(0.1);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, currentY, pageWidth - margin, currentY);
+        currentY += 6;
+
+        const maxIndexRows = Math.min(sortedEntries.length, 12);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        
+        for (let r = 0; r < maxIndexRows; r++) {
+          const entry = sortedEntries[r];
+          doc.setTextColor(15, 23, 42);
+          doc.setFont("helvetica", "bold");
+          doc.text(sanitizePdfText(entry.date), margin, currentY);
+          
+          doc.setFont("helvetica", "normal");
+          const title = sanitizePdfText(entry.title || "Untitled Record");
+          doc.text(doc.splitTextToSize(title, 70)[0], margin + 35, currentY);
+          
+          const location = sanitizePdfText(entry.location || "N/A");
+          doc.text(doc.splitTextToSize(location, 40)[0], margin + 110, currentY);
+          
+          doc.setTextColor(16, 185, 129);
+          doc.text(`${entry.photos?.length || 0} Ph`, pageWidth - margin, currentY, { align: "right" });
+          
+          currentY += 8;
+          if (currentY > pageHeight - margin - 10) break;
+        }
+
+        if (sortedEntries.length > maxIndexRows) {
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`... and ${sortedEntries.length - maxIndexRows} more records`, margin, currentY);
+        }
       }
 
       // C. CHRONOLOGICAL DIARY ENTRIES

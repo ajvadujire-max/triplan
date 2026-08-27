@@ -1,5 +1,5 @@
 {
-  "name": "TripPro - Travel Planner & Expense Manager",
+  "name": "Triplan - Travel Planner & Expense Manager",
   "description": "Professional SaaS travel planning platform with role-based dashboards, multi-step onboarding, group expense splitting, and secure invite systems.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

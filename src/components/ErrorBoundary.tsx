@@ -21,7 +21,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("TripPro PWA Startup Error caught:", error, errorInfo);
+    console.error("Triplan PWA Startup Error caught:", error, errorInfo);
   }
 
   private handleResetCache = () => {
@@ -59,10 +59,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
             <div>
               <h1 className="text-xl font-black text-white tracking-tight mb-2">
-                TripPro Startup Recovery
+                Triplan Startup Recovery
               </h1>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Something went wrong while starting TripPro or loading app assets. This is often caused by an outdated cached version or connection glitch.
+                Something went wrong while starting Triplan or loading app assets. This is often caused by an outdated cached version or connection glitch.
               </p>
             </div>
 

@@ -30,6 +30,30 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Explicit Manifest and Service Worker routes with PWA headers
+app.get(["/manifest.webmanifest", "/manifest.json"], (req, res) => {
+  const isWebmanifest = req.path.endsWith(".webmanifest");
+  const manifestFile = isWebmanifest ? "manifest.webmanifest" : "manifest.json";
+  const filePath = process.env.NODE_ENV === "production"
+    ? path.join(process.cwd(), "dist", manifestFile)
+    : path.join(process.cwd(), "public", manifestFile);
+
+  res.setHeader("Content-Type", "application/manifest+json");
+  res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+  res.sendFile(filePath);
+});
+
+app.get("/sw.js", (req, res) => {
+  const filePath = process.env.NODE_ENV === "production"
+    ? path.join(process.cwd(), "dist", "sw.js")
+    : path.join(process.cwd(), "public", "sw.js");
+
+  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Service-Worker-Allowed", "/");
+  res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+  res.sendFile(filePath);
+});
+
 // AI Travel Insights Endpoint
 app.post("/api/ai-insights", async (req, res) => {
   try {

@@ -20,8 +20,8 @@ try {
 }
 export const db = dbInstance;
 
-console.log("[TripPro Firebase] Connected Project ID:", firebaseConfig.projectId);
-console.log("[TripPro Firebase] Firestore Database ID:", firebaseConfig.firestoreDatabaseId || "(default)");
+console.log("[Triplan Firebase] Connected Project ID:", firebaseConfig.projectId);
+console.log("[Triplan Firebase] Firestore Database ID:", firebaseConfig.firestoreDatabaseId || "(default)");
 
 if (typeof window !== "undefined") {
   const originalConsoleError = console.error;

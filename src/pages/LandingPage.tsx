@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Plane, Users, Wallet, Shield, CheckCircle2, ChevronRight, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
-import tripproLogo from "../assets/logo.svg";
+import triplanLogo from "../assets/logo.svg";
 import { auth } from "../lib/firebase";
 import { fetchUserTripsByUid } from "../lib/firestoreSync";
 
@@ -15,7 +15,7 @@ export default function LandingPage() {
     const unsub = auth.onAuthStateChanged((user) => {
       if (user) {
         // Check if user has trips saved in localStorage first
-        const savedTrips = localStorage.getItem("trippro_trips");
+        const savedTrips = localStorage.getItem("triplan_trips");
         if (savedTrips) {
           try {
             const parsed = JSON.parse(savedTrips);
@@ -30,9 +30,9 @@ export default function LandingPage() {
         // Also verify in Firestore
         fetchUserTripsByUid(user.uid).then((trips) => {
           if (trips && trips.length > 0) {
-            localStorage.setItem("trippro_trips", JSON.stringify(trips));
-            if (!localStorage.getItem("trippro_active_trip_id")) {
-              localStorage.setItem("trippro_active_trip_id", trips[0].id);
+            localStorage.setItem("triplan_trips", JSON.stringify(trips));
+            if (!localStorage.getItem("triplan_active_trip_id")) {
+              localStorage.setItem("triplan_active_trip_id", trips[0].id);
             }
             navigate("/dashboard", { replace: true });
           }
@@ -57,7 +57,7 @@ export default function LandingPage() {
                 className="shrink-0 flex items-center justify-center p-0.5"
               >
                 <img
-                  src={tripproLogo}
+                  src={triplanLogo}
                   alt=""
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
@@ -69,7 +69,7 @@ export default function LandingPage() {
                 style={{ fontSize: "clamp(22px, 6vw, 28px)" }}
                 className="font-bold tracking-tight text-slate-900"
               >
-                TripPro
+                Triplan
               </span>
             </div>
 
@@ -204,7 +204,7 @@ export default function LandingPage() {
           <div className="text-center mb-10 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Travel Smarter</h2>
             <p className="text-slate-600 max-w-2xl mx-auto text-base md:text-lg">
-              TripPro combines travel logistics with financial management to give you the most comprehensive trip planning tool.
+              Triplan combines travel logistics with financial management to give you the most comprehensive trip planning tool.
             </p>
           </div>
 
@@ -279,7 +279,7 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-16">Frequently Asked Questions</h2>
           <div className="space-y-4 md:space-y-6">
             {[
-              { q: "Is TripPro available offline?", a: "Yes, you can access your itinerary and basic trip details without an internet connection." },
+              { q: "Is Triplan available offline?", a: "Yes, you can access your itinerary and basic trip details without an internet connection." },
               { q: "Can I export my expense data?", a: "Absolutely! You can export your financial records to CSV or PDF at any time." },
               { q: "How many people can I invite?", a: "The Free plan supports up to 5 travellers. Pro and Enterprise support unlimited participants." },
             ].map((item, i) => (
@@ -301,7 +301,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                   <Plane className="text-white w-5 h-5" />
                 </div>
-                <span className="text-xl font-bold text-white tracking-tight">TripPro</span>
+                <span className="text-xl font-bold text-white tracking-tight">Triplan</span>
               </div>
               <p className="max-w-sm mb-6 text-sm md:text-base">
                 Making group travel organized, transparent, and fun. Built for modern travellers who value coordination.
@@ -325,7 +325,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
-            <p>© 2026 TripPro. All rights reserved.</p>
+            <p>© 2026 Triplan. All rights reserved.</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-white transition-colors">Twitter</a>
               <a href="#" className="hover:text-white transition-colors">Instagram</a>

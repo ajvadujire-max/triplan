@@ -672,7 +672,7 @@ export const initialCashbookEntries: CashbookEntry[] = [
     category: "Food",
     tripId: "trip_goa_2026",
     travellerId: "trv_ajva",
-    auditTrail: "Logged automatically by TripPro Financial Sync at 2026-07-25T20:30:00Z",
+    auditTrail: "Logged automatically by Triplan Financial Sync at 2026-07-25T20:30:00Z",
   },
   {
     id: "cb_2",
@@ -684,7 +684,7 @@ export const initialCashbookEntries: CashbookEntry[] = [
     category: "Fuel",
     tripId: "trip_goa_2026",
     travellerId: "trv_ajva",
-    auditTrail: "Logged automatically by TripPro Financial Sync at 2026-07-25T14:15:00Z",
+    auditTrail: "Logged automatically by Triplan Financial Sync at 2026-07-25T14:15:00Z",
   },
   {
     id: "cb_3",
@@ -696,7 +696,7 @@ export const initialCashbookEntries: CashbookEntry[] = [
     category: "Hotel",
     tripId: "trip_goa_2026",
     travellerId: "trv_nafih",
-    auditTrail: "Logged automatically by TripPro Financial Sync at 2026-07-25T11:00:00Z",
+    auditTrail: "Logged automatically by Triplan Financial Sync at 2026-07-25T11:00:00Z",
   },
   {
     id: "cb_4",
@@ -708,6 +708,6 @@ export const initialCashbookEntries: CashbookEntry[] = [
     category: "Entertainment",
     tripId: "trip_goa_2026",
     travellerId: "trv_hashim",
-    auditTrail: "Logged automatically by TripPro Financial Sync at 2026-07-26T12:00:00Z",
+    auditTrail: "Logged automatically by Triplan Financial Sync at 2026-07-26T12:00:00Z",
   },
 ];

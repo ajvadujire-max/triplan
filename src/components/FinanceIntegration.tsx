@@ -46,6 +46,7 @@ interface FinanceIntegrationProps {
   onDeleteAccount: (accountId: string) => void;
   onSaveCashbookEntry: (entry: CashbookEntry) => void;
   onDeleteCashbookEntry: (entryId: string) => void;
+  isDesktop?: boolean;
 }
 
 const ACCOUNT_TYPES = [
@@ -92,6 +93,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
   onDeleteAccount,
   onSaveCashbookEntry,
   onDeleteCashbookEntry,
+  isDesktop = false,
 }) => {
   // State variables
   const [activeMenuAccountId, setActiveMenuAccountId] = useState<string | null>(null);
@@ -101,14 +103,14 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [viewingHistoryAccountId, setViewingHistoryAccountId] = useState<string | null>(() => {
-    return localStorage.getItem("trippro_viewing_account_id") || null;
+    return localStorage.getItem("triplan_viewing_account_id") || null;
   });
 
   React.useEffect(() => {
     if (viewingHistoryAccountId) {
-      localStorage.setItem("trippro_viewing_account_id", viewingHistoryAccountId);
+      localStorage.setItem("triplan_viewing_account_id", viewingHistoryAccountId);
     } else {
-      localStorage.removeItem("trippro_viewing_account_id");
+      localStorage.removeItem("triplan_viewing_account_id");
     }
   }, [viewingHistoryAccountId]);
   
@@ -447,7 +449,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
       type: "debit",
       amount: transferAmount,
       accountId: fromAcc.id,
-      auditTrail: `Transferred ${trip.currency}${transferAmount.toLocaleString()} to ${toAcc.name} via TripPro.`,
+      auditTrail: `Transferred ${trip.currency}${transferAmount.toLocaleString()} to ${toAcc.name} via Triplan.`,
     };
     onSaveCashbookEntry(debitEntry);
 
@@ -461,7 +463,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
       type: "credit",
       amount: transferAmount,
       accountId: toAcc.id,
-      auditTrail: `Received ${trip.currency}${transferAmount.toLocaleString()} from ${fromAcc.name} via TripPro.`,
+      auditTrail: `Received ${trip.currency}${transferAmount.toLocaleString()} from ${fromAcc.name} via Triplan.`,
     };
     onSaveCashbookEntry(creditEntry);
 
@@ -639,7 +641,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
       type: manualEntryForm.type,
       amount: amt,
       accountId: manualEntryForm.accountId,
-      auditTrail: `Manual ${manualEntryForm.type} entry via TripPro.`
+      auditTrail: `Manual ${manualEntryForm.type} entry via Triplan.`
     };
 
     onSaveCashbookEntry(newEntry);
@@ -671,38 +673,40 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
   const activeHistoryAccount = accounts.find((a) => a.id === viewingHistoryAccountId);
 
   return (
-    <div className="space-y-6 print:p-0 select-none pb-12">
+    <div className={`space-y-6 print:p-0 select-none pb-12 ${isDesktop ? "max-w-[1440px] mx-auto px-4" : ""}`}>
       {/* Dynamic Floating Action Button for Mobile, standard button for Desktop (Requirement 2, 9) */}
-      <div className="fixed bottom-20 right-4 sm:hidden z-40">
-        <button
-          onClick={handleOpenAddAccount}
-          className="flex items-center justify-center w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-2xl transition-all focus:outline-none focus:ring-4 focus:ring-indigo-300"
-          id="btn-add-account-mob-fab"
-        >
-          <Plus className="w-7 h-7" />
-        </button>
-      </div>
+      {!isDesktop && (
+        <div className="fixed bottom-20 right-4 sm:hidden z-40">
+          <button
+            onClick={handleOpenAddAccount}
+            className="flex items-center justify-center w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-2xl transition-all focus:outline-none focus:ring-4 focus:ring-indigo-300"
+            id="btn-add-account-mob-fab"
+          >
+            <Plus className="w-7 h-7" />
+          </button>
+        </div>
+      )}
 
       {/* Header and top tools */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm print:hidden">
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm print:hidden ${isDesktop ? "rounded-[32px] p-8" : "p-4 sm:p-5 rounded-2xl"}`}>
         <div>
           <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-              Financial Account Registry
+            <Wallet className={`${isDesktop ? "w-6 h-6" : "w-5 h-5"} text-indigo-600 dark:text-indigo-400`} />
+            <h2 className={`${isDesktop ? "text-3xl" : "text-lg sm:text-xl"} font-black text-slate-900 dark:text-white tracking-tight`}>
+              Financial Portfolio
             </h2>
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Manage your liquid assets, bank ledgers, credit pipelines, and execute instant money transfers.
+          <p className={`${isDesktop ? "text-base" : "text-[11px] sm:text-xs"} text-slate-500 dark:text-slate-400 font-medium mt-0.5`}>
+            Manage assets, ledgers, and execute instant money transfers.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
           <button
             onClick={() => setIsResetConfirmOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold px-4 py-2.5 rounded-xl border border-rose-100 dark:border-rose-900 transition-all"
+            className={`flex items-center justify-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold border border-rose-100 dark:border-rose-900 transition-all cursor-pointer ${isDesktop ? "px-6 py-3.5 rounded-2xl text-base" : "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs"}`}
           >
-            <RotateCcw className="w-4 h-4" /> Reset Cashbook
+            <RotateCcw className={isDesktop ? "w-5 h-5" : "w-4 h-4"} /> Reset Cashbook
           </button>
 
           <button
@@ -717,25 +721,25 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
               });
               setIsManualEntryModalOpen(true);
             }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all"
+            className={`flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-md transition-all cursor-pointer ${isDesktop ? "px-6 py-3.5 rounded-2xl text-base" : "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs"}`}
           >
-            <Plus className="w-4 h-4" /> Add Transaction
+            <Plus className={isDesktop ? "w-5 h-5" : "w-4 h-4"} /> Add Transaction
           </button>
 
           <button
             onClick={handleOpenAddAccount}
-            className="hidden sm:flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all"
+            className={`hidden sm:flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md transition-all cursor-pointer ${isDesktop ? "px-6 py-3.5 rounded-2xl text-base" : "px-4 py-2.5 rounded-xl text-xs"}`}
             id="btn-add-account-desk"
           >
-            <Plus className="w-4 h-4" /> Add New Account
+            <Plus className={isDesktop ? "w-5 h-5" : "w-4 h-4"} /> New Account
           </button>
           
           <button
             onClick={() => handleOpenTransfer()}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl transition-all"
+            className={`flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold transition-all cursor-pointer ${isDesktop ? "px-6 py-3.5 rounded-2xl text-base" : "flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs"}`}
             id="btn-transfer-funds"
           >
-            <ArrowRightLeft className="w-4 h-4" /> Transfer Funds
+            <ArrowRightLeft className={isDesktop ? "w-5 h-5" : "w-4 h-4"} /> Transfer Funds
           </button>
         </div>
       </div>
@@ -1003,14 +1007,14 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${isDesktop ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1 sm:grid-cols-2"}`}>
             {groupedAccounts.active.length === 0 ? (
-              <div className="col-span-full text-center p-8 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Financial accounts not configured</p>
+              <div className={`col-span-full text-center p-12 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 ${isDesktop ? "rounded-[32px]" : "rounded-xl"}`}>
+                <AlertTriangle className={`${isDesktop ? "w-12 h-12" : "w-8 h-8"} text-slate-400 mx-auto mb-3`} />
+                <p className={`${isDesktop ? "text-lg" : "text-xs"} font-bold text-slate-600 dark:text-slate-400`}>Financial accounts not configured</p>
                 <button
                   onClick={handleOpenAddAccount}
-                  className="mt-2 text-[#1AAB67] dark:text-[#34D399] text-xs font-bold cursor-pointer hover:underline"
+                  className="mt-3 text-[#1AAB67] dark:text-[#34D399] font-bold cursor-pointer hover:underline text-base"
                 >
                   Set Up Accounts
                 </button>
@@ -1025,22 +1029,22 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                       setViewingHistoryAccountId(acc.id);
                       setHistoryPage(1);
                     }}
-                    className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-36 relative group"
+                    className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative group ${isDesktop ? "p-6 rounded-[24px] h-48" : "p-4 rounded-2xl h-36"}`}
                   >
                     {/* Card Top Block */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
                         <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs"
+                          className={`rounded-xl flex items-center justify-center text-white shadow-xs ${isDesktop ? "w-12 h-12" : "w-9 h-9"}`}
                           style={{ backgroundColor: acc.color }}
                         >
-                          <IconComponent className="w-4 h-4" />
+                          <IconComponent className={isDesktop ? "w-6 h-6" : "w-4 h-4"} />
                         </div>
                         <div className="max-w-[150px] sm:max-w-[180px]">
-                          <h4 className="text-xs font-black text-slate-900 dark:text-white truncate group-hover:text-indigo-600 transition-colors">
+                          <h4 className={`${isDesktop ? "text-base" : "text-xs"} font-black text-slate-900 dark:text-white truncate group-hover:text-indigo-600 transition-colors`}>
                             {acc.name}
                           </h4>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">
+                          <span className={`${isDesktop ? "text-xs" : "text-[10px]"} text-slate-500 dark:text-slate-400 font-semibold uppercase`}>
                             {acc.type} {acc.accountNumber ? `• ${acc.accountNumber.slice(-4)}` : ""}
                           </span>
                         </div>
@@ -1115,7 +1119,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
 
                     {/* Card Balance Block */}
                     <div className="flex items-baseline justify-between mt-1">
-                      <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                      <p className={`${isDesktop ? "text-2xl" : "text-base sm:text-lg"} font-black text-slate-900 dark:text-white`}>
                         {acc.currency || trip.currency}
                         {acc.balance.toLocaleString()}
                       </p>
@@ -1128,7 +1132,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                     </div>
 
                     {/* Card Footer Block */}
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold border-t border-slate-50 dark:border-slate-800/50 pt-2">
+                    <div className={`flex items-center justify-between text-slate-400 font-semibold border-t border-slate-50 dark:border-slate-800/50 ${isDesktop ? "text-xs pt-4 mt-4" : "text-[10px] pt-2"}`}>
                       <div className="flex items-center gap-1">
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
@@ -1137,7 +1141,7 @@ export const FinanceIntegration: React.FC<FinanceIntegrationProps> = ({
                         />
                         <span>{acc.autoDeductExpenses ? "Auto-Deduct Active" : "No Auto-Deduct"}</span>
                       </div>
-                      <span className="text-[9px] font-medium text-slate-400">
+                      <span className={`${isDesktop ? "text-[10px]" : "text-[9px]"} font-medium text-slate-400`}>
                         {acc.branch ? `Branch: ${acc.branch}` : "Internal Ledger"}
                       </span>
                     </div>

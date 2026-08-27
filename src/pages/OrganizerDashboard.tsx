@@ -36,8 +36,8 @@ export default function OrganizerDashboard() {
     async function loadActiveTrip() {
       setLoadingTrip(true);
       try {
-        const activeId = localStorage.getItem("trippro_active_trip_id");
-        const savedTripsStr = localStorage.getItem("trippro_trips");
+        const activeId = localStorage.getItem("triplan_active_trip_id");
+        const savedTripsStr = localStorage.getItem("triplan_trips");
         let found: any = null;
         if (savedTripsStr) {
           const trips = JSON.parse(savedTripsStr);
@@ -84,11 +84,11 @@ export default function OrganizerDashboard() {
 
   const handleShare = async () => {
     if (!inviteCode) return;
-    const shareText = `Join my trip on TripPro!\n\nTrip Code: ${inviteCode}\n\nhttps://triplan-zeta.vercel.app/join/${inviteCode}`;
+    const shareText = `Join my trip on Triplan!\n\nTrip Code: ${inviteCode}\n\nhttps://triplan-zeta.vercel.app/join/${inviteCode}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join my trip on TripPro",
+          title: "Join my trip on Triplan",
           text: shareText,
           url: inviteLink,
         });
@@ -120,7 +120,7 @@ export default function OrganizerDashboard() {
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-emerald-100">
             <Plane className="text-white w-5 h-5" />
           </div>
-          {isSidebarOpen && <span className="ml-3 font-bold text-xl tracking-tight">TripPro <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full ml-1 uppercase">Admin</span></span>}
+          {isSidebarOpen && <span className="ml-3 font-bold text-xl tracking-tight">Triplan <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full ml-1 uppercase">Admin</span></span>}
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

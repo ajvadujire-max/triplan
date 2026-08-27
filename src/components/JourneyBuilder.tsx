@@ -52,6 +52,7 @@ interface JourneyBuilderProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
   role?: string;
+  isDesktop?: boolean;
 }
 
 const transportTypesList: { type: TransportType; iconName: string; color: string }[] = [
@@ -74,6 +75,7 @@ export const JourneyBuilder: React.FC<JourneyBuilderProps> = ({
   trip,
   onUpdateTrip,
   role = "traveller",
+  isDesktop = false,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
   const [activeSubTab, setActiveSubTab] = useState<

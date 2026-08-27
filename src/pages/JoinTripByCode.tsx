@@ -6,7 +6,7 @@ import { fetchTripByInviteCode } from "../lib/firestoreSync";
 import { auth } from "../lib/firebase";
 
 export default function JoinTripByCode() {
-  const [code, setCode] = useState(() => localStorage.getItem("trippro_last_trip_code") || "");
+  const [code, setCode] = useState(() => localStorage.getItem("triplan_last_trip_code") || "");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export default function JoinTripByCode() {
       let trip = await fetchTripByInviteCode(cleanCode);
       if (!trip) {
         // Also check local storage as fallback
-        const savedTrips = localStorage.getItem("trippro_trips");
+        const savedTrips = localStorage.getItem("triplan_trips");
         const localTrips = savedTrips ? JSON.parse(savedTrips) : [];
         const foundLocal = localTrips.find((t: any) => 
           (t.inviteCode && t.inviteCode.toUpperCase() === cleanCode) || 
@@ -49,9 +49,9 @@ export default function JoinTripByCode() {
           (Array.isArray(trip.travellers) && trip.travellers.some((t: any) => t.id === currentUser.uid && t.status !== "left"));
 
         if (isAlreadyMember) {
-          localStorage.setItem("trippro_active_trip_id", trip.id);
-          localStorage.setItem("trippro_last_trip_id", trip.id);
-          localStorage.setItem("trippro_last_trip_code", cleanCode);
+          localStorage.setItem("triplan_active_trip_id", trip.id);
+          localStorage.setItem("triplan_last_trip_id", trip.id);
+          localStorage.setItem("triplan_last_trip_code", cleanCode);
           window.dispatchEvent(new Event("trip_changed"));
           navigate("/dashboard", { replace: true, state: { notice: `You're already a member of ${trip.name}.` } });
           return;
@@ -59,7 +59,7 @@ export default function JoinTripByCode() {
       }
 
       // If trip exists and user is not yet a member, open Join Trip registration page
-      localStorage.setItem("trippro_last_trip_code", cleanCode);
+      localStorage.setItem("triplan_last_trip_code", cleanCode);
       navigate(`/t/${cleanCode}`);
     } catch (err) {
       console.error("Error looking up trip code:", err);

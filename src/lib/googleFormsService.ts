@@ -24,8 +24,8 @@ export async function createGoogleForm(
       },
       body: JSON.stringify({
         info: {
-          title: `TripPro Traveller Registration - ${tripName}`,
-          documentTitle: `TripPro Traveller Registration - ${tripName}`,
+          title: `Triplan Traveller Registration - ${tripName}`,
+          documentTitle: `Triplan Traveller Registration - ${tripName}`,
         },
       }),
     });
@@ -300,7 +300,7 @@ export async function createGoogleForm(
         },
         body: JSON.stringify({
           properties: {
-            title: `TripPro Registrations - ${tripName}`,
+            title: `Triplan Registrations - ${tripName}`,
           },
           sheets: [
             {

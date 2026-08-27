@@ -23,12 +23,14 @@ interface PlannerModuleProps {
   trip: Trip;
   onUpdateTrip: (updatedTrip: Trip) => void;
   role?: string;
+  isDesktop?: boolean;
 }
 
 export const PlannerModule: React.FC<PlannerModuleProps> = ({
   trip,
   onUpdateTrip,
-  role
+  role,
+  isDesktop = false,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"journey" | "activities">("journey");
 
@@ -85,7 +87,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <JourneyBuilder trip={trip} onUpdateTrip={onUpdateTrip} role={role} />
+              <JourneyBuilder trip={trip} onUpdateTrip={onUpdateTrip} role={role} isDesktop={isDesktop} />
             </motion.div>
           )}
 
@@ -97,7 +99,7 @@ export const PlannerModule: React.FC<PlannerModuleProps> = ({
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <ActivityTimeline trip={trip} onUpdateTrip={onUpdateTrip} hideSegments={true} />
+              <ActivityTimeline trip={trip} onUpdateTrip={onUpdateTrip} hideSegments={true} isDesktop={isDesktop} />
             </motion.div>
           )}
         </AnimatePresence>

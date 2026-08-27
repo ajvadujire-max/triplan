@@ -3,7 +3,8 @@ import { User } from "firebase/auth";
 import { motion, AnimatePresence } from "motion/react";
 import { Avatar } from "./Avatar";
 import { useModalBack } from "../hooks/useModalBack";
-import tripproLogo from "../assets/logo.svg";
+import { usePWAInstall } from "../hooks/usePWAInstall";
+import triplanLogo from "../assets/logo.svg";
 import {
   Compass,
   Luggage,
@@ -28,6 +29,8 @@ import {
   MapPin,
   CheckSquare2,
   FileText,
+  Download,
+  Smartphone,
 } from "lucide-react";
 import { Trip } from "../types";
 
@@ -70,6 +73,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
 }) => {
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
   useModalBack(isMoreDrawerOpen, () => setIsMoreDrawerOpen(false));
+  const { isStandalone, isInstalled, canPrompt, triggerInstall } = usePWAInstall();
 
   const activeTrip = trips.find((t) => t.id === activeTripId) || trips[0];
   const isOrganizerCreator = !!(user && activeTrip && activeTrip.organizerId === user.uid);
@@ -104,7 +108,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 sm:w-[38px] sm:h-[38px] shrink-0 flex items-center justify-center p-0.5">
             <img 
-              src={tripproLogo} 
+              src={triplanLogo} 
               alt="" 
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
@@ -265,7 +269,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
               <div className="px-5 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
                 <div>
                   <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
-                    TripPro Menu
+                    Triplan Menu
                   </h3>
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                     Select a feature or manage cloud state
@@ -386,6 +390,51 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                       Organizer Mode
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* App Installation Section */}
+              {!isStandalone && !isInstalled && (
+                <div className="px-5 py-2 space-y-2 select-none">
+                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                    App Installation
+                  </span>
+                  {canPrompt ? (
+                    <button
+                      onClick={async () => {
+                        const installed = await triggerInstall();
+                        if (installed) {
+                          setIsMoreDrawerOpen(false);
+                        }
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md hover:brightness-105 active:scale-98 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+                          <Download className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-extrabold">Install Triplan App</p>
+                          <p className="text-[10px] text-emerald-100 font-medium">Standalone app with fast access</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold bg-white text-emerald-800 px-3 py-1.5 rounded-xl shadow-xs">
+                        Install
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-slate-700 dark:text-slate-300">
+                      <div className="flex items-start gap-2.5">
+                        <Smartphone className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="text-xs leading-relaxed">
+                          <p className="font-extrabold text-slate-900 dark:text-white">To install Triplan:</p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                            Open your browser menu → <span className="font-bold text-emerald-700 dark:text-emerald-400">Install app</span> or <span className="font-bold text-emerald-700 dark:text-emerald-400">Add to Home screen</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

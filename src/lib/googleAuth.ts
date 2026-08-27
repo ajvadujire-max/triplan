@@ -10,7 +10,7 @@ import { auth } from "./firebase";
 export { auth };
 
 let isSigningIn = false;
-let cachedAccessToken: string | null = localStorage.getItem("trippro_google_access_token");
+let cachedAccessToken: string | null = localStorage.getItem("triplan_google_access_token");
 let signInPromise: Promise<{ user: User; accessToken: string } | null> | null = null;
 
 export const initAuth = (
@@ -24,7 +24,7 @@ export const initAuth = (
       }
     } else {
       cachedAccessToken = null;
-      localStorage.removeItem("trippro_google_access_token");
+      localStorage.removeItem("triplan_google_access_token");
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -54,7 +54,7 @@ export const googleSignIn = async (): Promise<{
       const token = credential?.accessToken || "";
       if (token) {
         cachedAccessToken = token;
-        localStorage.setItem("trippro_google_access_token", token);
+        localStorage.setItem("triplan_google_access_token", token);
       }
       return { user: result.user, accessToken: token };
     } catch (error: any) {
@@ -72,16 +72,16 @@ export const googleSignIn = async (): Promise<{
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
-  return cachedAccessToken || localStorage.getItem("trippro_google_access_token");
+  return cachedAccessToken || localStorage.getItem("triplan_google_access_token");
 };
 
 export const setAccessToken = (token: string) => {
   cachedAccessToken = token;
-  localStorage.setItem("trippro_google_access_token", token);
+  localStorage.setItem("triplan_google_access_token", token);
 };
 
 export const logoutGoogle = async () => {
   await signOut(auth);
   cachedAccessToken = null;
-  localStorage.removeItem("trippro_google_access_token");
+  localStorage.removeItem("triplan_google_access_token");
 };

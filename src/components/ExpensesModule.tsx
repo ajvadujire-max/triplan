@@ -58,6 +58,7 @@ interface ExpensesModuleProps {
   onUpdateTrip?: (updatedTrip: Trip) => void;
   role?: "traveller" | "organizer" | "super_admin";
   currentUser?: FirebaseUser | null;
+  isDesktop?: boolean;
 }
 
 const categoriesList: ExpenseCategory[] = [
@@ -120,6 +121,7 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
   onUpdateTrip,
   role = "traveller",
   currentUser,
+  isDesktop = false,
 }) => {
   const isOrganizer = role === "organizer" || role === "super_admin";
   const { basePath, relativePath, navigate, goBack } = useAppNavigation();
@@ -1400,9 +1402,9 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
   // Primary Expenses List View
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+    <div className={`space-y-4 sm:space-y-6 ${isDesktop ? "max-w-[1440px] mx-auto px-4" : "max-w-4xl mx-auto"}`}>
       {/* Privacy-Based Tab Switcher */}
-      <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className={`flex bg-slate-100 dark:bg-slate-950 p-1 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-2xl" : "rounded-xl"}`}>
         <button
           onClick={() => {
             navigate(`${basePath}/expenses`);
@@ -1435,15 +1437,15 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
       {/* Header & Quick Action */}
       {activeSection === "personal" && (
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-white dark:bg-slate-900 p-3.5 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm ${isDesktop ? "rounded-[24px]" : "rounded-2xl"}`}>
           <div className="flex-1">
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <Lock className="w-4 h-4 sm:w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
+              <Lock className={`text-indigo-600 dark:text-indigo-400 ${isDesktop ? "w-6 h-6" : "w-4 h-4 sm:w-5 h-5"}`} />
+              <h2 className={`${isDesktop ? "text-2xl" : "text-base sm:text-xl"} font-bold text-slate-900 dark:text-white`}>
                 Personal Expenses
               </h2>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+            <p className={`${isDesktop ? "text-sm" : "text-[11px] sm:text-xs"} text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed`}>
               Add and manage your private personal expenses that are not shared with anyone.
             </p>
           </div>
@@ -1451,9 +1453,9 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleOpenAdd}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-sm font-bold px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-md transition-all shrink-0"
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shrink-0 ${isDesktop ? "px-6 py-3 rounded-2xl text-base" : "px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-sm"}`}
             >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Plus className={isDesktop ? "w-5 h-5" : "w-3.5 h-3.5 sm:w-4 sm:h-4"} />
               <span>Record Personal Expense</span>
             </button>
           </div>
@@ -1462,38 +1464,69 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
 
       {/* 2x2 Mobile Action Grid for Trip Expenses */}
       {activeSection === "trip" && (
-        <div className="flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              if (!isOrganizer) {
-                alert("Only trip organizers can record shared trip expenses.");
-                return;
-              }
-              handleOpenAdd();
-            }}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span className="truncate">Record Expense</span>
-          </button>
+        <div className={isDesktop ? "flex items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-sm" : "flex flex-col gap-2.5"}>
+          <div className={isDesktop ? "flex-1" : ""}>
+            {isDesktop && (
+              <>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Receipt className="w-6 h-6 text-[#1AAB67]" />
+                  Trip Shared Expenses
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Manage combined spending, treasury records, and automatic settlement for all members.
+                </p>
+              </>
+            )}
+            {!isDesktop && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isOrganizer) {
+                    alert("Only trip organizers can record shared trip expenses.");
+                    return;
+                  }
+                  handleOpenAdd();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+              >
+                <Plus className="w-4 h-4 shrink-0" />
+                <span className="truncate">Record Expense</span>
+              </button>
+            )}
+          </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className={isDesktop ? "flex items-center gap-3" : "grid grid-cols-2 gap-2.5"}>
+            {isDesktop && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isOrganizer) {
+                    alert("Only trip organizers can record shared trip expenses.");
+                    return;
+                  }
+                  handleOpenAdd();
+                }}
+                className="flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+              >
+                <Plus className="w-5 h-5 shrink-0" />
+                <span>Record Expense</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setIsReportsOpen(!isReportsOpen)}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+              className={`flex items-center justify-center gap-2 font-bold transition-all shadow-xs cursor-pointer ${isDesktop ? "py-3 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-base" : "py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800"}`}
             >
-              <PieChart className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="truncate">{isReportsOpen ? "Hide Reports" : "Reports"}</span>
+              <PieChart className={`shrink-0 ${isDesktop ? "w-5 h-5 text-slate-500" : "w-4 h-4 text-emerald-600 dark:text-emerald-400"}`} />
+              <span className="truncate">{isReportsOpen ? "Hide Analytics" : "Reports"}</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportCSV}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800 transition-all shadow-xs cursor-pointer"
+              className={`flex items-center justify-center gap-2 font-bold transition-all shadow-xs cursor-pointer ${isDesktop ? "py-3 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-base" : "py-3 px-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm border border-emerald-200 dark:border-emerald-800"}`}
             >
-              <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <Download className={`shrink-0 ${isDesktop ? "w-5 h-5 text-slate-500" : "w-4 h-4 text-emerald-600 dark:text-emerald-400"}`} />
               <span className="truncate">Export CSV</span>
             </button>
           </div>
@@ -1663,6 +1696,40 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               <p className="text-xs sm:text-sm font-medium">No personal expenses recorded for this view.</p>
               <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a private transaction.</p>
             </div>
+          ) : isDesktop ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[24px] shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Title</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredPersonalExpenses.map((exp, idx) => (
+                    <tr 
+                      key={exp.id || idx}
+                      onClick={() => navigate(`${basePath}/expenses/personal/${exp.id}`)}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm font-medium text-slate-500 dark:text-slate-400">{exp.date}</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                          {getCategoryIcon(exp.category as any)}
+                          {exp.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-extrabold text-slate-900 dark:text-white">{exp.title}</td>
+                      <td className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white text-right">
+                        {trip.currency}{exp.amount.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="space-y-2.5">
               {filteredPersonalExpenses.map((exp, idx) => (
@@ -1711,6 +1778,56 @@ export const ExpensesModule: React.FC<ExpensesModuleProps> = ({
               <Receipt className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-40" />
               <p className="text-xs sm:text-sm font-medium">No expenses recorded for this view.</p>
               {isOrganizer && <p className="text-[11px] mt-1">Tap '+ Record Expense' to log a transaction.</p>}
+            </div>
+          ) : isDesktop ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[24px] shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Paid By</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredExpenses.map((exp, idx) => {
+                    const paidByPerson = trip.travellers.find((t) => t.id === exp.whoPaidId);
+                    return (
+                      <tr 
+                        key={exp.id || idx}
+                        onClick={() => navigate(`${basePath}/expenses/${exp.id}`)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm font-medium text-slate-500 dark:text-slate-400">{exp.date}</td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            {getCategoryIcon(exp.category)}
+                            {exp.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-extrabold text-slate-900 dark:text-white">{exp.description}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {paidByPerson?.profilePhoto ? (
+                              <img src={paidByPerson.profilePhoto} className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">
+                                {getInitials(paidByPerson?.fullName || "M")}
+                              </div>
+                            )}
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{paidByPerson?.fullName || "Member"}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white text-right">
+                          {trip.currency}{exp.amount.toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="space-y-2.5">

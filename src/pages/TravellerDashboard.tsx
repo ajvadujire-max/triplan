@@ -33,7 +33,7 @@ export default function TravellerDashboard() {
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0">
             <Plane className="text-white w-5 h-5" />
           </div>
-          {isSidebarOpen && <span className="ml-3 font-bold text-xl tracking-tight">TripPro</span>}
+          {isSidebarOpen && <span className="ml-3 font-bold text-xl tracking-tight">Triplan</span>}
         </div>
 
         <nav className="flex-1 p-4 space-y-2">

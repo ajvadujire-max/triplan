@@ -1,4 +1,4 @@
-# Security Specification: TripPro Travel Planner
+# Security Specification: Triplan Travel Planner
 
 ## 1. Data Invariants
 - **User Ownership:** All Trips, FinanceAccounts, and CashbookEntries are scoped to `/users/{userId}/` where `userId` is the authenticated User ID (`request.auth.uid`). No user can access or write to another user's path.

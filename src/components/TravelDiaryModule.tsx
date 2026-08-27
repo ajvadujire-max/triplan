@@ -40,6 +40,7 @@ import { TravelDiaryPdfModal } from "./TravelDiaryPdfModal";
 interface TravelDiaryModuleProps {
   trip: Trip;
   currentUser: User | null;
+  isDesktop?: boolean;
 }
 
 const PRESET_MOODS: DiaryMood[] = [
@@ -66,6 +67,7 @@ const PRESET_TAGS = [
 export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
   trip,
   currentUser,
+  isDesktop = false,
 }) => {
   const { basePath, relativePath, navigate, goBack } = useAppNavigation();
   const pathSegments = useMemo(() => relativePath.split("/").filter(Boolean), [relativePath]);
@@ -130,7 +132,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
   const ownerUid = currentUser?.uid || "guest_traveller";
 
   // Storage key for guest / offline fallback
-  const localStorageKey = `trippro_diary_${trip.id}_${ownerUid}`;
+  const localStorageKey = `triplan_diary_${trip.id}_${ownerUid}`;
 
   // Load Entries
   useEffect(() => {
@@ -452,44 +454,44 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="space-y-4 sm:space-y-6 pb-12"
+      className={`space-y-4 sm:space-y-6 pb-12 ${isDesktop ? "max-w-[1440px] mx-auto px-4" : ""}`}
     >
       {/* 1. HEADER BANNER */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
+      <div className={`bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden ${isDesktop ? "rounded-[32px] p-8" : "rounded-2xl sm:rounded-3xl p-5 sm:p-6"}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-[#1AAB67] text-white flex items-center justify-center font-bold text-base shadow-sm">
+              <span className={`rounded-xl bg-[#1AAB67] text-white flex items-center justify-center font-bold shadow-sm ${isDesktop ? "w-10 h-10 text-xl" : "w-8 h-8 text-base"}`}>
                 📖
               </span>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h1 className={`${isDesktop ? "text-3xl" : "text-xl sm:text-2xl"} font-black text-slate-900 dark:text-white tracking-tight`}>
                 Travel Diary
               </h1>
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
                 <Lock className="w-3 h-3" /> Private
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium pl-1">
+            <p className={`${isDesktop ? "text-base" : "text-xs sm:text-sm"} text-slate-500 dark:text-slate-400 font-medium pl-1`}>
               "Capture the moments from your journey."
             </p>
-            <p className="text-xs font-bold text-[#1AAB67] dark:text-#34D399 flex items-center gap-1 pt-1">
-              <MapPin className="w-3.5 h-3.5" /> {trip.name}
+            <p className={`${isDesktop ? "text-sm" : "text-xs"} font-bold text-[#1AAB67] dark:text-#34D399 flex items-center gap-1 pt-1`}>
+              <MapPin className={isDesktop ? "w-4 h-4" : "w-3.5 h-3.5"} /> {trip.name}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setIsPdfModalOpen(true)}
-              className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold px-4 py-3 rounded-xl shadow-xs transition-all cursor-pointer min-h-[44px] border border-slate-200 dark:border-slate-700"
+              className={`flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-800 dark:text-slate-200 font-bold shadow-xs transition-all cursor-pointer min-h-[44px] border border-slate-200 dark:border-slate-700 ${isDesktop ? "px-6 py-3.5 rounded-2xl text-base" : "px-4 py-3 rounded-xl text-xs sm:text-sm"}`}
             >
-              <FileText className="w-4 h-4 text-[#1AAB67]" />
+              <FileText className={`${isDesktop ? "w-5 h-5" : "w-4 h-4"} text-[#1AAB67]`} />
               <span>Create Travel Diary PDF</span>
             </button>
             <button
               onClick={handleOpenCreate}
-              className="flex items-center justify-center gap-2 bg-[#1AAB67] hover:bg-[#159257] active:scale-95 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-xl shadow-sm transition-all cursor-pointer min-h-[44px]"
+              className={`flex items-center justify-center gap-2 bg-[#1AAB67] hover:bg-[#159257] active:scale-95 text-white font-bold shadow-sm transition-all cursor-pointer min-h-[44px] ${isDesktop ? "px-6 py-3.5 rounded-2xl text-base" : "px-5 py-3 rounded-xl text-xs sm:text-sm"}`}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className={isDesktop ? "w-5 h-5" : "w-4 h-4"} />
               <span>+ New Diary Entry</span>
             </button>
           </div>
@@ -628,17 +630,17 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
               </div>
 
               {/* Group Entries */}
-              <div className="space-y-4 pl-1 sm:pl-2">
+              <div className={`pl-1 sm:pl-2 ${isDesktop ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}`}>
                 {group.items.map((entry) => (
                   <motion.div
                     key={entry.id}
                     layout
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-#1AAB67/50 dark:hover:border-#1AAB67/60 transition-all space-y-3 group"
+                    className={`bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-[#1AAB67]/50 dark:hover:border-[#1AAB67]/60 transition-all flex flex-col group ${isDesktop ? "rounded-[24px] p-6" : "rounded-2xl p-4 sm:p-5 space-y-3"}`}
                   >
                     {/* Header Row: Title, Mood & Actions */}
-                    <div className="flex items-start justify-between gap-3">
+                    <div className={`flex items-start justify-between gap-3 ${isDesktop ? "mb-4" : ""}`}>
                       <div>
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           {entry.mood && (
@@ -655,7 +657,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                         </div>
                         <h3
                           onClick={() => navigate(`${basePath}/diary/${entry.id}`)}
-                          className="text-base sm:text-lg font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#1AAB67] dark:hover:text-#34D399 transition-colors leading-snug"
+                          className={`${isDesktop ? "text-xl" : "text-base sm:text-lg"} font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#1AAB67] dark:hover:text-#34D399 transition-colors leading-snug`}
                         >
                           {entry.title}
                         </h3>
@@ -680,13 +682,13 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     </div>
 
                     {/* Story Preview */}
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-normal leading-relaxed line-clamp-3">
+                    <p className={`text-slate-600 dark:text-slate-300 font-normal leading-relaxed line-clamp-3 ${isDesktop ? "text-sm mb-6" : "text-xs sm:text-sm"}`}>
                       "{entry.content}"
                     </p>
 
                     {/* Photo Gallery Grid */}
                     {entry.photos && entry.photos.length > 0 && (
-                      <div className="pt-1">
+                      <div className={`pt-1 ${isDesktop ? "mb-6 flex-1" : ""}`}>
                         <div
                           className={`grid gap-2 ${
                             entry.photos.length === 1
@@ -695,26 +697,26 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                               ? "grid-cols-2"
                               : entry.photos.length === 3
                               ? "grid-cols-3"
-                              : "grid-cols-2 sm:grid-cols-4"
+                              : isDesktop ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"
                           }`}
                         >
-                          {entry.photos.slice(0, 4).map((photoUrl, idx) => {
-                            const isFourthAndMore =
-                              idx === 3 && entry.photos.length > 4;
-                            const remainingCount = entry.photos.length - 4;
+                          {entry.photos.slice(0, isDesktop ? 2 : 4).map((photoUrl, idx) => {
+                            const maxPhotos = isDesktop ? 2 : 4;
+                            const isLastVisible = idx === maxPhotos - 1 && entry.photos.length > maxPhotos;
+                            const remainingCount = entry.photos.length - maxPhotos;
 
                             return (
                               <div
                                 key={photoUrl + idx}
                                 onClick={() => navigate(`${basePath}/diary/${entry.id}/photo/${idx}`)}
-                                className="relative aspect-video sm:aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group/photo border border-slate-200/50 dark:border-slate-800"
+                                className={`relative rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer group/photo border border-slate-200/50 dark:border-slate-800 ${isDesktop ? "aspect-[4/3]" : "aspect-video sm:aspect-square"}`}
                               >
                                 <img
                                   src={photoUrl}
                                   alt={`Diary Memory ${idx + 1}`}
                                   className="w-full h-full object-cover group-hover/photo:scale-105 transition-transform duration-300"
                                 />
-                                {isFourthAndMore && (
+                                {isLastVisible && (
                                   <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center text-white font-extrabold text-sm sm:text-base">
                                     +{remainingCount}
                                   </div>
@@ -727,7 +729,7 @@ export const TravelDiaryModule: React.FC<TravelDiaryModuleProps> = ({
                     )}
 
                     {/* Footer Row: Tags & View Button */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+                    <div className={`flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs ${isDesktop ? "mt-auto" : "pt-2"}`}>
                       <div className="flex flex-wrap gap-1.5">
                         {entry.tags &&
                           entry.tags.map((tag, idx) => (

@@ -114,7 +114,7 @@ export const SwitchTripModal: React.FC<SwitchTripModalProps> = ({
             <div>
               <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Compass className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <span>My TripPro Trips</span>
+                <span>My Triplan Trips</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 Switch active trip or join a new one

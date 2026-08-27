@@ -7,7 +7,8 @@ import React from "react";
 import { User } from "firebase/auth";
 import { Trip } from "../types";
 import { Avatar } from "./Avatar";
-import tripproLogo from "../assets/logo.svg";
+import { usePWAInstall } from "../hooks/usePWAInstall";
+import triplanLogo from "../assets/logo.svg";
 import {
   Compass,
   Plus,
@@ -26,6 +27,7 @@ import {
   Navigation,
   CheckSquare2,
   FileText,
+  Download,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -81,6 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   const tabs = allTabs.filter(tab => !(tab as any).organizerOnly || role === "organizer" || role === "super_admin");
+  const { canPrompt, triggerInstall } = usePWAInstall();
 
   return (
     <header className="hidden md:block sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -90,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           <div className="w-[42px] h-[42px] shrink-0 flex items-center justify-center p-0.5">
             <img
-              src={tripproLogo}
+              src={triplanLogo}
               alt=""
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).src = "/triplan_logo.png";
@@ -101,11 +104,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">
-                TripPro
+                Triplan
               </span>
               <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Treasury Pro v4.2
+                Triplan v4.2
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block font-medium">
@@ -210,6 +213,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Organizer View
               </button>
             </div>
+          )}
+
+          {canPrompt && (
+            <button
+              onClick={() => triggerInstall()}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Install Triplan</span>
+            </button>
           )}
 
           <button

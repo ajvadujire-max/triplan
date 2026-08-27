@@ -24,6 +24,8 @@ import {
 import { initialTrips, initialAccounts, initialCashbookEntries } from "./data/mockData";
 import { Navbar } from "./components/Navbar";
 import { MobileNavigation } from "./components/MobileNavigation";
+import { DesktopSidebar } from "./components/DesktopSidebar";
+import { DesktopHeader } from "./components/DesktopHeader";
 import { TripDashboard } from "./components/TripDashboard";
 import { TripCreateModal } from "./components/TripCreateModal";
 import { TravellersModule } from "./components/TravellersModule";
@@ -64,26 +66,52 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userRole, setUserRole] = useState<"traveller" | "organizer" | "super_admin">(role as any);
 
+  // Data Migration for Branding Change (TripPro -> Triplan)
+  // We do this synchronously before state initialization
+  const migrateStorageData = () => {
+    if (typeof window === "undefined") return;
+    const keysToMigrate = [
+      "trippro_trips",
+      "trippro_active_trip_id",
+      "trippro_accounts",
+      "trippro_cashbook",
+      "trippro_theme",
+      "trippro_google_access_token"
+    ];
+
+    keysToMigrate.forEach(oldKey => {
+      const val = localStorage.getItem(oldKey);
+      if (val !== null) {
+        const newKey = oldKey.replace("trippro_", "triplan_");
+        if (!localStorage.getItem(newKey)) {
+          localStorage.setItem(newKey, val);
+        }
+      }
+    });
+  };
+
+  migrateStorageData();
+
   const [trips, setTrips] = useState<Trip[]>(() => {
-    const saved = localStorage.getItem("trippro_trips");
+    const saved = localStorage.getItem("triplan_trips");
     return saved ? JSON.parse(saved) : initialTrips;
   });
 
   const [selectedTripId, setSelectedTripId] = useState<string>(() => {
-    const active = localStorage.getItem("trippro_active_trip_id");
+    const active = localStorage.getItem("triplan_active_trip_id");
     if (active && trips.some((t) => t.id === active)) return active;
     return trips[0]?.id || "trip_goa_01";
   });
 
   useEffect(() => {
     if (selectedTripId) {
-      localStorage.setItem("trippro_active_trip_id", selectedTripId);
+      localStorage.setItem("triplan_active_trip_id", selectedTripId);
     }
   }, [selectedTripId]);
 
   useEffect(() => {
     const migrateTripCodes = async () => {
-        if (localStorage.getItem("trippro_codes_migrated")) return;
+        if (localStorage.getItem("triplan_codes_migrated")) return;
         try {
             // const tripsSnap = await getDocs(collection(db, "trips"));
             // for (const docSnap of tripsSnap.docs) {
@@ -102,7 +130,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             //         await updateDoc(doc(db, "trips", docSnap.id), updates);
             //     }
             // }
-            localStorage.setItem("trippro_codes_migrated", "true");
+            localStorage.setItem("triplan_codes_migrated", "true");
         } catch (err) {
             console.error("Migration failed:", err);
         }
@@ -112,7 +140,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
 
   useEffect(() => {
     const syncActiveTrip = () => {
-      const savedTripsStr = localStorage.getItem("trippro_trips");
+      const savedTripsStr = localStorage.getItem("triplan_trips");
       if (savedTripsStr) {
         try {
           const parsed = JSON.parse(savedTripsStr);
@@ -123,7 +151,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           // ignore
         }
       }
-      const active = localStorage.getItem("trippro_active_trip_id");
+      const active = localStorage.getItem("triplan_active_trip_id");
       if (active) {
         setSelectedTripId(active);
       }
@@ -132,7 +160,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     window.addEventListener("trip_changed", syncActiveTrip);
     window.addEventListener("storage", syncActiveTrip);
 
-    const active = localStorage.getItem("trippro_active_trip_id");
+    const active = localStorage.getItem("triplan_active_trip_id");
     if (active && trips.some((t) => t.id === active)) {
       setSelectedTripId(active);
     }
@@ -169,7 +197,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
       console.log("No trips found for user, navigating to /join");
       if (!justLeftRef.current) {
         // They were probably removed if they had trips before
-        const hadTripsBefore = localStorage.getItem("trippro_trips") && JSON.parse(localStorage.getItem("trippro_trips") || "[]").length > 0;
+        const hadTripsBefore = localStorage.getItem("triplan_trips") && JSON.parse(localStorage.getItem("triplan_trips") || "[]").length > 0;
         if (hadTripsBefore) {
           alert("You have been removed from this trip by the organizer.");
         }
@@ -254,12 +282,12 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   }, [activeTrip?.id, user?.uid]);
 
   const [accounts, setAccounts] = useState<FinanceAccount[]>(() => {
-    const saved = localStorage.getItem("trippro_accounts");
+    const saved = localStorage.getItem("triplan_accounts");
     return saved ? JSON.parse(saved) : initialAccounts;
   });
 
   const [cashbook, setCashbook] = useState<CashbookEntry[]>(() => {
-    const saved = localStorage.getItem("trippro_cashbook");
+    const saved = localStorage.getItem("triplan_cashbook");
     return saved ? JSON.parse(saved) : initialCashbookEntries;
   });
 
@@ -267,11 +295,19 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const [isSwitchTripModalOpen, setIsSwitchTripModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    const savedTheme = localStorage.getItem("trippro_theme");
+    const savedTheme = localStorage.getItem("triplan_theme");
     if (savedTheme === "dark") return true;
     if (savedTheme === "light") return false;
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
+
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (darkMode) {
@@ -284,19 +320,19 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
   const handleToggleDarkMode = () => {
     const nextVal = !darkMode;
     setDarkMode(nextVal);
-    localStorage.setItem("trippro_theme", nextVal ? "dark" : "light");
+    localStorage.setItem("triplan_theme", nextVal ? "dark" : "light");
   };
 
   useEffect(() => {
-    localStorage.setItem("trippro_trips", JSON.stringify(trips));
+    localStorage.setItem("triplan_trips", JSON.stringify(trips));
   }, [trips]);
 
   useEffect(() => {
-    localStorage.setItem("trippro_accounts", JSON.stringify(accounts));
+    localStorage.setItem("triplan_accounts", JSON.stringify(accounts));
   }, [accounts]);
 
   useEffect(() => {
-    localStorage.setItem("trippro_cashbook", JSON.stringify(cashbook));
+    localStorage.setItem("triplan_cashbook", JSON.stringify(cashbook));
   }, [cashbook]);
 
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -369,12 +405,12 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             if (fetchedTrips.length > 0) {
               setTrips(fetchedTrips);
               
-              const active = localStorage.getItem("trippro_active_trip_id");
+              const active = localStorage.getItem("triplan_active_trip_id");
               if (active && fetchedTrips.some(t => t.id === active)) {
                 setSelectedTripId(active);
               } else {
                 setSelectedTripId(fetchedTrips[0].id);
-                localStorage.setItem("trippro_active_trip_id", fetchedTrips[0].id);
+                localStorage.setItem("triplan_active_trip_id", fetchedTrips[0].id);
               }
             } else {
               setTrips([]);
@@ -414,9 +450,9 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           });
 
           // Migrate local storage in the background without blocking the UI
-          const savedTrips = localStorage.getItem("trippro_trips");
-          const savedAccounts = localStorage.getItem("trippro_accounts");
-          const savedCashbook = localStorage.getItem("trippro_cashbook");
+          const savedTrips = localStorage.getItem("triplan_trips");
+          const savedAccounts = localStorage.getItem("triplan_accounts");
+          const savedCashbook = localStorage.getItem("triplan_cashbook");
 
           const tripsToMigrate = savedTrips ? JSON.parse(savedTrips) : initialTrips;
           const accountsToMigrate = savedAccounts ? JSON.parse(savedAccounts) : initialAccounts;
@@ -447,7 +483,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         if (unsubscribeAccounts) unsubscribeAccounts();
         if (unsubscribeCashbook) unsubscribeCashbook();
 
-        const saved = localStorage.getItem("trippro_trips");
+        const saved = localStorage.getItem("triplan_trips");
         const localTrips: Trip[] = saved ? JSON.parse(saved) : initialTrips;
         setTrips(localTrips);
 
@@ -471,9 +507,9 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
           }
         }
 
-        const savedAccs = localStorage.getItem("trippro_accounts");
+        const savedAccs = localStorage.getItem("triplan_accounts");
         setAccounts(savedAccs ? JSON.parse(savedAccs) : initialAccounts);
-        const savedCb = localStorage.getItem("trippro_cashbook");
+        const savedCb = localStorage.getItem("triplan_cashbook");
         setCashbook(savedCb ? JSON.parse(savedCb) : initialCashbookEntries);
       }
     );
@@ -734,13 +770,13 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
     }
     return (
       <div className="min-h-[100dvh] bg-slate-900 text-white flex items-center justify-center">
-        <p>Loading TripPro system...</p>
+        <p>Loading Triplan system...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col overflow-x-hidden">
+    <div className={`min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 flex ${isDesktop ? "flex-row" : "flex-col"} overflow-x-hidden`}>
       <ConnectivityIndicator />
       
       {toastNotice && (
@@ -766,60 +802,95 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
         </div>
       )}
 
-      <Navbar
-        trips={trips}
-        activeTripId={selectedTripId}
-        onSelectTrip={(id) => setSelectedTripId(id)}
-        onOpenCreateTrip={() => {
-          setEditingTrip(null);
-          setIsCreateModalOpen(true);
-        }}
-        onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
-        darkMode={darkMode}
-        onToggleDarkMode={handleToggleDarkMode}
-        activeTab={activeTab}
-        onSelectTab={handleSelectTab}
-        user={user}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
-        isAuthLoading={isAuthLoading}
-        role={userRole}
-        onRoleChange={(newRole) => setUserRole(newRole)}
-        checklistStats={checklistStats}
-      />
+      {!isDesktop && (
+        <Navbar
+          trips={trips}
+          activeTripId={selectedTripId}
+          onSelectTrip={(id) => setSelectedTripId(id)}
+          onOpenCreateTrip={() => {
+            setEditingTrip(null);
+            setIsCreateModalOpen(true);
+          }}
+          onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          activeTab={activeTab}
+          onSelectTab={handleSelectTab}
+          user={user}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+          isAuthLoading={isAuthLoading}
+          role={userRole}
+          onRoleChange={(newRole) => setUserRole(newRole)}
+          checklistStats={checklistStats}
+        />
+      )}
 
-      <MobileNavigation
-        trips={trips}
-        activeTripId={selectedTripId}
-        onSelectTrip={(id) => setSelectedTripId(id)}
-        onOpenCreateTrip={() => {
-          setEditingTrip(null);
-          setIsCreateModalOpen(true);
-        }}
-        onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
-        darkMode={darkMode}
-        onToggleDarkMode={handleToggleDarkMode}
-        activeTab={activeTab}
-        onSelectTab={handleSelectTab}
-        user={user}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
-        isAuthLoading={isAuthLoading}
-        role={userRole}
-        onRoleChange={(newRole) => setUserRole(newRole)}
-        checklistStats={checklistStats}
-      />
+      {!isDesktop && (
+        <MobileNavigation
+          trips={trips}
+          activeTripId={selectedTripId}
+          onSelectTrip={(id) => setSelectedTripId(id)}
+          onOpenCreateTrip={() => {
+            setEditingTrip(null);
+            setIsCreateModalOpen(true);
+          }}
+          onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          activeTab={activeTab}
+          onSelectTab={handleSelectTab}
+          user={user}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+          isAuthLoading={isAuthLoading}
+          role={userRole}
+          onRoleChange={(newRole) => setUserRole(newRole)}
+          checklistStats={checklistStats}
+        />
+      )}
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-[clamp(12px,2vw,24px)] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="w-full space-y-4 sm:space-y-6"
-          >
+      {isDesktop && (
+        <DesktopSidebar 
+          activeTab={activeTab}
+          onSelectTab={handleSelectTab}
+          user={user}
+          onSignOut={handleSignOut}
+          role={userRole}
+          activeTrip={activeTrip}
+          onOpenCreateTrip={() => {
+            setEditingTrip(null);
+            setIsCreateModalOpen(true);
+          }}
+        />
+      )}
+
+      <div className={`flex-1 flex flex-col min-w-0 ${isDesktop ? "pl-[260px]" : ""}`}>
+        {isDesktop && (
+          <DesktopHeader 
+            activeTrip={activeTrip}
+            onOpenSwitchTrip={() => setIsSwitchTripModalOpen(true)}
+            onOpenCreateTrip={() => {
+              setEditingTrip(null);
+              setIsCreateModalOpen(true);
+            }}
+            onNavigateTab={handleSelectTab}
+            darkMode={darkMode}
+            onToggleDarkMode={handleToggleDarkMode}
+            user={user}
+          />
+        )}
+
+        <main className={`flex-1 ${isDesktop ? "max-w-[1440px]" : "max-w-7xl"} w-full mx-auto p-[clamp(12px,2vw,32px)] ${isDesktop ? "pb-12" : "pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8"}`}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="w-full space-y-4 sm:space-y-6"
+            >
             {activeTab === "dashboard" && (
               <TripDashboard
                 trip={activeTrip}
@@ -831,6 +902,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                   setIsCreateModalOpen(true);
                 }}
                 role={userRole}
+                isDesktop={isDesktop}
               />
             )}
 
@@ -849,7 +921,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             )}
 
             {activeTab === "diary" && (
-              <TravelDiaryModule trip={activeTrip} currentUser={user} />
+              <TravelDiaryModule trip={activeTrip} currentUser={user} isDesktop={isDesktop} />
             )}
 
             {activeTab === "route_tracker" && (
@@ -862,7 +934,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             )}
 
             {activeTab === "timeline" && (
-              <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} />
+              <PlannerModule trip={activeTrip} onUpdateTrip={handleUpdateTrip} role={userRole} isDesktop={isDesktop} />
             )}
 
             {activeTab === "expenses" && (
@@ -874,6 +946,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 onUpdateTrip={handleUpdateTrip}
                 role={userRole}
                 currentUser={user}
+                isDesktop={isDesktop}
               />
             )}
 
@@ -884,6 +957,7 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 currentUser={user}
                 mode="vault"
                 onChecklistStatsChange={setChecklistStats}
+                isDesktop={isDesktop}
               />
             )}
 
@@ -894,11 +968,12 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 currentUser={user}
                 mode="checklist"
                 onChecklistStatsChange={setChecklistStats}
+                isDesktop={isDesktop}
               />
             )}
 
             {(activeTab === "weather" || activeTab === "weather_maps") && (
-              <WeatherMapsTimeline trip={activeTrip} onUpdateTrip={handleUpdateTrip} />
+              <WeatherMapsTimeline trip={activeTrip} onUpdateTrip={handleUpdateTrip} isDesktop={isDesktop} />
             )}
 
             {activeTab === "finance" && (
@@ -914,13 +989,13 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
                 onDeleteAccount={handleDeleteAccount}
                 onSaveCashbookEntry={handleSaveCashbookEntry}
                 onDeleteCashbookEntry={handleDeleteCashbookEntry}
+                isDesktop={isDesktop}
               />
             )}
           </motion.div>
         </AnimatePresence>
       </main>
-
-
+    </div>
 
       <TripCreateModal
         isOpen={isCreateModalOpen}
@@ -960,15 +1035,15 @@ function MainApp({ role = "traveller" }: { role?: "traveller" | "organizer" }) {
             
             const remainingTrips = trips.filter(t => t.id !== tripId);
             setTrips(remainingTrips);
-            localStorage.setItem("trippro_trips", JSON.stringify(remainingTrips));
+            localStorage.setItem("triplan_trips", JSON.stringify(remainingTrips));
             
             if (tripId === selectedTripId) {
               if (remainingTrips.length > 0) {
                 setSelectedTripId(remainingTrips[0].id);
-                localStorage.setItem("trippro_active_trip_id", remainingTrips[0].id);
+                localStorage.setItem("triplan_active_trip_id", remainingTrips[0].id);
               } else {
                 setSelectedTripId("");
-                localStorage.removeItem("trippro_active_trip_id");
+                localStorage.removeItem("triplan_active_trip_id");
               }
             }
             
