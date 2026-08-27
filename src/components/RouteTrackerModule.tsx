@@ -31,6 +31,15 @@ import {
   ChevronRight
 } from "lucide-react";
 import { db } from "../lib/firebase";
+import { useConnectivity } from "../lib/useConnectivity";
+import {
+  saveActiveRouteToStorage,
+  getActiveRouteFromStorage,
+  clearActiveRouteFromStorage,
+  saveCompletedRouteToStorage,
+  getCompletedRoutesFromStorage,
+  deleteCompletedRouteFromStorage
+} from "../lib/routeStorage";
 import {
   collection,
   doc,
@@ -430,6 +439,10 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   const [gpsPermissionState, setGpsPermissionState] = useState<
     "prompt" | "granted" | "denied" | "unavailable"
   >("prompt");
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const isOnline = useConnectivity();
+  const [isGpsWeak, setIsGpsWeak] = useState<boolean>(false);
+  const [recoveredNotice, setRecoveredNotice] = useState<boolean>(false);
 
   // Active session timestamps & pause tracking states for durable persistence
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
@@ -563,47 +576,45 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       pauseLocations: pauseLocationsRef.current
     };
 
-    // Save to LocalStorage immediately
-    try {
-      localStorage.setItem(localStorageActiveKey, JSON.stringify(sessionData));
-    } catch (e) {
-      console.error("Failed to save active session to localStorage:", e);
-    }
+    // 1. Save to IndexedDB & LocalStorage
+    await saveActiveRouteToStorage(sessionData);
 
-    // Save to Firestore asynchronously
-    try {
-      const activeDocRef = doc(
-        db,
-        "trips",
-        trip.id,
-        "activeRouteSessions",
-        currentUser?.uid || "guest_user"
-      );
-      setDoc(activeDocRef, sessionData).catch((err) => {
-        console.warn("Firestore background sync warning:", err);
-      });
-    } catch (err) {
-      // Non-blocking warning
+    // 2. Save to Firestore asynchronously if online
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      try {
+        const activeDocRef = doc(
+          db,
+          "trips",
+          trip.id,
+          "activeRouteSessions",
+          currentUser?.uid || "guest_user"
+        );
+        setDoc(activeDocRef, sessionData).catch((err) => {
+          console.warn("Firestore background sync warning:", err);
+        });
+      } catch (err) {
+        // Non-blocking warning
+      }
     }
   };
 
   const clearActiveSessionFromStorage = async () => {
-    try {
-      localStorage.removeItem(localStorageActiveKey);
-      localStorage.removeItem(`triplan_tracker_draft_${trip.id}`);
-    } catch (e) {}
-
-    try {
-      const activeDocRef = doc(
-        db,
-        "trips",
-        trip.id,
-        "activeRouteSessions",
-        currentUser?.uid || "guest_user"
-      );
-      await deleteDoc(activeDocRef);
-    } catch (err) {
-      console.warn("Firestore active tracking delete warning:", err);
+    await clearActiveRouteFromStorage(trip.id);
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      try {
+        const activeDocRef = doc(
+          db,
+          "trips",
+          trip.id,
+          "activeRouteSessions",
+          currentUser?.uid || "guest_user"
+        );
+        await deleteDoc(activeDocRef).catch((err) => {
+          console.warn("Firestore active tracking delete warning:", err);
+        });
+      } catch (err) {
+        console.warn("Firestore active tracking delete warning:", err);
+      }
     }
   };
 
@@ -694,47 +705,10 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   };
 
   const restoreActiveSession = async () => {
-    let activeData: ActiveRouteSessionState | null = null;
+    let activeData: ActiveRouteSessionState | null = await getActiveRouteFromStorage(trip.id);
 
-    // 1. LocalStorage check
-    try {
-      const storedStr = localStorage.getItem(localStorageActiveKey);
-      if (storedStr) {
-        activeData = JSON.parse(storedStr);
-      }
-    } catch (e) {
-      console.error("Error reading active session from localStorage:", e);
-    }
-
-    // Fallback: check legacy draft key if active key wasn't found
-    if (!activeData) {
-      try {
-        const draftStr = localStorage.getItem(`triplan_tracker_draft_${trip.id}`);
-        if (draftStr) {
-          const legacy = JSON.parse(draftStr);
-          if (legacy.sessionId && legacy.points && legacy.points.length > 0) {
-            activeData = {
-              id: legacy.sessionId,
-              tripId: trip.id,
-              userId: currentUser?.uid || "guest_user",
-              status: "tracking",
-              startTimestamp: Date.now() - (legacy.elapsedSeconds || 0) * 1000,
-              accumulatedPausedSeconds: 0,
-              pausedAtTimestamp: null,
-              lastUpdateTimestamp: Date.now(),
-              totalDistanceKm: legacy.totalDistanceKm || 0,
-              currentSpeedKmh: 0,
-              maxSpeedKmh: 0,
-              lastKnownPosition: legacy.points[legacy.points.length - 1] || null,
-              points: legacy.points
-            };
-          }
-        }
-      } catch (e) {}
-    }
-
-    // 2. Firestore check
-    if (!activeData) {
+    // 2. Firestore check if local active route was not found
+    if (!activeData && typeof navigator !== "undefined" && navigator.onLine) {
       try {
         const activeDocRef = doc(
           db,
@@ -822,9 +796,11 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       startWatchingLocation();
     }
 
+    setRecoveredNotice(true);
+
     setToastMessage({
       type: "success",
-      text: `Restored active route tracking (${dist.toFixed(2)} KM).`
+      text: `Active route tracking recovered (${dist.toFixed(2)} KM in progress).`
     });
 
     return true;
@@ -880,36 +856,27 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   // Key for local storage persistence
   const localStorageDraftKey = `triplan_tracker_draft_${trip.id}`;
 
-  // 1. Load Past Saved Routes from Firestore & LocalStorage
+  // 1. Load Past Saved Routes from LocalStorage / IndexedDB & Firestore
   const loadSavedRoutes = async () => {
     setIsLoadingHistory(true);
     try {
-      const routesList: StoredRouteSession[] = [];
-      // Firestore check
-      try {
-        const routesCol = collection(db, "trips", trip.id, "routeSessions");
-        const q = query(routesCol, orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        snap.forEach((docSnap) => {
-          routesList.push({ id: docSnap.id, ...(docSnap.data() as any) });
-        });
-      } catch (err) {
-        console.warn("Firestore fetch routeSessions fallback to local:", err);
-      }
+      const routesList: StoredRouteSession[] = await getCompletedRoutesFromStorage(trip.id);
 
-      // Also merge with localStorage saved sessions for this trip
-      try {
-        const localSaved = localStorage.getItem(`triplan_saved_routes_${trip.id}`);
-        if (localSaved) {
-          const parsed: StoredRouteSession[] = JSON.parse(localSaved);
-          parsed.forEach((p) => {
-            if (!routesList.some((r) => r.id === p.id)) {
-              routesList.push(p);
+      // Firestore check if online
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        try {
+          const routesCol = collection(db, "trips", trip.id, "routeSessions");
+          const q = query(routesCol, orderBy("createdAt", "desc"));
+          const snap = await getDocs(q);
+          snap.forEach((docSnap) => {
+            const data = { id: docSnap.id, ...(docSnap.data() as any) };
+            if (!routesList.some((r) => r.id === data.id)) {
+              routesList.push(data);
             }
           });
+        } catch (err) {
+          console.warn("Firestore fetch routeSessions fallback to local:", err);
         }
-      } catch (e) {
-        console.error("Local storage read error", e);
       }
 
       // Sort by creation time desc
@@ -986,17 +953,10 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       // Check and restore active tracking session if any existed before reload
       restoreActiveSession().then((restored) => {
-        if (!restored && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const { latitude, longitude } = pos.coords;
-              if (mapInstanceRef.current) {
-                mapInstanceRef.current.setView([latitude, longitude], 15);
-              }
-            },
-            () => {},
-            { timeout: 5000 }
-          );
+        if (restored) {
+          detectAndShowCurrentLocation(false, false);
+        } else {
+          detectAndShowCurrentLocation(true, true);
         }
       });
     }
@@ -1088,6 +1048,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     const { latitude, longitude, accuracy, speed, heading } = position.coords;
     setGpsPermissionState("granted");
     setGpsError(null);
+    setIsGpsWeak(false);
     setShowLocationInstructionModal(false);
 
     const pointAccuracy = Math.round(accuracy || 15);
@@ -1312,6 +1273,9 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
   const handleGpsError = (error: GeolocationPositionError) => {
     console.warn("GPS Error:", error);
+    if (trackingStateRef.current === "tracking") {
+      setIsGpsWeak(true);
+    }
     if (error.code === error.PERMISSION_DENIED) {
       setGpsPermissionState("denied");
       setGpsError(
@@ -1320,12 +1284,60 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       setShowLocationInstructionModal(true);
     } else if (error.code === error.POSITION_UNAVAILABLE) {
       setGpsPermissionState("unavailable");
-      setGpsError("GPS position unavailable. Please ensure device location is turned on and try again.");
+      setGpsError("GPS signal weak or unavailable. Attempting to reconnect...");
     } else if (error.code === error.TIMEOUT) {
-      setGpsError("GPS request timed out. Please tap 'Enable Location' to retry.");
+      setGpsError("GPS signal timeout. Retrying...");
     } else {
-      setGpsError("Unable to acquire location coordinates.");
+      setGpsError("Unable to acquire location coordinates. Retrying...");
     }
+  };
+
+  // Immediate location detection for page mount and view center
+  const detectAndShowCurrentLocation = (animate = true, forceCenter = true) => {
+    if (!navigator.geolocation) {
+      setGpsPermissionState("unavailable");
+      setGpsError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    if (typeof window !== "undefined" && !window.isSecureContext && window.location.hostname !== "localhost") {
+      setGpsPermissionState("denied");
+      setGpsError("Geolocation requires a secure HTTPS connection.");
+      setShowLocationInstructionModal(true);
+      return;
+    }
+
+    setIsLocating(true);
+    setGpsError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setIsLocating(false);
+        setGpsPermissionState("granted");
+        setGpsError(null);
+        setShowLocationInstructionModal(false);
+
+        handleGpsUpdate(position);
+
+        const { latitude, longitude } = position.coords;
+        if (mapInstanceRef.current && (forceCenter || autoCenterRef.current)) {
+          if (animate) {
+            mapInstanceRef.current.flyTo([latitude, longitude], 15, { duration: 1 });
+          } else {
+            mapInstanceRef.current.setView([latitude, longitude], 15);
+          }
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        handleGpsError(error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000
+      }
+    );
   };
 
   // Explicit Location Request via native navigator.geolocation.getCurrentPosition
@@ -1343,10 +1355,12 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       return;
     }
 
+    setIsLocating(true);
     setGpsError(null);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        setIsLocating(false);
         setGpsPermissionState("granted");
         setGpsError(null);
         setShowLocationInstructionModal(false);
@@ -1367,6 +1381,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
         }
       },
       (error) => {
+        setIsLocating(false);
         handleGpsError(error);
       },
       {
@@ -1391,11 +1406,7 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       }
     }
 
-    handleRequestLocationPermission((pos) => {
-      setShowLocationInstructionModal(false);
-      setToastMessage({ type: "success", text: "Location access granted! GPS tracking ready." });
-      startWatchingLocation();
-    });
+    detectAndShowCurrentLocation(true, true);
   };
 
   // Start continuous GPS tracking watcher
@@ -1672,25 +1683,19 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     try {
       const sessionData = completedSummary;
 
-      // 1. Save to Firestore
-      try {
-        await setDoc(
-          doc(db, "trips", trip.id, "routeSessions", sessionData.id),
-          sessionData
-        );
-      } catch (err) {
-        console.warn("Firestore save failed, saving to localStorage:", err);
-      }
+      // 1. Save to local storage & IndexedDB
+      await saveCompletedRouteToStorage(sessionData);
 
-      // 2. Save to LocalStorage
-      try {
-        const localKey = `triplan_saved_routes_${trip.id}`;
-        const existing = localStorage.getItem(localKey);
-        const parsed: StoredRouteSession[] = existing ? JSON.parse(existing) : [];
-        const updated = [sessionData, ...parsed.filter((s) => s.id !== sessionData.id)];
-        localStorage.setItem(localKey, JSON.stringify(updated));
-      } catch (e) {
-        console.error("LocalStorage save error:", e);
+      // 2. Save to Firestore if online
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        try {
+          await setDoc(
+            doc(db, "trips", trip.id, "routeSessions", sessionData.id),
+            sessionData
+          );
+        } catch (err) {
+          console.warn("Firestore save failed:", err);
+        }
       }
 
       // 3. Clear active tracking session state & active tracking storage
@@ -1835,24 +1840,16 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     setIsDeletingJourney(true);
 
     try {
-      // 1. Delete from Firestore if available
-      try {
-        await deleteDoc(doc(db, "trips", trip.id, "routeSessions", targetId));
-      } catch (fsErr) {
-        console.warn("Firestore delete warning (may be guest or offline):", fsErr);
-      }
+      // 1. Delete from IndexedDB and LocalStorage
+      await deleteCompletedRouteFromStorage(targetId, trip.id);
 
-      // 2. Delete from LocalStorage
-      try {
-        const localKey = `triplan_saved_routes_${trip.id}`;
-        const existing = localStorage.getItem(localKey);
-        if (existing) {
-          const parsed: StoredRouteSession[] = JSON.parse(existing);
-          const filtered = parsed.filter((s) => s.id !== targetId);
-          localStorage.setItem(localKey, JSON.stringify(filtered));
+      // 2. Delete from Firestore if online
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        try {
+          await deleteDoc(doc(db, "trips", trip.id, "routeSessions", targetId));
+        } catch (fsErr) {
+          console.warn("Firestore delete warning:", fsErr);
         }
-      } catch (lsErr) {
-        console.error("LocalStorage delete error:", lsErr);
       }
 
       // 3. Update React state immediately
@@ -1880,31 +1877,18 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     }
   };
 
-  // Recenter and dynamically adjust zoom to fit recorded route path
+  // Recenter map on user's current location
   const handleRecenter = () => {
     setAutoCenter(true);
     autoCenterRef.current = true;
-    if (mapInstanceRef.current) {
-      adjustMapToFitRoute(routePointsRef.current, currentPositionRef.current, true);
+    if (currentPositionRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(
+        [currentPositionRef.current.lat, currentPositionRef.current.lng],
+        Math.max(mapInstanceRef.current.getZoom(), 15),
+        { duration: 0.8 }
+      );
     }
-    if (!currentPositionRef.current && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        const { latitude, longitude, accuracy, speed, heading } = pos.coords;
-        const newPos = {
-          lat: latitude,
-          lng: longitude,
-          accuracy: Math.round(accuracy || 15),
-          speed: speed ? speed * 3.6 : 0,
-          heading,
-          timestamp: pos.timestamp
-        };
-        setCurrentPosition(newPos);
-        currentPositionRef.current = newPos;
-        if (mapInstanceRef.current) {
-          adjustMapToFitRoute(routePointsRef.current, newPos, true);
-        }
-      });
-    }
+    detectAndShowCurrentLocation(true, true);
   };
 
   // Fit all points in view
@@ -1996,6 +1980,24 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       {/* 3. MAIN LIVE MAP VIEW */}
       {activeViewTab === "live" && (
         <div className="space-y-2.5 sm:space-y-3">
+          {/* Active Route Recovered Notification Banner */}
+          {recoveredNotice && trackingState !== "idle" && (
+            <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-emerald-900 dark:text-emerald-200 text-xs font-medium animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Active Route Recovered:</strong> Tracking session ({totalDistanceKm.toFixed(2)} KM · {formatDurationDigital(elapsedSeconds)}) is saved locally & active.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecoveredNotice(false)}
+                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           {/* Real-time Telemetry Stats Grid - Compact 2x2 Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
             {/* Total Distance */}
@@ -2064,6 +2066,69 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
           >
             {/* The Leaflet Div */}
             <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+            {/* Locating You Overlay */}
+            {isLocating && !currentPosition && (
+              <div className="absolute inset-0 z-20 bg-slate-900/10 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+                <div className="bg-white/95 dark:bg-slate-900/95 px-4 py-2.5 rounded-full shadow-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-extrabold text-slate-800 dark:text-slate-100 animate-fadeIn">
+                  <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin" />
+                  <span>Locating you…</span>
+                </div>
+              </div>
+            )}
+
+            {/* Permission Denied Overlay */}
+            {!isLocating && !currentPosition && gpsPermissionState === "denied" && (
+              <div className="absolute inset-0 z-20 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-xs pointer-events-auto">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
+                      Location Access Required
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Allow location access to show your current position on the map.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleEnableLocationClick}
+                    className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+                  >
+                    Enable Location
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Position Unavailable Overlay */}
+            {!isLocating && !currentPosition && gpsPermissionState === "unavailable" && (
+              <div className="absolute inset-0 z-20 bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-xs pointer-events-auto">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mx-auto">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
+                      Unable to Determine Location
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Please check that GPS / Location services are enabled on your device.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => detectAndShowCurrentLocation(true, true)}
+                    className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Retry Location</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Floating Top Bar (Active Tracking Indicator & Controls) */}
             <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-12 sm:right-14 z-10 flex items-center justify-between pointer-events-none">
@@ -2205,6 +2270,37 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       {/* 4. HISTORY TAB (SAVED ROUTES FOR THIS TRIP) */}
       {activeViewTab === "history" && (
         <div className="space-y-4">
+          {trackingState !== "idle" && (
+            <div className="bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-blue-500/10 dark:from-emerald-950/40 dark:via-indigo-950/40 dark:to-blue-950/40 border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <Navigation className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wide bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                      {trackingState === "paused" ? "PAUSED" : "ACTIVE ROUTE IN PROGRESS"}
+                    </span>
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                      {routePoints.length} GPS Points recorded
+                    </span>
+                  </div>
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-1">
+                    {totalDistanceKm.toFixed(2)} KM · {formatDurationDigital(elapsedSeconds)} elapsed
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveViewTab("live")}
+                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
+              >
+                <span>Return to Live Map</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
