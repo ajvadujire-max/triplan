@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Trip, RouteSession, RoutePoint } from "../types";
 import { User } from "firebase/auth";
 import {
@@ -30,6 +30,125 @@ import {
   Map as MapIcon,
   ChevronRight
 } from "lucide-react";
+
+const getMapStyle = (type: "streets" | "satellite" | "voyager"): maplibregl.StyleSpecification => {
+  if (type === "satellite") {
+    return {
+      version: 8,
+      sources: {
+        "esri-satellite": {
+          type: "raster",
+          tiles: [
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          ],
+          tileSize: 256,
+          attribution: "Esri World Imagery"
+        },
+        "esri-labels": {
+          type: "raster",
+          tiles: [
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+          ],
+          tileSize: 256
+        }
+      },
+      layers: [
+        {
+          id: "esri-satellite-layer",
+          type: "raster",
+          source: "esri-satellite",
+          minzoom: 0,
+          maxzoom: 19
+        },
+        {
+          id: "esri-labels-layer",
+          type: "raster",
+          source: "esri-labels",
+          minzoom: 0,
+          maxzoom: 19,
+          paint: {
+            "raster-opacity": 0.85
+          }
+        }
+      ]
+    };
+  } else if (type === "streets") {
+    return {
+      version: 8,
+      sources: {
+        "osm-streets": {
+          type: "raster",
+          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: "&copy; OpenStreetMap contributors"
+        }
+      },
+      layers: [
+        {
+          id: "osm-streets-layer",
+          type: "raster",
+          source: "osm-streets",
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    };
+  } else {
+    return {
+      version: 8,
+      sources: {
+        "carto-voyager": {
+          type: "raster",
+          tiles: [
+            "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+            "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+            "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+          ],
+          tileSize: 256,
+          attribution: "&copy; OpenStreetMap &copy; CARTO"
+        }
+      },
+      layers: [
+        {
+          id: "carto-voyager-layer",
+          type: "raster",
+          source: "carto-voyager",
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    };
+  }
+};
+
+const createGeoJSONCircle = (center: [number, number], radiusInMeters: number, points = 32) => {
+  const coords = [];
+  const km = Math.max(0.001, radiusInMeters / 1000);
+  const distanceX = km / (111.32 * Math.cos((center[1] * Math.PI) / 180));
+  const distanceY = km / 110.574;
+
+  for (let i = 0; i < points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([center[0] + x, center[1] + y]);
+  }
+  coords.push(coords[0]);
+
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        properties: {},
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [coords]
+        }
+      }
+    ]
+  };
+};
 import { db } from "../lib/firebase";
 import { useConnectivity } from "../lib/useConnectivity";
 import {
@@ -206,7 +325,7 @@ async function fetchLocationName(lat: number, lng: number): Promise<string> {
   return `Lat ${lat.toFixed(3)}°, Lon ${lng.toFixed(3)}°`;
 }
 
-// Lightweight static Leaflet route preview map for history cards
+// Lightweight static MapLibre route preview map for history cards
 interface RouteCardMapPreviewProps {
   points: { lat: number; lng: number }[];
   className?: string;
@@ -214,7 +333,7 @@ interface RouteCardMapPreviewProps {
 
 const RouteCardMapPreview: React.FC<RouteCardMapPreviewProps> = ({ points, className = "" }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -223,69 +342,63 @@ const RouteCardMapPreview: React.FC<RouteCardMapPreviewProps> = ({ points, class
       mapRef.current = null;
     }
 
-    const map = L.map(containerRef.current, {
-      zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      touchZoom: false,
-      boxZoom: false,
-      keyboard: false,
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: getMapStyle("voyager"),
+      center: points && points.length > 0 ? [points[0].lng, points[0].lat] : [0, 20],
+      zoom: 12,
+      interactive: false,
       attributionControl: false
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19
-    }).addTo(map);
-
     mapRef.current = map;
 
-    if (points && points.length > 0) {
-      const latLngs: [number, number][] = points.map((p) => [p.lat, p.lng]);
-      L.polyline(latLngs, {
-        color: "#4f46e5",
-        weight: 3.5,
-        opacity: 0.9,
-        lineCap: "round",
-        lineJoin: "round"
-      }).addTo(map);
+    map.on("load", () => {
+      if (points && points.length > 0) {
+        map.addSource("mini-route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: points.map((p) => [p.lng, p.lat])
+            }
+          }
+        });
 
-      // Start marker (green dot)
-      L.circleMarker(latLngs[0], {
-        radius: 5,
-        fillColor: "#10b981",
-        color: "#ffffff",
-        weight: 2,
-        fillOpacity: 1
-      }).addTo(map);
+        map.addLayer({
+          id: "mini-route-line",
+          type: "line",
+          source: "mini-route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#4f46e5", "line-width": 3.5, "line-opacity": 0.9 }
+        });
 
-      // End marker (red dot)
-      if (latLngs.length > 1) {
-        L.circleMarker(latLngs[latLngs.length - 1], {
-          radius: 5,
-          fillColor: "#f43f5e",
-          color: "#ffffff",
-          weight: 2,
-          fillOpacity: 1
-        }).addTo(map);
+        const startEl = document.createElement("div");
+        startEl.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs pointer-events-none";
+        new maplibregl.Marker({ element: startEl, anchor: "center" })
+          .setLngLat([points[0].lng, points[0].lat])
+          .addTo(map);
+
+        if (points.length > 1) {
+          const lastPt = points[points.length - 1];
+          const endEl = document.createElement("div");
+          endEl.className = "w-2.5 h-2.5 rounded-full bg-rose-500 border-2 border-white shadow-xs pointer-events-none";
+          new maplibregl.Marker({ element: endEl, anchor: "center" })
+            .setLngLat([lastPt.lng, lastPt.lat])
+            .addTo(map);
+        }
+
+        const bounds = new maplibregl.LngLatBounds();
+        points.forEach((p) => bounds.extend([p.lng, p.lat]));
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 12, animate: false });
+        }
       }
-
-      const bounds = L.latLngBounds(latLngs);
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [12, 12], animate: false });
-      }
-    } else {
-      map.setView([20, 0], 2);
-    }
-
-    const timer = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.invalidateSize();
-      }
-    }, 150);
+    });
 
     return () => {
-      clearTimeout(timer);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -302,12 +415,12 @@ const RouteCardMapPreview: React.FC<RouteCardMapPreviewProps> = ({ points, class
   );
 };
 
-// Detailed full-size Leaflet map component for "View Route" detail view
+// Detailed full-size MapLibre map component for "View Route" detail view
 const DetailedRouteLargeMap: React.FC<{ points: { lat: number; lng: number }[] }> = ({
   points
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -316,73 +429,64 @@ const DetailedRouteLargeMap: React.FC<{ points: { lat: number; lng: number }[] }
       mapRef.current = null;
     }
 
-    const map = L.map(containerRef.current, {
-      zoomControl: true,
-      attributionControl: false
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: getMapStyle("voyager"),
+      center: points && points.length > 0 ? [points[0].lng, points[0].lat] : [0, 20],
+      zoom: 12,
+      attributionControl: false,
+      dragRotate: true,
+      touchZoomRotate: true
     });
-
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19
-    }).addTo(map);
 
     mapRef.current = map;
 
-    if (points && points.length > 0) {
-      const latLngs: [number, number][] = points.map((p) => [p.lat, p.lng]);
-      L.polyline(latLngs, {
-        color: "#2563eb",
-        weight: 5,
-        opacity: 0.9,
-        lineCap: "round",
-        lineJoin: "round"
-      }).addTo(map);
-
-      // Start Marker
-      const startPt = latLngs[0];
-      const startIcon = L.divIcon({
-        className: "custom-start-marker",
-        html: `
-          <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-white">
-            START
-          </div>
-        `,
-        iconSize: [60, 26],
-        iconAnchor: [30, 13]
-      });
-      L.marker(startPt, { icon: startIcon }).addTo(map);
-
-      // End Marker
-      if (latLngs.length > 1) {
-        const endPt = latLngs[latLngs.length - 1];
-        const endIcon = L.divIcon({
-          className: "custom-end-marker",
-          html: `
-            <div class="flex items-center gap-1 bg-rose-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-white">
-              END
-            </div>
-          `,
-          iconSize: [52, 26],
-          iconAnchor: [26, 13]
+    map.on("load", () => {
+      if (points && points.length > 0) {
+        map.addSource("detail-route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: points.map((p) => [p.lng, p.lat])
+            }
+          }
         });
-        L.marker(endPt, { icon: endIcon }).addTo(map);
-      }
 
-      const bounds = L.latLngBounds(latLngs);
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [35, 35], animate: false });
-      }
-    } else {
-      map.setView([20, 0], 2);
-    }
+        map.addLayer({
+          id: "detail-route-line",
+          type: "line",
+          source: "detail-route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#2563eb", "line-width": 5, "line-opacity": 0.9 }
+        });
 
-    const timer = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.invalidateSize();
+        const startEl = document.createElement("div");
+        startEl.innerHTML = `<div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-white">START</div>`;
+        new maplibregl.Marker({ element: startEl, anchor: "center" })
+          .setLngLat([points[0].lng, points[0].lat])
+          .addTo(map);
+
+        if (points.length > 1) {
+          const lastPt = points[points.length - 1];
+          const endEl = document.createElement("div");
+          endEl.innerHTML = `<div class="flex items-center gap-1 bg-rose-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-white">END</div>`;
+          new maplibregl.Marker({ element: endEl, anchor: "center" })
+            .setLngLat([lastPt.lng, lastPt.lat])
+            .addTo(map);
+        }
+
+        const bounds = new maplibregl.LngLatBounds();
+        points.forEach((p) => bounds.extend([p.lng, p.lat]));
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 35, animate: false });
+        }
       }
-    }, 150);
+    });
 
     return () => {
-      clearTimeout(timer);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -403,18 +507,16 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 }) => {
   // Map and Tile states
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const polylineLayerRef = useRef<L.Polyline | null>(null);
-  const currentMarkerRef = useRef<L.Marker | null>(null);
-  const accuracyCircleRef = useRef<L.Circle | null>(null);
-  const startMarkerRef = useRef<L.Marker | null>(null);
-  const stopMarkersGroupRef = useRef<L.LayerGroup | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const mapInstanceRef = useRef<maplibregl.Map | null>(null);
+  const currentMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const startMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const stopMarkersRef = useRef<maplibregl.Marker[]>([]);
 
   // Map settings
   const [mapType, setMapType] = useState<"streets" | "satellite" | "voyager">("voyager");
   const [autoCenter, setAutoCenter] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [currentBearing, setCurrentBearing] = useState<number>(0);
 
   // Tracking state
   const [trackingState, setTrackingState] = useState<"idle" | "tracking" | "paused">("idle");
@@ -510,44 +612,42 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
   // Helper to dynamically adjust map viewport zoom/bounds to fit recorded route + current position
   const adjustMapToFitRoute = (
     points: { lat: number; lng: number }[],
-    currentPos?: { lat: number; lng: number } | null,
+    currentPos: { lat: number; lng: number } | null,
     animate = true
   ) => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
 
-    const rawCoords: [number, number][] = points.map((p) => [p.lat, p.lng]);
+    const rawCoords: [number, number][] = points.map((p) => [p.lng, p.lat]);
     if (
       currentPos &&
       !rawCoords.some(
-        (c) => Math.abs(c[0] - currentPos.lat) < 0.00001 && Math.abs(c[1] - currentPos.lng) < 0.00001
+        (c) => Math.abs(c[1] - currentPos.lat) < 0.00001 && Math.abs(c[0] - currentPos.lng) < 0.00001
       )
     ) {
-      rawCoords.push([currentPos.lat, currentPos.lng]);
+      rawCoords.push([currentPos.lng, currentPos.lat]);
     }
 
     if (rawCoords.length >= 2) {
-      const bounds = L.latLngBounds(rawCoords);
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, {
-          padding: [50, 50],
-          maxZoom: 18,
-          animate: animate,
-          duration: 0.8
-        });
-      }
+      const bounds = new maplibregl.LngLatBounds();
+      rawCoords.forEach((c) => bounds.extend(c));
+      map.fitBounds(bounds, {
+        padding: 50,
+        maxZoom: 18,
+        duration: animate ? 800 : 0
+      });
     } else if (rawCoords.length === 1) {
       const target = rawCoords[0];
       if (animate) {
-        map.flyTo(target, Math.max(map.getZoom(), 16), { duration: 0.8 });
+        map.flyTo({ center: target, zoom: Math.max(map.getZoom(), 16), duration: 800 });
       } else {
-        map.setView(target, 16);
+        map.jumpTo({ center: target, zoom: 16 });
       }
     } else if (currentPos) {
       if (animate) {
-        map.flyTo([currentPos.lat, currentPos.lng], 16, { duration: 0.8 });
+        map.flyTo({ center: [currentPos.lng, currentPos.lat], zoom: 16, duration: 800 });
       } else {
-        map.setView([currentPos.lat, currentPos.lng], 16);
+        map.jumpTo({ center: [currentPos.lng, currentPos.lat], zoom: 16 });
       }
     }
   };
@@ -627,75 +727,70 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     const map = mapInstanceRef.current;
 
     // Draw restored polyline
-    if (polylineLayerRef.current && pts.length > 0) {
-      polylineLayerRef.current.setLatLngs(pts.map((p) => [p.lat, p.lng]));
+    if (pts.length > 0) {
+      updateRoutePolyline(map, pts);
     }
 
     // Draw Start Marker
     if (pts.length > 0) {
       const firstPt = pts[0];
-      const startIcon = L.divIcon({
-        className: "custom-start-marker",
-        html: `
-          <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-            <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-            START
-          </div>
-        `,
-        iconSize: [60, 26],
-        iconAnchor: [30, 13]
-      });
+      const startEl = document.createElement("div");
+      startEl.className = "custom-start-marker";
+      startEl.innerHTML = `
+        <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+          <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+          START
+        </div>
+      `;
       if (startMarkerRef.current) {
         startMarkerRef.current.remove();
       }
-      startMarkerRef.current = L.marker([firstPt.lat, firstPt.lng], { icon: startIcon }).addTo(map);
+      startMarkerRef.current = new maplibregl.Marker({ element: startEl, anchor: "center" })
+        .setLngLat([firstPt.lng, firstPt.lat])
+        .addTo(map);
     }
 
     // Draw Pause Markers
-    if (stopMarkersGroupRef.current) {
-      stopMarkersGroupRef.current.clearLayers();
-      pauses.forEach((p) => {
-        const pauseIcon = L.divIcon({
-          className: "custom-pause-marker",
-          html: `
-            <div class="flex items-center justify-center w-6 h-6 bg-amber-500 text-white rounded-full shadow-md border-2 border-white text-[10px] font-bold">
-              ⏸
-            </div>
-          `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
-        });
-        L.marker([p.lat, p.lng], { icon: pauseIcon })
-          .bindPopup(`<b>Paused</b> ${p.time ? `at ${p.time}` : ""}`)
-          .addTo(stopMarkersGroupRef.current);
-      });
-    }
+    stopMarkersRef.current.forEach((m) => m.remove());
+    stopMarkersRef.current = [];
+    pauses.forEach((p) => {
+      const pauseEl = document.createElement("div");
+      pauseEl.className = "custom-pause-marker";
+      pauseEl.innerHTML = `
+        <div class="flex items-center justify-center w-6 h-6 bg-amber-500 text-white rounded-full shadow-md border-2 border-white text-[10px] font-bold">
+          ⏸
+        </div>
+      `;
+      const popup = new maplibregl.Popup({ offset: 12 }).setHTML(
+        `<b>Paused</b> ${p.time ? `at ${p.time}` : ""}`
+      );
+      const pauseMarker = new maplibregl.Marker({ element: pauseEl, anchor: "center" })
+        .setLngLat([p.lng, p.lat])
+        .setPopup(popup)
+        .addTo(map);
+      stopMarkersRef.current.push(pauseMarker);
+    });
 
     // Render User Marker & Zoom View
     const centerLat = lastPos ? lastPos.lat : pts.length > 0 ? pts[pts.length - 1].lat : null;
     const centerLng = lastPos ? lastPos.lng : pts.length > 0 ? pts[pts.length - 1].lng : null;
 
     if (centerLat !== null && centerLng !== null) {
-      const currentCustomIcon = L.divIcon({
-        className: "custom-live-user-marker",
-        html: `
+      if (!currentMarkerRef.current) {
+        const userEl = document.createElement("div");
+        userEl.className = "custom-live-user-marker";
+        userEl.innerHTML = `
           <div class="relative flex items-center justify-center w-8 h-8">
             <span class="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping"></span>
             <span class="absolute w-5 h-5 bg-blue-600 border-2 border-white rounded-full shadow-lg"></span>
             <span class="w-2 h-2 bg-white rounded-full"></span>
           </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      if (!currentMarkerRef.current) {
-        currentMarkerRef.current = L.marker([centerLat, centerLng], {
-          icon: currentCustomIcon,
-          zIndexOffset: 1000
-        }).addTo(map);
+        `;
+        currentMarkerRef.current = new maplibregl.Marker({ element: userEl, anchor: "center" })
+          .setLngLat([centerLng, centerLat])
+          .addTo(map);
       } else {
-        currentMarkerRef.current.setLatLng([centerLat, centerLng]);
+        currentMarkerRef.current.setLngLat([centerLng, centerLat]);
       }
 
       if (pts.length > 0 || lastPos) {
@@ -895,74 +990,151 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     loadSavedRoutes();
   }, [trip.id]);
 
-  // 2. Initialize Leaflet Map
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    if (!mapInstanceRef.current) {
-      // Default to user's destination or coordinates
-      const defaultCenter: [number, number] = [12.9716, 77.5946]; // Bangalore fallback
-
-      const map = L.map(mapContainerRef.current, {
-        center: defaultCenter,
-        zoom: 13,
-        zoomControl: false,
-        attributionControl: false
+  const setupMapSourcesAndLayers = (map: maplibregl.Map) => {
+    if (!map.getSource("route-source")) {
+      map.addSource("route-source", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: routePointsRef.current.map((p) => [p.lng, p.lat])
+          }
+        }
       });
 
-      // Add zoom control to top-right
-      L.control.zoom({ position: "topright" }).addTo(map);
-
-      // Tile layer
-      const getTileUrl = (type: "streets" | "satellite" | "voyager") => {
-        if (type === "satellite") {
-          return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-        }
-        if (type === "streets") {
-          return "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-        }
-        return "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-      };
-
-      const tileLayer = L.tileLayer(getTileUrl(mapType), {
-        maxZoom: 19,
-        subdomains: "abcd"
-      }).addTo(map);
-
-      tileLayerRef.current = tileLayer;
-
-      // Group for stops
-      stopMarkersGroupRef.current = L.layerGroup().addTo(map);
-
-      // Polyline for active route
-      polylineLayerRef.current = L.polyline([], {
-        color: "#2563eb",
-        weight: 5,
-        opacity: 0.9,
-        lineCap: "round",
-        lineJoin: "round"
-      }).addTo(map);
-
-      mapInstanceRef.current = map;
-
-      // Disable autoCenter if user manually pans/drags map canvas
-      map.on("dragstart", () => {
-        setAutoCenter(false);
-        autoCenterRef.current = false;
-      });
-
-      // Check and restore active tracking session if any existed before reload
-      restoreActiveSession().then((restored) => {
-        if (restored) {
-          detectAndShowCurrentLocation(false, false);
-        } else {
-          detectAndShowCurrentLocation(true, true);
+      map.addLayer({
+        id: "route-line-layer",
+        type: "line",
+        source: "route-source",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round"
+        },
+        paint: {
+          "line-color": "#2563eb",
+          "line-width": 6,
+          "line-opacity": 0.9
         }
       });
     }
 
+    if (!map.getSource("accuracy-source")) {
+      map.addSource("accuracy-source", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: []
+        }
+      });
+
+      map.addLayer({
+        id: "accuracy-fill-layer",
+        type: "fill",
+        source: "accuracy-source",
+        paint: {
+          "fill-color": "#3b82f6",
+          "fill-opacity": 0.15
+        }
+      });
+
+      map.addLayer({
+        id: "accuracy-line-layer",
+        type: "line",
+        source: "accuracy-source",
+        paint: {
+          "line-color": "#3b82f6",
+          "line-width": 1,
+          "line-opacity": 0.4
+        }
+      });
+    }
+  };
+
+  const updateRoutePolyline = (map: maplibregl.Map, points: { lat: number; lng: number }[]) => {
+    const source = map.getSource("route-source") as maplibregl.GeoJSONSource;
+    if (source) {
+      source.setData({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: points.map((p) => [p.lng, p.lat])
+        }
+      });
+    }
+  };
+
+  const updateAccuracyCircle = (
+    map: maplibregl.Map,
+    lat: number,
+    lng: number,
+    accuracyMeters: number
+  ) => {
+    const source = map.getSource("accuracy-source") as maplibregl.GeoJSONSource;
+    if (source) {
+      if (accuracyMeters > 0) {
+        source.setData(createGeoJSONCircle([lng, lat], accuracyMeters));
+      } else {
+        source.setData({ type: "FeatureCollection", features: [] });
+      }
+    }
+  };
+
+  // 2. Initialize MapLibre GL Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const defaultCenter: [number, number] = [77.5946, 12.9716]; // [lng, lat]
+
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: getMapStyle(mapType),
+        center: defaultCenter,
+        zoom: 13,
+        bearing: 0,
+        pitch: 0,
+        attributionControl: false,
+        dragRotate: true,
+        touchZoomRotate: true,
+        touchPitch: false
+      });
+
+      mapInstanceRef.current = map;
+
+      map.on("rotate", () => {
+        setCurrentBearing(map.getBearing());
+      });
+
+      map.on("dragstart", () => {
+        setAutoCenter(false);
+        autoCenterRef.current = false;
+      });
+      map.on("rotatestart", () => {
+        setAutoCenter(false);
+        autoCenterRef.current = false;
+      });
+      map.on("zoomstart", () => {
+        setAutoCenter(false);
+        autoCenterRef.current = false;
+      });
+
+      map.on("load", () => {
+        setupMapSourcesAndLayers(map);
+
+        restoreActiveSession().then((restored) => {
+          if (restored) {
+            detectAndShowCurrentLocation(false, false);
+          } else {
+            detectAndShowCurrentLocation(true, true);
+          }
+        });
+      });
+    }
+
     return () => {
-      // Cleanup on unmount
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -970,33 +1142,36 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     };
   }, []);
 
-  // Update map tiles when mapType changes
+  // Update map style when mapType changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-    if (tileLayerRef.current) {
-      mapInstanceRef.current.removeLayer(tileLayerRef.current);
-    }
-    const getTileUrl = (type: "streets" | "satellite" | "voyager") => {
-      if (type === "satellite") {
-        return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-      }
-      if (type === "streets") {
-        return "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-      }
-      return "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-    };
+    const map = mapInstanceRef.current;
+    const currBearing = map.getBearing();
 
-    tileLayerRef.current = L.tileLayer(getTileUrl(mapType), {
-      maxZoom: 19,
-      subdomains: "abcd"
-    }).addTo(mapInstanceRef.current);
+    map.setStyle(getMapStyle(mapType));
+
+    map.once("style.load", () => {
+      map.setBearing(currBearing);
+      setupMapSourcesAndLayers(map);
+      if (routePointsRef.current.length > 0) {
+        updateRoutePolyline(map, routePointsRef.current);
+      }
+      if (currentPositionRef.current) {
+        updateAccuracyCircle(
+          map,
+          currentPositionRef.current.lat,
+          currentPositionRef.current.lng,
+          currentPositionRef.current.accuracy
+        );
+      }
+    });
   }, [mapType]);
 
   // Handle map resize on fullscreen toggle or container change
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.invalidateSize();
+        mapInstanceRef.current.resize();
       }
     }, 200);
     return () => clearTimeout(timeout);
@@ -1068,45 +1243,32 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     const map = mapInstanceRef.current;
 
     // Render / update Current User Marker (Pulsing blue radar dot)
-    const currentCustomIcon = L.divIcon({
-      className: "custom-live-user-marker",
-      html: `
+    if (!currentMarkerRef.current) {
+      const userEl = document.createElement("div");
+      userEl.className = "custom-live-user-marker";
+      userEl.innerHTML = `
         <div class="relative flex items-center justify-center w-8 h-8">
           <span class="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping"></span>
           <span class="absolute w-5 h-5 bg-blue-600 border-2 border-white rounded-full shadow-lg"></span>
           <span class="w-2 h-2 bg-white rounded-full"></span>
         </div>
-      `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-
-    if (!currentMarkerRef.current) {
-      currentMarkerRef.current = L.marker([latitude, longitude], {
-        icon: currentCustomIcon,
-        zIndexOffset: 1000
-      }).addTo(map);
+      `;
+      currentMarkerRef.current = new maplibregl.Marker({ element: userEl, anchor: "center" })
+        .setLngLat([longitude, latitude])
+        .addTo(map);
     } else {
-      currentMarkerRef.current.setLatLng([latitude, longitude]);
+      currentMarkerRef.current.setLngLat([longitude, latitude]);
     }
 
-    // Render / update Accuracy Circle
-    if (!accuracyCircleRef.current) {
-      accuracyCircleRef.current = L.circle([latitude, longitude], {
-        radius: pointAccuracy,
-        color: "#3b82f6",
-        weight: 1,
-        fillColor: "#3b82f6",
-        fillOpacity: 0.12
-      }).addTo(map);
-    } else {
-      accuracyCircleRef.current.setLatLng([latitude, longitude]);
-      accuracyCircleRef.current.setRadius(pointAccuracy);
-    }
+    // Update Accuracy Circle GeoJSON
+    updateAccuracyCircle(map, latitude, longitude, pointAccuracy);
 
-    // If autoCenter is enabled, dynamically adjust map viewport zoom/bounds to fit entire recorded route
-    if (autoCenterRef.current) {
-      adjustMapToFitRoute(routePointsRef.current, newPos, true);
+    // If autoCenter is enabled, smoothly pan map to user's location preserving current zoom level and bearing
+    if (autoCenterRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.easeTo({
+        center: [longitude, latitude],
+        duration: 500
+      });
     }
 
     // IF TRACKING IS NOT ACTIVE (e.g. idle or paused): Force current speed to 0 km/h
@@ -1145,26 +1307,23 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       consecutiveMovementsRef.current = 0;
 
       // Add Emerald Start Marker
-      const startIcon = L.divIcon({
-        className: "custom-start-marker",
-        html: `
-          <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-            <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-            START
-          </div>
-        `,
-        iconSize: [60, 26],
-        iconAnchor: [30, 13]
-      });
+      const startEl = document.createElement("div");
+      startEl.className = "custom-start-marker";
+      startEl.innerHTML = `
+        <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+          <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+          START
+        </div>
+      `;
 
       if (startMarkerRef.current) {
         startMarkerRef.current.remove();
       }
-      startMarkerRef.current = L.marker([latitude, longitude], { icon: startIcon }).addTo(map);
+      startMarkerRef.current = new maplibregl.Marker({ element: startEl, anchor: "center" })
+        .setLngLat([longitude, latitude])
+        .addTo(map);
 
-      if (polylineLayerRef.current) {
-        polylineLayerRef.current.setLatLngs([[latitude, longitude]]);
-      }
+      updateRoutePolyline(map, [{ lat: latitude, lng: longitude }]);
     } else {
       // SUBSEQUENT POINTS: Apply Strict GPS Filtering & Noise Rejection
       const lastPoint = prevPoints[prevPoints.length - 1];
@@ -1184,7 +1343,6 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       const timeDeltaSec = Math.max(0.5, (currTimeMs - lastTimeMs) / 1000);
 
       // C. Accuracy-Aware Minimum Movement Threshold
-      // minimumMovement = Math.max(5, Math.min(20, Math.max(previousAccuracy, currentAccuracy)))
       const previousAccuracy = lastPoint.accuracy || 15;
       const currentAccuracy = pointAccuracy;
       const minimumMovementMeters = Math.max(
@@ -1206,16 +1364,13 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
       // E. Evaluate Minimum Movement Threshold (Stationary & Drift Filter)
       if (distDeltaMeters < minimumMovementMeters) {
-        // GPS DRIFT / STATIONARY NOISE:
         stationaryCountRef.current += 1;
         consecutiveMovementsRef.current = 0;
-
-        // Force speed to 0 km/h, keep Total Distance unchanged, do not add point to route
         setCurrentSpeedKmh(0);
         return;
       }
 
-      // F. Stationary Recovery Guard: Require consecutive or clear movement if previously stationary
+      // F. Stationary Recovery Guard
       if (
         stationaryCountRef.current >= 2 &&
         consecutiveMovementsRef.current === 0 &&
@@ -1230,7 +1385,6 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       stationaryCountRef.current = 0;
       consecutiveMovementsRef.current += 1;
 
-      // Calculate speed from genuine movement
       let effectiveSpeedKmh = Math.round(impliedSpeedKmh * 10) / 10;
       if (rawSpeedKmh > 0 && Math.abs(rawSpeedKmh - impliedSpeedKmh) < 25) {
         effectiveSpeedKmh = Math.round(rawSpeedKmh * 10) / 10;
@@ -1256,17 +1410,17 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
         setMaxSpeedKmh(Math.round(effectiveSpeedKmh * 10) / 10);
       }
 
-      // Update polyline on map & dynamically adjust viewport zoom
-      if (polylineLayerRef.current) {
-        const latLngs = newPointsList.map((p) => [p.lat, p.lng] as [number, number]);
-        polylineLayerRef.current.setLatLngs(latLngs);
+      // Update polyline on MapLibre map
+      updateRoutePolyline(map, newPointsList);
+
+      if (autoCenterRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.easeTo({
+          center: [longitude, latitude],
+          duration: 500
+        });
       }
 
-      if (autoCenterRef.current) {
-        adjustMapToFitRoute(newPointsList, newPos, true);
-      }
-
-      // Persist active session to local storage & Firestore immediately
+      // Persist active session
       saveActiveSessionToStorage();
     }
   };
@@ -1321,11 +1475,11 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
         const { latitude, longitude } = position.coords;
         if (mapInstanceRef.current && (forceCenter || autoCenterRef.current)) {
-          if (animate) {
-            mapInstanceRef.current.flyTo([latitude, longitude], 15, { duration: 1 });
-          } else {
-            mapInstanceRef.current.setView([latitude, longitude], 15);
-          }
+          mapInstanceRef.current.flyTo({
+            center: [longitude, latitude],
+            zoom: 15,
+            duration: animate ? 1000 : 0
+          });
         }
       },
       (error) => {
@@ -1367,8 +1521,10 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
         handleGpsUpdate(position);
 
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([position.coords.latitude, position.coords.longitude], 15, {
-            duration: 1
+          mapInstanceRef.current.flyTo({
+            center: [position.coords.longitude, position.coords.latitude],
+            zoom: 15,
+            duration: 1000
           });
         }
 
@@ -1394,16 +1550,13 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
   // Dedicated Enable Location button click handler
   const handleEnableLocationClick = async () => {
-    // If permissions API is available, check state
     if (typeof navigator !== "undefined" && navigator.permissions && navigator.permissions.query) {
       try {
         const perm = await navigator.permissions.query({ name: "geolocation" });
         if (perm.state === "denied") {
           setShowLocationInstructionModal(true);
         }
-      } catch (e) {
-        // Query not supported for geolocation in some contexts
-      }
+      } catch (e) {}
     }
 
     detectAndShowCurrentLocation(true, true);
@@ -1417,7 +1570,6 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       return;
     }
 
-    // Clear existing watcher to prevent duplicates
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
@@ -1444,7 +1596,6 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
 
   // 5. Track Actions: START, PAUSE, RESUME, END
   const handleStartRoute = () => {
-    // Request permission & get initial accurate position before tracking starts
     handleRequestLocationPermission((initialPos) => {
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const now = Date.now();
@@ -1486,17 +1637,16 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       setTrackingState("tracking");
       trackingStateRef.current = "tracking";
 
-      // Clear old polyline & start marker
-      if (polylineLayerRef.current) {
-        polylineLayerRef.current.setLatLngs([]);
+      // Clear old polyline & markers
+      if (mapInstanceRef.current) {
+        updateRoutePolyline(mapInstanceRef.current, []);
       }
       if (startMarkerRef.current) {
         startMarkerRef.current.remove();
         startMarkerRef.current = null;
       }
-      if (stopMarkersGroupRef.current) {
-        stopMarkersGroupRef.current.clearLayers();
-      }
+      stopMarkersRef.current.forEach((m) => m.remove());
+      stopMarkersRef.current = [];
 
       saveActiveSessionToStorage(true);
       startWatchingLocation();
@@ -1518,21 +1668,24 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     consecutiveMovementsRef.current = 0;
 
     // Add a pause marker on the map if we have points
-    if (mapInstanceRef.current && currentPositionRef.current && stopMarkersGroupRef.current) {
+    if (mapInstanceRef.current && currentPositionRef.current) {
       const pos = currentPositionRef.current;
-      const pauseIcon = L.divIcon({
-        className: "custom-pause-marker",
-        html: `
-          <div class="flex items-center justify-center w-6 h-6 bg-amber-500 text-white rounded-full shadow-md border-2 border-white text-[10px] font-bold">
-            ⏸
-          </div>
-        `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-      });
-      L.marker([pos.lat, pos.lng], { icon: pauseIcon })
-        .bindPopup(`<b>Paused</b> at ${new Date().toLocaleTimeString()}`)
-        .addTo(stopMarkersGroupRef.current);
+      const pauseEl = document.createElement("div");
+      pauseEl.className = "custom-pause-marker";
+      pauseEl.innerHTML = `
+        <div class="flex items-center justify-center w-6 h-6 bg-amber-500 text-white rounded-full shadow-md border-2 border-white text-[10px] font-bold">
+          ⏸
+        </div>
+      `;
+      const popup = new maplibregl.Popup({ offset: 12 }).setHTML(
+        `<b>Paused</b> at ${new Date().toLocaleTimeString()}`
+      );
+      const pauseMarker = new maplibregl.Marker({ element: pauseEl, anchor: "center" })
+        .setLngLat([pos.lng, pos.lat])
+        .setPopup(popup)
+        .addTo(mapInstanceRef.current);
+
+      stopMarkersRef.current.push(pauseMarker);
 
       const newPauses = [
         ...pauseLocationsRef.current,
@@ -1582,7 +1735,6 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     const finalDistance = Math.round(totalDistanceKm * 100) / 100;
     const finalDuration = elapsedSeconds;
 
-    // Edge case: handle insufficient GPS coordinates
     if (finalPoints.length < 2) {
       setToastMessage({
         type: "error",
@@ -1653,24 +1805,23 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       createdAt: new Date().toISOString()
     };
 
-    // Save to completed summary state (COMPLETED — UNSAVED state)
     setCompletedSummary(sessionData);
     setSaveRouteError(null);
 
     // Add Red End Marker on map preview
     if (mapInstanceRef.current && endPoint) {
-      const endIcon = L.divIcon({
-        className: "custom-end-marker",
-        html: `
-          <div class="flex items-center gap-1 bg-rose-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-            <span class="w-2 h-2 bg-white rounded-full"></span>
-            END
-          </div>
-        `,
-        iconSize: [52, 26],
-        iconAnchor: [26, 13]
-      });
-      L.marker([endPoint.lat, endPoint.lng], { icon: endIcon }).addTo(mapInstanceRef.current);
+      const endEl = document.createElement("div");
+      endEl.className = "custom-end-marker";
+      endEl.innerHTML = `
+        <div class="flex items-center gap-1 bg-rose-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+          <span class="w-2 h-2 bg-white rounded-full"></span>
+          END
+        </div>
+      `;
+      const endMarker = new maplibregl.Marker({ element: endEl, anchor: "center" })
+        .setLngLat([endPoint.lng, endPoint.lat])
+        .addTo(mapInstanceRef.current);
+      stopMarkersRef.current.push(endMarker);
     }
   };
 
@@ -1761,12 +1912,13 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     setMaxSpeedKmh(0);
 
     // Clear map layers
-    if (polylineLayerRef.current) {
-      polylineLayerRef.current.setLatLngs([]);
+    if (mapInstanceRef.current) {
+      updateRoutePolyline(mapInstanceRef.current, []);
+      updateAccuracyCircle(mapInstanceRef.current, 0, 0, 0);
     }
-    if (stopMarkersGroupRef.current) {
-      stopMarkersGroupRef.current.clearLayers();
-    }
+    stopMarkersRef.current.forEach((m) => m.remove());
+    stopMarkersRef.current = [];
+
     if (startMarkerRef.current) {
       startMarkerRef.current.remove();
       startMarkerRef.current = null;
@@ -1787,49 +1939,47 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     if (!mapInstanceRef.current || !sess.points || sess.points.length === 0) return;
     const map = mapInstanceRef.current;
 
-    // Clear active layers
-    if (polylineLayerRef.current) {
-      const latLngs = sess.points.map((p) => [p.lat, p.lng] as [number, number]);
-      polylineLayerRef.current.setLatLngs(latLngs);
-    }
+    updateRoutePolyline(map, sess.points);
 
-    if (stopMarkersGroupRef.current) {
-      stopMarkersGroupRef.current.clearLayers();
-    }
+    stopMarkersRef.current.forEach((m) => m.remove());
+    stopMarkersRef.current = [];
+
     if (startMarkerRef.current) {
       startMarkerRef.current.remove();
+      startMarkerRef.current = null;
     }
 
     const firstPoint = sess.points[0];
     const lastPoint = sess.points[sess.points.length - 1];
 
-    const startIcon = L.divIcon({
-      className: "custom-start-marker",
-      html: `
-        <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-          START
-        </div>
-      `,
-      iconSize: [56, 26],
-      iconAnchor: [28, 13]
-    });
-    startMarkerRef.current = L.marker([firstPoint.lat, firstPoint.lng], { icon: startIcon }).addTo(map);
+    const startEl = document.createElement("div");
+    startEl.className = "custom-start-marker";
+    startEl.innerHTML = `
+      <div class="flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+        START
+      </div>
+    `;
+    startMarkerRef.current = new maplibregl.Marker({ element: startEl, anchor: "center" })
+      .setLngLat([firstPoint.lng, firstPoint.lat])
+      .addTo(map);
 
-    const endIcon = L.divIcon({
-      className: "custom-end-marker",
-      html: `
-        <div class="flex items-center gap-1 bg-rose-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-          END
-        </div>
-      `,
-      iconSize: [48, 26],
-      iconAnchor: [24, 13]
-    });
-    L.marker([lastPoint.lat, lastPoint.lng], { icon: endIcon }).addTo(map);
+    const endEl = document.createElement("div");
+    endEl.className = "custom-end-marker";
+    endEl.innerHTML = `
+      <div class="flex items-center gap-1 bg-rose-600 text-white text-[11px] font-extrabold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+        END
+      </div>
+    `;
+    const endMarker = new maplibregl.Marker({ element: endEl, anchor: "center" })
+      .setLngLat([lastPoint.lng, lastPoint.lat])
+      .addTo(map);
+
+    stopMarkersRef.current.push(endMarker);
 
     // Fit map bounds to show complete route
-    const bounds = L.latLngBounds(sess.points.map((p) => [p.lat, p.lng]));
-    map.fitBounds(bounds, { padding: [40, 40] });
+    const bounds = new maplibregl.LngLatBounds();
+    sess.points.forEach((p) => bounds.extend([p.lng, p.lat]));
+    map.fitBounds(bounds, { padding: 40 });
     setAutoCenter(false);
   };
 
@@ -1858,13 +2008,15 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
       // 4. If this session was currently displayed on map, clear it
       if (selectedSessionToView?.id === targetId) {
         setSelectedSessionToView(null);
-        if (polylineLayerRef.current) {
-          polylineLayerRef.current.setLatLngs([]);
+        if (mapInstanceRef.current) {
+          updateRoutePolyline(mapInstanceRef.current, []);
         }
         if (startMarkerRef.current) {
           startMarkerRef.current.remove();
           startMarkerRef.current = null;
         }
+        stopMarkersRef.current.forEach((m) => m.remove());
+        stopMarkersRef.current = [];
       }
 
       setToastMessage({ type: "success", text: "Completed journey deleted successfully." });
@@ -1877,16 +2029,23 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     }
   };
 
-  // Recenter map on user's current location
+  // Reset map orientation to north-up
+  const handleResetNorth = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.easeTo({ bearing: 0, duration: 500 });
+    }
+  };
+
+  // Recenter map on user's current location without resetting user's manual bearing
   const handleRecenter = () => {
     setAutoCenter(true);
     autoCenterRef.current = true;
     if (currentPositionRef.current && mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo(
-        [currentPositionRef.current.lat, currentPositionRef.current.lng],
-        Math.max(mapInstanceRef.current.getZoom(), 15),
-        { duration: 0.8 }
-      );
+      mapInstanceRef.current.flyTo({
+        center: [currentPositionRef.current.lng, currentPositionRef.current.lat],
+        zoom: Math.max(mapInstanceRef.current.getZoom(), 15),
+        duration: 800
+      });
     }
     detectAndShowCurrentLocation(true, true);
   };
@@ -1897,7 +2056,14 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
     setAutoCenter(true);
     autoCenterRef.current = true;
     const pointsToFit = routePoints.length > 0 ? routePoints : selectedSessionToView?.points || [];
-    adjustMapToFitRoute(pointsToFit, currentPositionRef.current, true);
+    if (pointsToFit.length === 0) return;
+
+    const bounds = new maplibregl.LngLatBounds();
+    pointsToFit.forEach((p) => bounds.extend([p.lng, p.lat]));
+    if (currentPositionRef.current) {
+      bounds.extend([currentPositionRef.current.lng, currentPositionRef.current.lat]);
+    }
+    mapInstanceRef.current.fitBounds(bounds, { padding: 40 });
   };
 
   return (
@@ -2197,6 +2363,21 @@ export const RouteTrackerModule: React.FC<RouteTrackerModuleProps> = ({
                   >
                     <Compass className={`w-4 h-4 sm:w-5 sm:h-5 ${autoCenter ? "animate-spin" : ""}`} />
                   </button>
+
+                  {/* Compass / Reset North */}
+                  {Math.abs(currentBearing) > 1 && (
+                    <button
+                      type="button"
+                      onClick={handleResetNorth}
+                      title="Reset Orientation to North"
+                      className="w-9 h-9 sm:w-10 sm:h-10 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Navigation
+                        className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 dark:text-rose-400 transition-transform duration-200"
+                        style={{ transform: `rotate(${-currentBearing}deg)` }}
+                      />
+                    </button>
+                  )}
 
                   {/* Fit Entire Route Bounds */}
                   {(routePoints.length > 1 || selectedSessionToView) && (
